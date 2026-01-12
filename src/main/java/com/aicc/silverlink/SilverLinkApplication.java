@@ -1,4 +1,4 @@
-package com.silverlink.silverlink;
+package com.aicc.silverlink;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

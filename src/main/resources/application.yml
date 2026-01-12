@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/silver_care_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: SilverCare_App  # 아까 만든 앱 전용 계정
+    password: 본인의비밀번호
+
+  # JPA 설정 (테이블 자동 생성 등)
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: update  # 개발 중엔 update, 운영엔 validate or none
+    show-sql: true      # 콘솔에 SQL 찍어보기
+    properties:
+      hibernate:
+        format_sql: true
