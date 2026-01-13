@@ -1,4 +1,4 @@
 package com.aicc.silverlink.global.exception;
 
-public enum ErrorCode {
+public class ErrorCode {
 }
