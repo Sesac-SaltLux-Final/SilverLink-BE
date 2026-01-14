@@ -52,4 +52,5 @@ public class DateTimeUtil {
 
         return format(targetTime, DATE_PATTERN); // 한 달 이상은 날짜 표시
     }
+
 }
