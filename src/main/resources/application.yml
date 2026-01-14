@@ -1,16 +1,32 @@
+server:
+  port: 8080
+
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/silver_care_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: SilverCare_App  # 아까 만든 앱 전용 계정
-    password: 본인의비밀번호
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:silverlink}?serverTimezone=Asia/Seoul
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:password}
 
   # JPA 설정 (테이블 자동 생성 등)
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: update  # 개발 중엔 update, 운영엔 validate or none
+      ddl-auto: ${JPA_DDL_AUTO:update} # 배포 시 validate로 바꾸기 위해 변수화
     show-sql: true      # 콘솔에 SQL 찍어보기
     properties:
       hibernate:
         format_sql: true
+
+#app:
+#  security:
+#    jwt:
+#      issuer: silverlink
+#      secret: ${JWT_SECRET}
+#      access-exp-minutes: 15
+#      refresh-exp-days: 14
+#    session:
+#      idle-timeout-minutes: 60
+#      refresh-cookie-name: "SL_REFRESH"
+#      refresh-cookie-path: "/"
+#      refresh-cookie-secure: false
