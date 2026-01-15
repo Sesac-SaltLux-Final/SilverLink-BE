@@ -1,13 +1,30 @@
 package com.aicc.silverlink.domain.admin.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
+import com.aicc.silverlink.domain.user.entity.User;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
+@Table(name = "admins")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Admin {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_id")
     private Long id;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @MapsId
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @Column(name = "adm_dong_code", nullable = false, length = 20)
+    private String admDongCode;
+
+    public Admin(User user, String admDongCode) {
+        this.user = user;
+        this.admDongCode = admDongCode;
+    }
 }

@@ -1,6 +1,5 @@
 package com.aicc.silverlink.domain.inquiry.entity;
 
-import com.aicc.silverlink.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -8,31 +7,33 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "inquiry_answers")
+@Table(name = "faqs")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class InquiryAnswer {
+public class Faq {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "answer_id")
+    @Column(name = "faq_id")
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "qna_id", nullable = false)
-    private Inquiry inquiry;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", nullable = false)
+    private FaqCategory category;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "answered_by_user_id", nullable = false)
-    private User answeredBy;
+    @Column(name = "question", nullable = false, length = 500)
+    private String question;
 
     @Column(name = "answer_text", nullable = false, columnDefinition = "TEXT")
     private String answerText;
 
-    @Column(name = "is_deleted", nullable = false)
-    private boolean isDeleted;
+    @Column(name = "view_count", nullable = false)
+    private int viewCount;
 
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
+    @Column(name = "is_active", nullable = false)
+    private boolean isActive;
+
+    @Column(name = "display_order", nullable = false)
+    private int displayOrder;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -44,10 +45,17 @@ public class InquiryAnswer {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
+        if (this.isActive == false) { // Default true logic handled elsewhere or assume true by default if needed
+             this.isActive = true;
+        }
     }
 
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public enum FaqCategory {
+        SERVICE, CALLBOT, MEDICATION, WELFARE
     }
 }
