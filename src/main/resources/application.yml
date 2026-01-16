@@ -1,24 +1,34 @@
 server:
   port: 8080
+  # 여기에 있던 servlet 설정은 삭제!
 
 spring:
+  # [이동 완료] 최신 스프링 부트에서는 인코딩 설정이 여기로 옵니다.
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
+
   config:
     import: optional:file:.env[.properties]
+
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:silverlink}?serverTimezone=Asia/Seoul
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:silverlink}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:password}
 
-  # JPA 설정 (테이블 자동 생성 등)
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:update} # 배포 시 validate로 바꾸기 위해 변수화
-    show-sql: true      # 콘솔에 SQL 찍어보기
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
+        physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
 
       security:
         auth:
@@ -31,3 +41,27 @@ spring:
           refresh-cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
       jwt:
         secret: ${JWT_SECRET}
+
+# 공공데이터 API 설정 (변경 없음)
+api:
+  welfare:
+    service-key: ${API_SERVICE_KEY}
+    central-url: https://apis.data.go.kr/B554287/NationalWelfareInformationsV001
+    local-url: https://apis.data.go.kr/B554287/LocalGovernmentWelfareInformations
+
+logging:
+  level:
+    com.aicc.silverlink: debug
+    org.hibernate.SQL: debug
+    #app:
+    #  security:
+    #    jwt:
+    #      issuer: silverlink
+    #      secret: ${JWT_SECRET}
+    #      access-exp-minutes: 15
+    #      refresh-exp-days: 14
+    #    session:
+    #      idle-timeout-minutes: 60
+    #      refresh-cookie-name: "SL_REFRESH"
+    #      refresh-cookie-path: "/"
+    #      refresh-cookie-secure: false

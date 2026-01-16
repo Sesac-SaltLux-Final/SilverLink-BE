@@ -1,40 +1,86 @@
 package com.aicc.silverlink.domain.welfare.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
-/**
- * 공공데이터 수집 전용 DTO 그룹
- */
+import java.util.List;
+
 public class WelfareApiDto {
 
-    // [1] 중앙부처 API 전용 (NationalWelfare)
-    @Getter @Setter @NoArgsConstructor
+    // ==========================================
+    // [1] 공통 껍데기 (제네릭 <T> 사용)
+    // ==========================================
+
+    @Getter @Setter @ToString
+    @JacksonXmlRootElement(localName = "response")
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class ResponseWrapper<T> {
+        @JacksonXmlProperty(localName = "body")
+        private Body<T> body;
+    }
+
+    @Getter @Setter @ToString
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Body<T> {
+        @JacksonXmlProperty(localName = "items")
+        private Items<T> items;
+    }
+
+    @Getter @Setter @ToString
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Items<T> {
+        @JacksonXmlElementWrapper(useWrapping = false)
+        @JacksonXmlProperty(localName = "item")
+        private List<T> itemList;
+    }
+
+    // ==========================================
+    // [2] 실제 사용할 구체적인 클래스 (Service에서 이걸 호출)
+    // ==========================================
+
+    // 중앙부처용: ResponseWrapper에 <CentralItem>을 끼워넣음
+    public static class CentralResponse extends ResponseWrapper<CentralItem> {}
+
+    // 지자체용: ResponseWrapper에 <LocalItem>을 끼워넣음
+    public static class LocalResponse extends ResponseWrapper<LocalItem> {}
+
+
+    // ==========================================
+    // [3] 알맹이 데이터 (Item)
+    // ==========================================
+
+    @Getter @Setter @NoArgsConstructor @ToString
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class CentralItem {
         private String servId;
         private String servNm;
         private String jurMnofNm;
-        private String wlfareInfoOutlCn; // 상세조회 시 요약 내용
-        private String tgtrDtlCn;        // 대상자 상세 (주의: tgtr)
-        private String slctCritCn;       // 선정 기준
-        private String alwServCn;        // 지원 내용
-        private String rprsCtadr;        // 문의처
-        private String servDtlLink;      // 상세 링크
+        private String wlfareInfoOutlCn;
+        private String tgtrDtlCn;
+        private String slctCritCn;
+        private String alwServCn;
+        private String rprsCtadr;
+        private String servDtlLink;
     }
 
-    // [2] 지자체 API 전용 (LocalGovernment)
-    @Getter @Setter @NoArgsConstructor
+    @Getter @Setter @NoArgsConstructor @ToString
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class LocalItem {
         private String servId;
         private String servNm;
-        private String servDgst;         // 서비스 요약
-        private String sprtTrgtCn;       // 지원 대상 (주의: sprtTrgt)
-        private String slctCritCn;       // 선정 기준
-        private String alwServCn;        // 급여 서비스 내용
-        private String inqNum;           // 조회수(또는 문의처로 사용됨)
-        private String servDtlLink;      // 상세 링크
-        private String ctpvNm;           // 시도명 (서울, 경기 등)
-        private String sggNm;            // 시군구명 (강남구, 수원시 등)
+        private String servDgst;
+        private String sprtTrgtCn;
+        private String slctCritCn;
+        private String alwServCn;
+        private String inqNum;
+        private String servDtlLink;
+        private String ctpvNm;
+        private String sggNm;
     }
 }
