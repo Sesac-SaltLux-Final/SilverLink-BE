@@ -7,7 +7,9 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "users")
 @Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -65,28 +67,21 @@ public class User {
         if (this.status == null) {
             this.status = UserStatus.ACTIVE;
         }
-        if (this.phoneVerified == false) {
+        if (!phoneVerified == false) {
             this.phoneVerified = false;
         }
     }
+
+    public void updateLastLogin(){
+        this.lastLoginAt = LocalDateTime.now();
+    }
+
 
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
 
-    @Builder(access = AccessLevel.PRIVATE)
-    private User(String loginId, String passwordHash, String name, String phone, String email, Role role, UserStatus status, boolean phoneVerified, Long createdBy){
-        this.loginId = loginId;
-        this.passwordHash = passwordHash;
-        this.name = name;
-        this.phone = phone;
-        this.email = email;
-        this.role = role;
-        this.status = status;
-        this.phoneVerified = phoneVerified;
-        this.createdBy = createdBy;
-    }
 
     public static User createLocal(String loginId, String encodedPassword, String name, String phone, String email, Role role){
         validate(loginId, encodedPassword, name, phone, role);
