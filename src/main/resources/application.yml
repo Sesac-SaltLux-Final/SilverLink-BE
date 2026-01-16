@@ -20,7 +20,7 @@ spring:
     password: ${DB_PASSWORD:password}
 
   jpa:
-    database-platform: org.hibernate.dialect.MySQLDialect
+#    database-platform: org.hibernate.dialect.MySQLDialect
     open-in-view: false
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:update}

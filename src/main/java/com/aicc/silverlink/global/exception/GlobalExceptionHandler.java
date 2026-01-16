@@ -2,9 +2,12 @@ package com.aicc.silverlink.global.exception;
 
 import com.aicc.silverlink.global.common.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.Map;
 
 @Slf4j
 @RestControllerAdvice
@@ -34,4 +37,34 @@ public class GlobalExceptionHandler {
                 .status(500)
                 .body(ApiResponse.error(ErrorCode.INTERNAL_SERVER_ERROR.getMessage()));
     }
+
+    /**
+     * 로그인 실패 / 잘못된 인자 (IllegalArgumentException)
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String,String>> handleIllegalArgument(IllegalArgumentException e){
+        String message = e.getMessage();
+
+        if ("LOGIN_FAIL".equals(message)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED) // 401
+                    .body(Map.of("error", "LOGIN_FAIL","message","아이디 또는 비밀번호가 일치하지 않습니다"));
+        }
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST) // 400
+                .body(Map.of("error", "BAD_REQUEST","message",message));
+
+    }
+
+    /**
+     *  상태 오류 (IllegalArgumentException)
+     *  이미 로그인 중(BLOCK_NEW) , 계정 비활성화 등
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String,String>> handleIllegalState(IllegalStateException e){
+        return ResponseEntity.status(HttpStatus.FORBIDDEN) // 403
+                .body(Map.of("error", "FORBIDDEN","message",e.getMessage()));
+
+    }
+
+
 }
