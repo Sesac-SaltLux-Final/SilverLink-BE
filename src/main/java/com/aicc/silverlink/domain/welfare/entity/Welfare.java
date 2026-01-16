@@ -1,15 +1,17 @@
 package com.aicc.silverlink.domain.welfare.entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "welfare_services") // SQL의 테이블명과 일치
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Builder
+@Setter
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class Welfare {
 
     @Id
@@ -54,6 +56,7 @@ public class Welfare {
     @Column(name = "category", length = 50)
     private String category;
 
+    @Builder.Default
     @Column(name = "is_active", nullable = false) // TINYINT(1) 매핑
     private boolean isActive = true;
 
