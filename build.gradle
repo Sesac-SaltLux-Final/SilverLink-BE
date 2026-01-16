@@ -36,18 +36,38 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    implementation 'io.jsonwebtoken:jjwt:0.9.1'
     implementation 'com.googlecode.json-simple:json-simple:1.1.1'
     implementation 'javax.xml.bind:jaxb-api:2.3.1'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.0'
     implementation 'io.github.cdimascio:dotenv-java:3.0.0'
     implementation 'org.modelmapper:modelmapper:3.1.1'
     implementation 'org.springframework.boot:spring-boot-starter-aop:3.5.6'
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml'
 
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    implementation 'org.springframework.boot:spring-boot-starter-json'
+
+    // Mockito agent를 위한 의존성 추가
+    testRuntimeOnly 'org.mockito:mockito-core'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+    jvmArgs "-Xshare:off"
+
+    // Mockito를 Java agent로 설정하여 동적 로딩 경고 제거
+    doFirst {
+        def mockitoAgent = configurations.testRuntimeClasspath.find {
+            it.name.contains('mockito-core')
+        }
+        if (mockitoAgent) {
+            jvmArgs "-javaagent:${mockitoAgent}"
+        }
+    }
 }
