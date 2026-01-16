@@ -1,26 +1,29 @@
 package com.aicc.silverlink.domain.welfare.entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "welfare_services")
+@Table(name = "welfare_services") // SQL의 테이블명과 일치
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class WelfareService {
+@Builder
+@Setter
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
+public class Welfare {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "welfare_service_id")
+    @Column(name = "welfare_service_id") // PK 컬럼명 명시
     private Long id;
 
     @Column(name = "serv_id", nullable = false, length = 50)
     private String servId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "source", nullable = false)
+    @Column(name = "source", nullable = false) // ENUM('CENTRAL', 'LOCAL')
     private Source source;
 
     @Column(name = "serv_nm", length = 255)
@@ -44,7 +47,7 @@ public class WelfareService {
     @Column(name = "rprs_ctadr", length = 100)
     private String rprsCtadr;
 
-    @Column(name = "serv_dtl_link", columnDefinition = "TEXT")
+    @Column(name = "serv_dtl_link", columnDefinition = "TEXT") // 필드명 dtl 확인
     private String servDtlLink;
 
     @Column(name = "district_code", length = 20)
@@ -53,8 +56,9 @@ public class WelfareService {
     @Column(name = "category", length = 50)
     private String category;
 
-    @Column(name = "is_active", nullable = false)
-    private boolean isActive;
+    @Builder.Default
+    @Column(name = "is_active", nullable = false) // TINYINT(1) 매핑
+    private boolean isActive = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -66,17 +70,11 @@ public class WelfareService {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
-        if (this.isActive == false) { // Default true logic handled elsewhere or assume true by default if needed
-             this.isActive = true;
-        }
+        // 별도 설정 없으면 기본값 true 유지
     }
 
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
-    }
-
-    public enum Source {
-        CENTRAL, LOCAL
     }
 }

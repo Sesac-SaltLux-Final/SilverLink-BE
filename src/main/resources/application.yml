@@ -20,15 +20,14 @@ spring:
       hibernate:
         format_sql: true
 
-#app:
-#  security:
-#    jwt:
-#      issuer: silverlink
-#      secret: ${JWT_SECRET}
-#      access-exp-minutes: 15
-#      refresh-exp-days: 14
-#    session:
-#      idle-timeout-minutes: 60
-#      refresh-cookie-name: "SL_REFRESH"
-#      refresh-cookie-path: "/"
-#      refresh-cookie-secure: false
+      security:
+        auth:
+          access-ttl-seconds: ${AUTH_ACCESS_TTL:900}
+          refresh-ttl-seconds: ${AUTH_REFRESH_TTL:1209600}
+          idle-ttl-seconds: ${AUTH_IDLE_TTL:3600}
+          concurrent-policy: KICK_OLD
+          refresh-cookie-name: REFRESH_TOKEN
+          refresh-cookie-path: /auth
+          refresh-cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
+      jwt:
+        secret: ${JWT_SECRET}
