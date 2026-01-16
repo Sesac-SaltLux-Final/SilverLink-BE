@@ -2,15 +2,16 @@ package com.aicc.silverlink.domain.notice.entity;
 
 import com.aicc.silverlink.domain.admin.entity.Admin;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "notices")
 @Getter
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class Notice {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
