@@ -38,4 +38,8 @@ public interface WelfareRepository extends JpaRepository<Welfare, Long> {
             @Param("source") Source source,
             Pageable pageable
     );
+    @Query("SELECT w FROM Welfare w " +
+            "WHERE (:keyword IS NULL OR :keyword = '' OR w.servNm LIKE %:keyword% OR w.servDgst LIKE %:keyword%) " +
+            "AND w.isActive = true")
+    Page<Welfare> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 }
