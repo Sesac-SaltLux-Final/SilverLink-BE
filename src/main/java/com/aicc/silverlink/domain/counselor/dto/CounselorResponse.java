@@ -38,7 +38,10 @@ public class CounselorResponse {
                 .loginId(user.getLoginId())
                 .email(user.getEmail())
                 .phone(user.getPhone())
+                .status(user.getStatus())
+                .department(counselor.getDepartment())
                 .employeeNo(counselor.getEmployeeNo())
+                .admDongCode(counselor.getAdmDongCode())
                 .build();
     }
 }
