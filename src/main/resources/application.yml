@@ -30,17 +30,26 @@ spring:
         format_sql: true
         physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
 
-      security:
-        auth:
-          access-ttl-seconds: ${AUTH_ACCESS_TTL:900}
-          refresh-ttl-seconds: ${AUTH_REFRESH_TTL:1209600}
-          idle-ttl-seconds: ${AUTH_IDLE_TTL:3600}
-          concurrent-policy: KICK_OLD
-          refresh-cookie-name: REFRESH_TOKEN
-          refresh-cookie-path: /auth
-          refresh-cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
-      jwt:
-        secret: ${JWT_SECRET}
+# 인증/보안 설정 (spring 네임스페이스 밖으로 이동)
+security:
+  auth:
+    access-ttl-seconds: ${AUTH_ACCESS_TTL:900}
+    refresh-ttl-seconds: ${AUTH_REFRESH_TTL:1209600}
+    idle-ttl-seconds: ${AUTH_IDLE_TTL:3600}
+    concurrent-policy: KICK_OLD
+    refresh-cookie-name: REFRESH_TOKEN
+    refresh-cookie-path: /auth
+    refresh-cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
+    webauthn:
+      rp:
+        id: "localhost"
+        name: "SilverLink"
+        origin: "http://localhost:8080"
+      origins:
+        - "https://localhost:8080"      # 개발용
+        - "https://silverlink.aicc.com" # 운영용
+  jwt:
+    secret: ${JWT_SECRET}
 
 # 공공데이터 API 설정 (변경 없음)
 api:
@@ -53,15 +62,9 @@ logging:
   level:
     com.aicc.silverlink: debug
     org.hibernate.SQL: debug
-    #app:
-    #  security:
-    #    jwt:
-    #      issuer: silverlink
-    #      secret: ${JWT_SECRET}
-    #      access-exp-minutes: 15
-    #      refresh-exp-days: 14
-    #    session:
-    #      idle-timeout-minutes: 60
-    #      refresh-cookie-name: "SL_REFRESH"
-    #      refresh-cookie-path: "/"
-    #      refresh-cookie-secure: false
+
+solapi:
+  api-key: ${SOLAPI_API_KEY}
+  api-secret: ${SOLAPI_API_SECRET}
+  sender-number: ${SOLAPI_SENDER_NUMBER}
+

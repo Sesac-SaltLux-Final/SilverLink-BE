@@ -52,6 +52,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
 //    implementation 'org.springframework.boot:spring-boot-starter-json'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // OTP 해시(Bcrypt)
+    implementation 'org.springframework.security:spring-security-crypto'
+    // Passkey(WebAuthn)
+    implementation 'com.yubico:webauthn-server-core:2.8.0'
+//    implementation 'com.twilio.sdk:twilio:10.0.0'
+    implementation 'com.solapi:sdk:1.0.3'
 
     // Mockito agent를 위한 의존성 추가
     testRuntimeOnly 'org.mockito:mockito-core'
