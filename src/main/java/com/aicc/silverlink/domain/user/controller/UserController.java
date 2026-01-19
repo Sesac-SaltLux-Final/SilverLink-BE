@@ -29,6 +29,7 @@ public class UserController {
         return userCommandService.updateMyProfile(userId, req);
     }
 
+    // 관리자
     @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{userId}/status")
     public void changeStatus(@PathVariable Long userId, @Valid @RequestBody UserRequests.ChangeStatusRequest req) {
