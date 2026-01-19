@@ -1,4 +1,4 @@
-package com.silverlink.silverlink.welfare;
+package com.aicc.silverlink.domain.welfare.service;
 
 import com.aicc.silverlink.domain.welfare.dto.*;
 import com.aicc.silverlink.domain.welfare.entity.Welfare;
