@@ -2,8 +2,10 @@ package com.aicc.silverlink.domain.system.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -11,8 +13,8 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AdministrativeDivision {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "adm_code")
     private Long admCode;
 
@@ -35,33 +37,53 @@ public class AdministrativeDivision {
     private String dongName;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "level", nullable = false)
-    private Level level;
+    @Column(nullable = false)
+    private DivisionLevel level;
 
     @Column(name = "is_active", nullable = false)
-    private boolean isActive;
+    private Boolean isActive = true;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    public enum DivisionLevel {
+        SIDO, SIGUNGU, DONG
+    }
+
+    @Builder
+    public AdministrativeDivision(Long admCode, String sidoCode, String sigunguCode,
+                                  String dongCode, String sidoName, String sigunguName,
+                                  String dongName, DivisionLevel level) {
+        this.admCode = admCode;
+        this.sidoCode = sidoCode;
+        this.sigunguCode = sigunguCode;
+        this.dongCode = dongCode;
+        this.sidoName = sidoName;
+        this.sigunguName = sigunguName;
+        this.dongName = dongName;
+        this.level = level;
+        this.isActive = true;
+    }
+
+    public String getFullAddress() {
+        StringBuilder sb = new StringBuilder();
+        if (sidoName != null) sb.append(sidoName);
+        if (sigunguName != null) sb.append(" ").append(sigunguName);
+        if (dongName != null) sb.append(" ").append(dongName);
+        return sb.toString().trim();
+    }
+
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-        if (this.isActive == false) { // Default true logic handled elsewhere or assume true by default if needed
-             this.isActive = true;
-        }
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    public enum Level {
-        SIDO, SIGUNGU, DONG
+        updatedAt = LocalDateTime.now();
     }
 }

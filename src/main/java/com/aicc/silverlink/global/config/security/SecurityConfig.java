@@ -56,6 +56,7 @@ public class SecurityConfig {
                         ).permitAll()
 
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admins/**").hasRole("ADMIN")
                         .requestMatchers("/counselor/**").hasRole("COUNSELOR")
                         .requestMatchers("/guardian/**").hasRole("GUARDIAN")
                         .requestMatchers("/elderly/**").hasRole("ELDERLY")
