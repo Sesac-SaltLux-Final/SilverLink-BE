@@ -67,9 +67,6 @@ public class User {
         if (this.status == null) {
             this.status = UserStatus.ACTIVE;
         }
-        if (!phoneVerified == false) {
-            this.phoneVerified = false;
-        }
     }
 
     public void updateLastLogin(){
@@ -106,7 +103,7 @@ public class User {
 
     public void suspend() { this.status = UserStatus.LOCKED; }
     public void activate() { this.status = UserStatus.ACTIVE; }
-    public void softDelete() { 
+    public void softDelete() {
         this.status = UserStatus.DELETED; 
         this.deletedAt = LocalDateTime.now();
     }
@@ -131,4 +128,15 @@ public class User {
         this.phoneVerified = true;
         this.phoneVerifiedAt = LocalDateTime.now();
     }
+
+    public void updateName(String name) {
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("NAME_INVALID");
+        this.name = name.trim();
+    }
+
+    public void updateEmail(String email) {
+        this.email = (email == null || email.isBlank()) ? null : email.trim();
+    }
+
+
 }
