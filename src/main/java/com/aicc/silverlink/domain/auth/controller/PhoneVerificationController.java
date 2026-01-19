@@ -27,7 +27,7 @@ public class PhoneVerificationController {
     @PostMapping("/verify")
     public PhoneVerificationDtos.VerifyCodeResponse verify(@Valid @RequestBody PhoneVerificationDtos.VerifyCodeRequest req,
                                                            HttpServletRequest http) {
-        return service.vericyCode(req, ip(http));
+        return service.verifyCode(req, ip(http));
     }
 
 
