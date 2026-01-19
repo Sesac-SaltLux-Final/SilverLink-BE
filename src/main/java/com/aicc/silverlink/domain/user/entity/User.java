@@ -126,4 +126,9 @@ public class User {
     private static String normalizePhone(String phone) {
         return phone.replaceAll("[^0-9]", "");
     }
+
+    public void markPhoneVerified() {
+        this.phoneVerified = true;
+        this.phoneVerifiedAt = LocalDateTime.now();
+    }
 }
