@@ -308,20 +308,24 @@ class AdminControllerTest {
     @DisplayName("상위 관리자 조회 API")
     class GetSupervisors {
 
-        // ✅ 1. 행정동 리포지토리 주입 (필드 추가)
         @Autowired
         private AdministrativeDivisionRepository administrativeDivisionRepository;
 
+        // 👇 이 import가 파일 최상단에 없다면 추가가 필요할 수 있습니다.
+        // import org.springframework.test.util.ReflectionTestUtils;
+
         @BeforeEach
         void setUpHierarchy() {
-            // ✅ [Fix 1] 유저 상태를 ACTIVE로 강제 변경 (조회 조건 충족을 위해)
-            ReflectionTestUtils.setField(testUser, "status", UserStatus.ACTIVE);
-            userRepository.save(testUser);
+            // ✅ 1. 유저 상태를 ACTIVE로 강제 변경 (서비스 조회 조건 충족)
+            // 조회 대상인 'anotherUser'(서울시 관리자)가 반드시 ACTIVE여야 합니다.
+            org.springframework.test.util.ReflectionTestUtils.setField(anotherUser, "status", UserStatus.ACTIVE);
+            userRepository.saveAndFlush(anotherUser); // 즉시 DB 반영
 
-            ReflectionTestUtils.setField(anotherUser, "status", UserStatus.ACTIVE);
-            userRepository.save(anotherUser);
+            // 본인('testUser')도 ACTIVE로 설정
+            org.springframework.test.util.ReflectionTestUtils.setField(testUser, "status", UserStatus.ACTIVE);
+            userRepository.saveAndFlush(testUser);
 
-            // 1. 행정구역 데이터 생성 (서울, 강남구)
+            // ✅ 2. 행정구역 데이터 생성
             AdministrativeDivision seoulDiv = AdministrativeDivision.builder()
                     .admCode(1100000000L)
                     .sidoCode("11")
@@ -340,29 +344,29 @@ class AdminControllerTest {
                     .build();
             administrativeDivisionRepository.save(gangnamDiv);
 
-            // 2. 관리자 데이터 생성
-            // 시/도 레벨 관리자 (서울) -> 상위 관리자로 조회될 대상
+            // ✅ 3. 관리자 데이터 생성
+            // 서울시 관리자 (상위 관리자 조회 대상)
             Admin provincialAdmin = Admin.builder()
                     .user(anotherUser)
                     .admDongCode(1100000000L)
                     .adminLevel(AdminLevel.PROVINCIAL)
                     .build();
-            adminRepository.save(provincialAdmin);
+            adminRepository.saveAndFlush(provincialAdmin); // 즉시 DB 반영
 
-            // 시/군/구 레벨 관리자 (강남구)
+            // 강남구 관리자
             testAdmin = Admin.builder()
                     .user(testUser)
                     .admDongCode(1168000000L)
                     .adminLevel(AdminLevel.CITY)
                     .build();
-            adminRepository.save(testAdmin);
+            adminRepository.saveAndFlush(testAdmin);
         }
 
         @Test
         @WithMockUser(roles = "ADMIN")
         @DisplayName("성공: 상위 관리자 목록 조회")
         void getSupervisors_Success() throws Exception {
-            // given: 강남구(1168000000) 관리자와 행정동 데이터가 모두 존재함
+            // given: 강남구 관리자와 '활성화된' 서울시 관리자가 존재함
 
             // when: 강남구(1168000000)의 상위 관리자(서울시)를 조회
             ResultActions result = mockMvc.perform(get("/api/admins/supervisors")
@@ -370,7 +374,8 @@ class AdminControllerTest {
 
             // then
             result.andDo(print())
-                    .andExpect(status().isOk()) // 이제 200 OK가 뜰 것입니다.
+                    .andExpect(status().isOk())
+                    // 결과 리스트 사이즈가 1 이상인지 확인 (서울시 관리자가 나와야 함)
                     .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))));
         }
     }
