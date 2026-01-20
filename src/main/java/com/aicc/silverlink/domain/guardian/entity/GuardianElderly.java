@@ -2,23 +2,24 @@ package com.aicc.silverlink.domain.guardian.entity;
 
 import com.aicc.silverlink.domain.elderly.entity.Elderly;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "guardian_elderly")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class GuardianElderly {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "guardian_elderly_id")
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "guardian_user_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "guardian_user_id", nullable = false, unique = true)
     private Guardian guardian;
 
     @OneToOne(fetch = FetchType.LAZY)
@@ -37,7 +38,13 @@ public class GuardianElderly {
         this.createdAt = LocalDateTime.now();
     }
 
-    public enum RelationType {
-        CHILD, SPOUSE, RELATIVE, OTHER
+    public static GuardianElderly create(Guardian guardian, Elderly elderly, RelationType relationType,LocalDateTime createdAt) {
+
+        return GuardianElderly.builder()
+                .guardian(guardian)
+                .elderly(elderly)
+                .relationType(relationType)
+                .createdAt(LocalDateTime.now())
+                .build();
     }
 }

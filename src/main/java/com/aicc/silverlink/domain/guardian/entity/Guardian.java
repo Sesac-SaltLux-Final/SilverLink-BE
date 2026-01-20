@@ -2,15 +2,16 @@ package com.aicc.silverlink.domain.guardian.entity;
 
 import com.aicc.silverlink.domain.user.entity.User;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "guardians")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 public class Guardian {
     @Id
     @Column(name = "user_id")
@@ -47,7 +48,14 @@ public class Guardian {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public Guardian(User user) {
-        this.user = user;
+    public static Guardian create(User user, String addressLine1, String addressLine2, String zipcode, LocalDateTime createdAt) {
+        return Guardian.builder()
+                .user(user)
+                .addressLine1(addressLine1)
+                .addressLine2(addressLine2)
+                .zipcode(zipcode)
+                .createdAt(createdAt)
+                .updatedAt(LocalDateTime.now())
+                .build();
     }
 }
