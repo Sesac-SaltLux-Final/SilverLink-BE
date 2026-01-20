@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:src/test/java/com/aicc/silverlink/domain/welfare/WelfareServiceTest.java
-package com.aicc.silverlink.domain.welfare;
-========
 package com.aicc.silverlink.domain.welfare.service;
->>>>>>>> 1676a0535db9f9dd590dcb7148ec1fd0f1f6520f:src/test/java/com/aicc/silverlink/domain/welfare/service/WelfareServiceTest.java
 
 import com.aicc.silverlink.domain.welfare.dto.*;
 import com.aicc.silverlink.domain.welfare.entity.Welfare;
