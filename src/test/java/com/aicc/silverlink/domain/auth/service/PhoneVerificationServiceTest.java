@@ -214,7 +214,7 @@ class PhoneVerificationServiceTest {
                 given(passwordEncoder.matches("123456", testVerification.getCodeHash())).willReturn(true);
 
                 // when
-                PhoneVerificationDtos.VerifyCodeResponse response = service.vericyCode(request, ip);
+                PhoneVerificationDtos.VerifyCodeResponse response = service.verifyCode(request, ip);
 
                 // then
                 assertThat(response).isNotNull();
@@ -238,7 +238,7 @@ class PhoneVerificationServiceTest {
                 given(passwordEncoder.matches("999999", testVerification.getCodeHash())).willReturn(false);
 
                 // when & then
-                assertThatThrownBy(() -> service.vericyCode(request, ip))
+                assertThatThrownBy(() -> service.verifyCode(request, ip))
                                 .isInstanceOf(IllegalArgumentException.class)
                                 .hasMessage("PV_CODE_INVALID");
 
@@ -256,7 +256,7 @@ class PhoneVerificationServiceTest {
                 given(repo.findById(999L)).willReturn(Optional.empty());
 
                 // when & then
-                assertThatThrownBy(() -> service.vericyCode(request, ip))
+                assertThatThrownBy(() -> service.verifyCode(request, ip))
                                 .isInstanceOf(IllegalArgumentException.class)
                                 .hasMessage("PV_NOT_FOUND");
         }
@@ -277,7 +277,7 @@ class PhoneVerificationServiceTest {
                 given(repo.findById(1L)).willReturn(Optional.of(expiredVerification));
 
                 // when & then
-                assertThatThrownBy(() -> service.vericyCode(request, ip))
+                assertThatThrownBy(() -> service.verifyCode(request, ip))
                                 .isInstanceOf(IllegalArgumentException.class)
                                 .hasMessage("PV_EXPIRED");
         }
@@ -299,7 +299,7 @@ class PhoneVerificationServiceTest {
                 given(repo.findById(1L)).willReturn(Optional.of(failedVerification));
 
                 // when & then
-                assertThatThrownBy(() -> service.vericyCode(request, ip))
+                assertThatThrownBy(() -> service.verifyCode(request, ip))
                                 .isInstanceOf(IllegalArgumentException.class)
                                 .hasMessage("PV_TOO_MANY_ATTEMPTS");
         }
@@ -319,7 +319,7 @@ class PhoneVerificationServiceTest {
                 given(repo.findById(1L)).willReturn(Optional.of(verifiedVerification));
 
                 // when & then
-                assertThatThrownBy(() -> service.vericyCode(request, ip))
+                assertThatThrownBy(() -> service.verifyCode(request, ip))
                                 .isInstanceOf(IllegalArgumentException.class)
                                 .hasMessage("PV_NOT_REQUESTED");
         }

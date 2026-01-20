@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.sql.Time;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -110,7 +111,7 @@ public class WebAuthnService {
         AssertionRequest request = rp.startAssertion(builder.build());
 
         String requestId = UUID.randomUUID().toString();
-        redis.opsForValue().set(authKey(requestId),request.toJson(),REQUEST_TTL_MIN);
+        redis.opsForValue().set(authKey(requestId),request.toJson(),REQUEST_TTL_MIN, TimeUnit.MINUTES);
 
         return new StartAuthResponse(requestId, request.toJson());
     }
