@@ -62,21 +62,44 @@ dependencies {
     testRuntimeOnly 'com.h2database:h2'
     // Mockito agent를 위한 의존성 추가
     testRuntimeOnly 'org.mockito:mockito-core'
+    testImplementation 'com.h2database:h2'
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
 }
+
+
 
 tasks.named('test') {
     useJUnitPlatform()
     jvmArgs "-Xshare:off"
 
-    // Mockito를 Java agent로 설정하여 동적 로딩 경고 제거
+    // ✅ PR CI에서는 통합테스트(*IT) 제외
+    exclude '**/*IT.class'
+
+    // Mockito를 Java agent로 설정하여 동적 로딩 경고 제거 (네가 하던 것 유지)
     doFirst {
         def mockitoAgent = configurations.testRuntimeClasspath.find {
             it.name.contains('mockito-core')
         }
         if (mockitoAgent) {
-            jvmArgs "-javaagent:${mockitoAgent}"
+            jvmArgs "-javaagent:${mockitoAgent.absolutePath}"
+        }
+    }
+}
+
+// ✅ 통합테스트 전용 태스크(원할 때만 실행)
+tasks.register('integrationTest', Test) {
+    useJUnitPlatform()
+    jvmArgs "-Xshare:off"
+    include '**/*IT.class'
+    shouldRunAfter tasks.test
+
+    doFirst {
+        def mockitoAgent = configurations.testRuntimeClasspath.find {
+            it.name.contains('mockito-core')
+        }
+        if (mockitoAgent) {
+            jvmArgs "-javaagent:${mockitoAgent.absolutePath}"
         }
     }
 }
