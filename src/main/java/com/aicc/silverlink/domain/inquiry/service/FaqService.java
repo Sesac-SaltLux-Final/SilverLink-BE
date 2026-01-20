@@ -18,10 +18,13 @@ public class FaqService {
 
     private final FaqRepository faqRepository;
 
-    public List<FaqResponse> getFaqs(String category) {
+    public List<FaqResponse> getFaqs(String category, String keyword) {
         List<Faq> faqs;
 
-        if (category == null || category.trim().isEmpty() || "ALL".equalsIgnoreCase(category)) {
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            faqs = faqRepository.findByQuestionContainingOrAnswerTextContainingAndIsActiveTrueOrderByDisplayOrderAsc(
+                    keyword, keyword);
+        } else if (category == null || category.trim().isEmpty() || "ALL".equalsIgnoreCase(category)) {
             faqs = faqRepository.findAllByIsActiveTrueOrderByDisplayOrderAsc();
         } else {
             try {

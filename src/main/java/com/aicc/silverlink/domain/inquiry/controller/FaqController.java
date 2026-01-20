@@ -22,9 +22,10 @@ public class FaqController {
     private final FaqService faqService;
 
     @GetMapping
-    @Operation(summary = "FAQ 목록 조회", description = "카테고리별 FAQ 목록을 조회합니다. category 파라미터가 없으면 전체 목록을 반환합니다.")
-    public ResponseEntity<List<FaqResponse>> getFaqs(@RequestParam(required = false) String category) {
-        List<FaqResponse> faqs = faqService.getFaqs(category);
+    @Operation(summary = "FAQ 목록 조회", description = "카테고리별 FAQ 목록을 조회하거나 키워드로 검색합니다. category, keyword 파라미터가 없으면 전체 목록을 반환합니다.")
+    public ResponseEntity<List<FaqResponse>> getFaqs(@RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword) {
+        List<FaqResponse> faqs = faqService.getFaqs(category, keyword);
         return ResponseEntity.ok(faqs);
     }
 }

@@ -12,4 +12,7 @@ public interface FaqRepository extends JpaRepository<Faq, Long> {
     List<Faq> findAllByCategoryAndIsActiveTrueOrderByDisplayOrderAsc(FaqCategory category);
 
     List<Faq> findAllByIsActiveTrueOrderByDisplayOrderAsc();
+
+    List<Faq> findByQuestionContainingOrAnswerTextContainingAndIsActiveTrueOrderByDisplayOrderAsc(
+            String questionKeyword, String answerKeyword);
 }
