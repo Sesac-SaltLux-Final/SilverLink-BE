@@ -5,6 +5,8 @@ import com.aicc.silverlink.domain.admin.dto.request.AdminUpdateRequest;
 import com.aicc.silverlink.domain.admin.entity.Admin;
 import com.aicc.silverlink.domain.admin.entity.Admin.AdminLevel;
 import com.aicc.silverlink.domain.admin.repository.AdminRepository;
+import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
+import com.aicc.silverlink.domain.system.repository.AdministrativeDivisionRepository;
 import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.entity.UserStatus;
@@ -305,9 +307,35 @@ class AdminControllerTest {
     @DisplayName("상위 관리자 조회 API")
     class GetSupervisors {
 
+        // ✅ 1. 행정동 리포지토리 주입 (필드 추가)
+        @Autowired
+        private AdministrativeDivisionRepository administrativeDivisionRepository;
+
         @BeforeEach
         void setUpHierarchy() {
-            // 1. 시/도 레벨 관리자 (서울)
+            // ✅ 2. 행정구역 데이터(Reference Data) 생성
+            // 2-1. 서울특별시 (시/도) 데이터 생성
+            AdministrativeDivision seoulDiv = AdministrativeDivision.builder()
+                    .admCode(1100000000L)
+                    .sidoCode("11")
+                    .sidoName("서울특별시")
+                    .level(AdministrativeDivision.DivisionLevel.SIDO)
+                    .build();
+            administrativeDivisionRepository.save(seoulDiv);
+
+            // 2-2. 강남구 (시/군/구) 데이터 생성
+            AdministrativeDivision gangnamDiv = AdministrativeDivision.builder()
+                    .admCode(1168000000L)
+                    .sidoCode("11")
+                    .sigunguCode("680")
+                    .sigunguName("강남구")
+                    .sidoName("서울특별시")
+                    .level(AdministrativeDivision.DivisionLevel.SIGUNGU)
+                    .build();
+            administrativeDivisionRepository.save(gangnamDiv);
+
+            // ✅ 3. 관리자(Admin) 데이터 생성
+            // 3-1. 시/도 레벨 관리자 (서울)
             Admin provincialAdmin = Admin.builder()
                     .user(anotherUser)
                     .admDongCode(1100000000L)
@@ -315,7 +343,7 @@ class AdminControllerTest {
                     .build();
             adminRepository.save(provincialAdmin);
 
-            // 2. 시/군/구 레벨 관리자 (강남구)
+            // 3-2. 시/군/구 레벨 관리자 (강남구)
             testAdmin = Admin.builder()
                     .user(testUser)
                     .admDongCode(1168000000L) // 강남구 코드
@@ -328,14 +356,15 @@ class AdminControllerTest {
         @WithMockUser(roles = "ADMIN")
         @DisplayName("성공: 상위 관리자 목록 조회")
         void getSupervisors_Success() throws Exception {
-            // given: 강남구(1168000000)는 setup에서 만들었으므로 확실히 존재함
-            // when: 강남구의 상위 관리자(서울시)를 조회하도록 변경!
+            // given: 강남구(1168000000) 관리자와 행정동 데이터가 모두 존재함
+
+            // when: 강남구(1168000000)의 상위 관리자(서울시)를 조회
             ResultActions result = mockMvc.perform(get("/api/admins/supervisors")
-                    .param("admDongCode", "1168000000")); // 👈 1168010100 -> 1168000000 로 수정
+                    .param("admDongCode", "1168000000"));
 
             // then
             result.andDo(print())
-                    .andExpect(status().isOk()) // 이제 200 OK가 뜰 겁니다
+                    .andExpect(status().isOk()) // 이제 200 OK가 뜰 것입니다.
                     .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))));
         }
     }
