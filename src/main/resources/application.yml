@@ -57,7 +57,7 @@ api:
     service-key: ${API_SERVICE_KEY}
     central-url: https://apis.data.go.kr/B554287/NationalWelfareInformationsV001/NationalWelfarelistV001
     local-url: https://apis.data.go.kr/B554287/LocalGovernmentWelfareInformations/LcgvWelfarelist
-      # [추가] 상세 조회 URL (문서 보고 정확히 적었습니다)
+    # [추가] 상세 조회 URL (문서 보고 정확히 적었습니다)
     central-detail-url: https://apis.data.go.kr/B554287/NationalWelfareInformationsV001/NationalWelfaredetailedV001
     local-detail-url: https://apis.data.go.kr/B554287/LocalGovernmentWelfareInformations/LcgvWelfaredetailed
 
