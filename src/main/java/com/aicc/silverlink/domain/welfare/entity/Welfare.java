@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "welfare_services") // SQL의 테이블명과 일치
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor(access = AccessLevel.PUBLIC)
 @Builder
 @Setter
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
