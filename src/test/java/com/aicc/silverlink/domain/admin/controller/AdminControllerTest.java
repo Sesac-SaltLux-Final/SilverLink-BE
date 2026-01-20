@@ -314,6 +314,13 @@ class AdminControllerTest {
                     .adminLevel(AdminLevel.PROVINCIAL)
                     .build();
             adminRepository.save(provincialAdmin);
+
+            testAdmin = Admin.builder()
+                    .user(testUser)
+                    .admDongCode(1168000000L)
+                    .adminLevel(AdminLevel.CITY)
+                    .build();
+            adminRepository.save(testAdmin);
         }
 
         @Test
