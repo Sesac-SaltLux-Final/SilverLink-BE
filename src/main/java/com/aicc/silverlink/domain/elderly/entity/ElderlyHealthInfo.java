@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ElderlyHealthInfo {
+
     @Id
     @Column(name = "elderly_user_id")
     private Long id;
@@ -32,9 +34,30 @@ public class ElderlyHealthInfo {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    private ElderlyHealthInfo(Elderly elderly) {
+        if (elderly == null) throw new IllegalArgumentException("ELDERLY_REQUIRED");
+        this.elderly = elderly;
+    }
+
+    public static ElderlyHealthInfo create(Elderly elderly) {
+        return new ElderlyHealthInfo(elderly);
+    }
+
+    public void update(String chronicDiseases, String mentalHealthNotes, String specialNotes) {
+        this.chronicDiseases = trimOrNull(chronicDiseases);
+        this.mentalHealthNotes = trimOrNull(mentalHealthNotes);
+        this.specialNotes = trimOrNull(specialNotes);
+    }
+
     @PrePersist
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    private String trimOrNull(String v) {
+        if (v == null) return null;
+        String t = v.trim();
+        return t.isEmpty() ? null : t;
     }
 }
