@@ -21,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import org.springframework.test.context.ActiveProfiles;
 
@@ -313,8 +314,14 @@ class AdminControllerTest {
 
         @BeforeEach
         void setUpHierarchy() {
-            // ✅ 2. 행정구역 데이터(Reference Data) 생성
-            // 2-1. 서울특별시 (시/도) 데이터 생성
+            // ✅ [Fix 1] 유저 상태를 ACTIVE로 강제 변경 (조회 조건 충족을 위해)
+            ReflectionTestUtils.setField(testUser, "status", UserStatus.ACTIVE);
+            userRepository.save(testUser);
+
+            ReflectionTestUtils.setField(anotherUser, "status", UserStatus.ACTIVE);
+            userRepository.save(anotherUser);
+
+            // 1. 행정구역 데이터 생성 (서울, 강남구)
             AdministrativeDivision seoulDiv = AdministrativeDivision.builder()
                     .admCode(1100000000L)
                     .sidoCode("11")
@@ -323,7 +330,6 @@ class AdminControllerTest {
                     .build();
             administrativeDivisionRepository.save(seoulDiv);
 
-            // 2-2. 강남구 (시/군/구) 데이터 생성
             AdministrativeDivision gangnamDiv = AdministrativeDivision.builder()
                     .admCode(1168000000L)
                     .sidoCode("11")
@@ -334,8 +340,8 @@ class AdminControllerTest {
                     .build();
             administrativeDivisionRepository.save(gangnamDiv);
 
-            // ✅ 3. 관리자(Admin) 데이터 생성
-            // 3-1. 시/도 레벨 관리자 (서울)
+            // 2. 관리자 데이터 생성
+            // 시/도 레벨 관리자 (서울) -> 상위 관리자로 조회될 대상
             Admin provincialAdmin = Admin.builder()
                     .user(anotherUser)
                     .admDongCode(1100000000L)
@@ -343,10 +349,10 @@ class AdminControllerTest {
                     .build();
             adminRepository.save(provincialAdmin);
 
-            // 3-2. 시/군/구 레벨 관리자 (강남구)
+            // 시/군/구 레벨 관리자 (강남구)
             testAdmin = Admin.builder()
                     .user(testUser)
-                    .admDongCode(1168000000L) // 강남구 코드
+                    .admDongCode(1168000000L)
                     .adminLevel(AdminLevel.CITY)
                     .build();
             adminRepository.save(testAdmin);
