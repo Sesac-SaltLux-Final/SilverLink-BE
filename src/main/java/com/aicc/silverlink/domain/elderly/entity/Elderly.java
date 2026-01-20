@@ -2,9 +2,7 @@ package com.aicc.silverlink.domain.elderly.entity;
 
 import com.aicc.silverlink.domain.user.entity.User;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -14,6 +12,8 @@ import java.time.Period;
 @Table(name = "elderly")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Builder
+@AllArgsConstructor
 public class Elderly {
 
     @Id
