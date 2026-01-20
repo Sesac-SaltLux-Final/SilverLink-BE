@@ -1,0 +1,45 @@
+name: Backend CI
+
+on:
+  push:
+    branches: ["develop", "main"]
+  pull_request:
+    branches: ["develop", "main"]
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # (선택) 빠르게 실패 원인 확인용
+      - name: Gradle info
+        run: ./gradlew -v
+
+      # ✅ 테스트는 CI 전용 프로파일로 (H2 권장)
+      - name: Test (CI profile)
+        env:
+          SPRING_PROFILES_ACTIVE: ci
+        run: ./gradlew test --no-daemon
+
+      # ✅ 빌드도 확인 (테스트는 이미 했으니 -x test)
+      - name: Build
+        run: ./gradlew build -x test --no-daemon
