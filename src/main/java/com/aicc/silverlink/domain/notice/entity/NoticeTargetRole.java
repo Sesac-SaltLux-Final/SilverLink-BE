@@ -7,17 +7,12 @@ import lombok.*;
 @Entity
 @Table(name = "notice_target_roles")
 @Getter
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @IdClass(NoticeTargetRoleId.class)
-@AllArgsConstructor // <-- 이게 있어야 빌더 에러가 안 납니다!
-@Builder
 public class NoticeTargetRole {
-
-    @EmbeddedId
-    private NoticeTargetRoleId id;
-
     @Id
-    @MapsId("noticeId")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "notice_id", nullable = false)
     private Notice notice;
