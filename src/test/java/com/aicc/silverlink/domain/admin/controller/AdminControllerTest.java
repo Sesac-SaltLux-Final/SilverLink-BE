@@ -329,14 +329,13 @@ class AdminControllerTest {
         @DisplayName("성공: 상위 관리자 목록 조회")
         void getSupervisors_Success() throws Exception {
             // given: 강남구(1168000000)는 setup에서 만들었으므로 확실히 존재함
-            // when: 강남구의 상위 관리자(서울시)를 조회
+            // when: 강남구의 상위 관리자(서울시)를 조회하도록 변경!
             ResultActions result = mockMvc.perform(get("/api/admins/supervisors")
-                    .param("admDongCode", "1168000000")); // 1168010100(역삼동) -> 1168000000(강남구)로 변경
+                    .param("admDongCode", "1168000000")); // 👈 1168010100 -> 1168000000 로 수정
 
             // then
             result.andDo(print())
-                    .andExpect(status().isOk())
-                    // 서울시 관리자가 조회되어야 함 (최소 1명)
+                    .andExpect(status().isOk()) // 이제 200 OK가 뜰 겁니다
                     .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))));
         }
     }
