@@ -1,20 +1,34 @@
 spring:
+  # CI에서는 .env import 안 해도 되게 (있어도 optional이라 무관)
+  config:
+    import: optional:file:.env[.properties]
+
   datasource:
     url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password:
+
   jpa:
     hibernate:
       ddl-auto: create-drop
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
     open-in-view: false
-  sql:
-    init:
-      mode: never
+    show-sql: false
+
+# ✅ 기본값 없는 것들: CI에서 컨텍스트 로딩용 더미값
+security:
+  jwt:
+    secret: "ci_test_secret_please_use_a_long_random_string_1234567890_abcdefghijklmnopqrstuvwxyz"
+
+api:
+  welfare:
+    service-key: "ci_dummy_api_key"
+
+solapi:
+  api-key: "ci_dummy_solapi_key"
+  api-secret: "ci_dummy_solapi_secret"
+  sender-number: "01000000000"
 
 logging:
   level:
-    org.hibernate.SQL: warn
+    com.aicc.silverlink: info

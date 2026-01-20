@@ -34,12 +34,17 @@ jobs:
       - name: Gradle info
         run: ./gradlew -v
 
-      # ✅ 테스트는 CI 전용 프로파일로 (H2 권장)
-      - name: Test (CI profile)
+      - name: Test (unit only)
         env:
           SPRING_PROFILES_ACTIVE: ci
-        run: ./gradlew test --no-daemon
+          # (안전용) 혹시 프로파일이 안 먹어도 Placeholder 터지지 않게 더미 env 주입
+          JWT_SECRET: ci_dummy_jwt_secret_please_change
+          API_SERVICE_KEY: ci_dummy_api_key
+          SOLAPI_API_KEY: ci_dummy_solapi_key
+          SOLAPI_API_SECRET: ci_dummy_solapi_secret
+          SOLAPI_SENDER_NUMBER: "01000000000"
+        run: ./gradlew test --no-daemon --stacktrace
 
-      # ✅ 빌드도 확인 (테스트는 이미 했으니 -x test)
       - name: Build
         run: ./gradlew build -x test --no-daemon
+
