@@ -307,7 +307,7 @@ class AdminControllerTest {
 
         @BeforeEach
         void setUpHierarchy() {
-            // 시/도 레벨 관리자 (서울)
+            // 1. 시/도 레벨 관리자 (서울)
             Admin provincialAdmin = Admin.builder()
                     .user(anotherUser)
                     .admDongCode(1100000000L)
@@ -315,9 +315,10 @@ class AdminControllerTest {
                     .build();
             adminRepository.save(provincialAdmin);
 
+            // 2. 시/군/구 레벨 관리자 (강남구)
             testAdmin = Admin.builder()
                     .user(testUser)
-                    .admDongCode(1168000000L)
+                    .admDongCode(1168000000L) // 강남구 코드
                     .adminLevel(AdminLevel.CITY)
                     .build();
             adminRepository.save(testAdmin);
@@ -327,13 +328,16 @@ class AdminControllerTest {
         @WithMockUser(roles = "ADMIN")
         @DisplayName("성공: 상위 관리자 목록 조회")
         void getSupervisors_Success() throws Exception {
-            // when - 강남구 역삼동의 상위 관리자 조회
+            // given: 강남구(1168000000)는 setup에서 만들었으므로 확실히 존재함
+            // when: 강남구의 상위 관리자(서울시)를 조회
             ResultActions result = mockMvc.perform(get("/api/admins/supervisors")
-                    .param("admDongCode", "1168010100"));
+                    .param("admDongCode", "1168000000")); // 1168010100(역삼동) -> 1168000000(강남구)로 변경
 
             // then
             result.andDo(print())
-                    .andExpect(status().isOk());
+                    .andExpect(status().isOk())
+                    // 서울시 관리자가 조회되어야 함 (최소 1명)
+                    .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))));
         }
     }
 
