@@ -28,21 +28,10 @@ public class WelfareApiDto {
     @JacksonXmlRootElement(localName = "wantedDtl")
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class DetailResponseWrapper<T> {
-        // 상세 조회는 리스트가 아니라 객체 하나가 바로 나옵니다.
-        // 하지만 제네릭 구조상 편의를 위해 매핑을 유연하게 처리하거나,
-        // 아래처럼 필드들을 직접 받아서 매핑합니다.
 
-        // 여기서는 T타입(Item)의 필드들이 wantedDtl 바로 아래에 펼쳐져 있으므로
-        // Jackson이 T타입으로 바로 변환하도록 유도하거나, 별도 Wrapper 없이 T를 씁니다.
-        // 하지만 RestTemplate은 Root를 필요로 하므로,
-        // 사실상 DetailItem 자체가 Root Element 역할을 하게 됩니다.
     }
 
-    // ==========================================
-    // 알맹이 데이터 Items
-    // ==========================================
 
-// WelfareApiDto.java 내부
 
     @Getter @Setter @NoArgsConstructor @ToString
     @JsonIgnoreProperties(ignoreUnknown = true)

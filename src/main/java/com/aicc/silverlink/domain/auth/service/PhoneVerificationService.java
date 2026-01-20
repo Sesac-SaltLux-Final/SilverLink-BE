@@ -85,7 +85,7 @@ public class PhoneVerificationService {
     }
 
     @Transactional
-    public PhoneVerificationDtos.VerifyCodeResponse vericyCode(PhoneVerificationDtos.VerifyCodeRequest req, String ip) {
+    public PhoneVerificationDtos.VerifyCodeResponse verifyCode(PhoneVerificationDtos.VerifyCodeRequest req, String ip) {
         PhoneVerification pv = repo.findById(req.verificationId())
                 .orElseThrow(()-> new IllegalArgumentException("PV_NOT_FOUND"));
 
@@ -97,6 +97,7 @@ public class PhoneVerificationService {
             pv.expire();
             throw new IllegalArgumentException("PV_EXPIRED");
         }
+
 
         if (pv.getFailCount() >= props.getMaxAttemps()) {
             pv.fail();
@@ -122,8 +123,14 @@ public class PhoneVerificationService {
         }
 
         String proofToken = UUID.randomUUID().toString();
-        String proofKey = "pv:proof:" + pv.getId();
-        redis.opsForValue().set(proofKey, proofToken, 5, TimeUnit.MINUTES);
+        String proofKey = "pv:proof:" + proofToken;
+
+        redis.opsForValue().set(
+                proofKey,
+                pv.getPhoneE164(),
+                5,
+                TimeUnit.MINUTES
+        );
 
         return new PhoneVerificationDtos.VerifyCodeResponse(true,proofToken);
 
