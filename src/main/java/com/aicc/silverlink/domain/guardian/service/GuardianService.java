@@ -69,9 +69,10 @@ public class GuardianService {
 
         return GuardianResponse.from(guardian);
     }
+    @Transactional
     public void connectElderly(Long guardianId, Long elderlyId, RelationType relationType){
         if(guardianElderlyRepository.existsByElderly_Id(elderlyId)){
-            throw new IllegalArgumentException("이미 다른 보호자가 들록한 어르신입니다.");
+            throw new IllegalArgumentException("이미 다른 보호자가 등록한 어르신입니다.");
         }
         Guardian guardian = guardianRepository.findById(guardianId)
                 .orElseThrow(()->new IllegalArgumentException("보호자를 찾을 수 없습니다."));
