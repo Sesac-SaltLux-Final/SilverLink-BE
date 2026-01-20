@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * AdminController 테스트
  */
-@Disabled("auth 마무리 후 다시 시도할 예정")
+//@Disabled("auth 마무리 후 다시 시도할 예정")
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 @DisplayName("AdminController 테스트")
