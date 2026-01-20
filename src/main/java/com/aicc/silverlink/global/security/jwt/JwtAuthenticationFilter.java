@@ -29,6 +29,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        // ✅ 이미 인증이 있으면 (예: @WithMockUser 테스트) 건너뛰기
+        Authentication existingAuth = SecurityContextHolder.getContext().getAuthentication();
+        if (existingAuth != null && existingAuth.isAuthenticated()
+                && !"anonymousUser".equals(existingAuth.getPrincipal())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String token = resolveBearer(request);
 
         if (token != null) {
@@ -57,8 +65,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 var auth = new UsernamePasswordAuthenticationToken(
                         userId,
                         null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
-                );
+                        List.of(new SimpleGrantedAuthority("ROLE_" + role.name())));
+
+                // ✅ SecurityContext에 인증 설정 (이 부분이 누락되어 있었음!)
+                SecurityContextHolder.getContext().setAuthentication(auth);
 
             } catch (JwtException | IllegalArgumentException e) {
                 logger.error("Invalid JWT Token: {}");
@@ -69,17 +79,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private String resolveBearer(HttpServletRequest req){
+    private String resolveBearer(HttpServletRequest req) {
         String h = req.getHeader("Authorization");
-        if (h == null || h.isBlank()) return null;
+        if (h == null || h.isBlank())
+            return null;
 
         // "Bearer " 대소문자/공백 약간 방어하고 싶으면 더 탄탄하게 처리
-        if (!h.startsWith("Bearer ")) return null;
+        if (!h.startsWith("Bearer "))
+            return null;
 
         String token = h.substring(7).trim();
         return token.isEmpty() ? null : token;
     }
-
-
 
 }
