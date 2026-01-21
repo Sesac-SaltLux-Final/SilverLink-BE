@@ -26,23 +26,23 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+//    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly 'com.mysql:mysql-connector-j'
-    runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+//    runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    implementation 'com.googlecode.json-simple:json-simple:1.1.1'
-    implementation 'javax.xml.bind:jaxb-api:2.3.1'
+//    implementation 'com.googlecode.json-simple:json-simple:1.1.1'
+//    implementation 'javax.xml.bind:jaxb-api:2.3.1'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.0'
     implementation 'io.github.cdimascio:dotenv-java:3.0.0'
     implementation 'org.modelmapper:modelmapper:3.1.1'
     implementation 'org.springframework.boot:spring-boot-starter-aop:3.5.6'
-    implementation 'org.springframework.boot:spring-boot-starter-aop'
+//    implementation 'org.springframework.boot:spring-boot-starter-aop'
     implementation 'me.paulschwarz:spring-dotenv:4.0.0'
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml'
 
@@ -51,23 +51,59 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
-    implementation 'org.springframework.boot:spring-boot-starter-json'
-
+//    implementation 'org.springframework.boot:spring-boot-starter-json'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // OTP 해시(Bcrypt)
+    implementation 'org.springframework.security:spring-security-crypto'
+    // Passkey(WebAuthn)
+    implementation 'com.yubico:webauthn-server-core:2.8.0'
+//    implementation 'com.twilio.sdk:twilio:10.0.0'
+    implementation 'com.solapi:sdk:1.0.3'
+    testRuntimeOnly 'com.h2database:h2'
     // Mockito agent를 위한 의존성 추가
     testRuntimeOnly 'org.mockito:mockito-core'
+    testImplementation 'com.h2database:h2'
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
 }
+
+
 
 tasks.named('test') {
     useJUnitPlatform()
     jvmArgs "-Xshare:off"
 
-    // Mockito를 Java agent로 설정하여 동적 로딩 경고 제거
+    if (System.getProperty('spring.profiles.active')) {
+        systemProperty 'spring.profiles.active', System.getProperty('spring.profiles.active')
+    }
+
+    // ✅ PR CI에서는 통합테스트(*IT) 제외
+    exclude '**/*IT.class'
+
+    // Mockito를 Java agent로 설정하여 동적 로딩 경고 제거 (네가 하던 것 유지)
     doFirst {
         def mockitoAgent = configurations.testRuntimeClasspath.find {
             it.name.contains('mockito-core')
         }
         if (mockitoAgent) {
-            jvmArgs "-javaagent:${mockitoAgent}"
+            jvmArgs "-javaagent:${mockitoAgent.absolutePath}"
+        }
+    }
+}
+
+// ✅ 통합테스트 전용 태스크(원할 때만 실행)
+tasks.register('integrationTest', Test) {
+    useJUnitPlatform()
+    jvmArgs "-Xshare:off"
+    include '**/*IT.class'
+    shouldRunAfter tasks.test
+
+    doFirst {
+        def mockitoAgent = configurations.testRuntimeClasspath.find {
+            it.name.contains('mockito-core')
+        }
+        if (mockitoAgent) {
+            jvmArgs "-javaagent:${mockitoAgent.absolutePath}"
         }
     }
 }

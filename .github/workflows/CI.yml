@@ -1,0 +1,50 @@
+name: Backend CI
+
+on:
+  push:
+    branches: ["develop", "main"]
+  pull_request:
+    branches: ["develop", "main"]
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # (선택) 빠르게 실패 원인 확인용
+      - name: Gradle info
+        run: ./gradlew -v
+
+      - name: Test (unit only)
+        env:
+          SPRING_PROFILES_ACTIVE: ci
+          # (안전용) 혹시 프로파일이 안 먹어도 Placeholder 터지지 않게 더미 env 주입
+          JWT_SECRET: ci_dummy_jwt_secret_please_change
+          API_SERVICE_KEY: ci_dummy_api_key
+          SOLAPI_API_KEY: ci_dummy_solapi_key
+          SOLAPI_API_SECRET: ci_dummy_solapi_secret
+          SOLAPI_SENDER_NUMBER: "01000000000"
+        run: ./gradlew test --no-daemon --stacktrace -Dspring.profiles.active=ci
+
+      - name: Build
+        run: ./gradlew build -x test --no-daemon
+

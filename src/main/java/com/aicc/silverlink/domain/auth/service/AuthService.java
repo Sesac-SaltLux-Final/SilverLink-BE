@@ -7,6 +7,7 @@ import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.repository.UserRepository;
 import com.aicc.silverlink.global.config.auth.AuthPolicyProperties;
 import com.aicc.silverlink.global.security.jwt.JwtTokenProvider;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -77,7 +78,39 @@ public class AuthService {
         return new AuthResult(newAccessToken, newRefreshToken ,sid ,ttl);
     }
 
+    @Transactional
+    public AuthResult issueForUser(Long userId, HttpServletRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
+
+        if (!user.isActive()) {
+            throw new IllegalStateException("USER_INACTIVE");
+        }
+
+        var issued = sessionService.issueSession(user.getId(), user.getRole());
+
+        String accessToken = jwt.createAccessToken(
+                user.getId(),
+                user.getRole(),
+                issued.sid(),
+                props.getAccessTtlSeconds()
+        );
+
+        user.updateLastLogin();
+
+        return new AuthResult(
+                accessToken,
+                issued.refreshToken(),
+                issued.sid(),
+                props.getAccessTtlSeconds()
+        );
+    }
+
+
+
     public void logout(String sid){
         sessionService.invalidateBySid(sid);
     }
+
+
 }
