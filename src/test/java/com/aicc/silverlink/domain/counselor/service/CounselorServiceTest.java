@@ -1,15 +1,15 @@
 package com.aicc.silverlink.domain.counselor.service;
 
-import com.aicc.silverlink.domain.assignment.entity.Assignment;
-import com.aicc.silverlink.domain.assignment.repository.AssignmentRepository;
 import com.aicc.silverlink.domain.counselor.dto.CounselorRequest;
 import com.aicc.silverlink.domain.counselor.dto.CounselorResponse;
 import com.aicc.silverlink.domain.counselor.entity.Counselor;
 import com.aicc.silverlink.domain.counselor.repository.CounselorRepository;
-import com.aicc.silverlink.domain.elderly.entity.Elderly;
+import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
+import com.aicc.silverlink.domain.system.repository.AdministrativeDivisionRepository;
 import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,7 +43,21 @@ class CounselorServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
     @Mock
-    private AssignmentRepository assignmentRepository;
+    private AdministrativeDivisionRepository divisionRepository; // [추가] 필수 의존성
+
+    // 테스트 픽스처
+    private AdministrativeDivision division;
+
+    @BeforeEach
+    void setUp() {
+        // 행정구역 더미 데이터 생성
+        division = AdministrativeDivision.builder()
+                .admCode(1111051500L)
+                .sidoName("서울특별시")
+                .sigunguName("종로구")
+                .dongName("청운효자동")
+                .build();
+    }
 
     // 테스트용 더미 데이터 생성 헬퍼 메서드
     private User createDummyUser() {
@@ -54,9 +68,10 @@ class CounselorServiceTest {
         return user;
     }
 
-    private Counselor createDummyCounselor(User user) {
+    // [수정] create 메서드 시그니처에 맞게 AdministrativeDivision 전달
+    private Counselor createDummyCounselor(User user, AdministrativeDivision division) {
         return Counselor.create(
-                user, "2024001", "복지팀", "02-123-4567",  LocalDate.now(),"1111051500"
+                user, "2024001", "복지팀", "02-123-4567", LocalDate.now(), division
         );
     }
 
@@ -66,10 +81,13 @@ class CounselorServiceTest {
         // given (준비)
         CounselorRequest request = new CounselorRequest(
                 "counselor1", "pass1234", "김상담", "test@email.com",
-                "010-1234-5678", "2024001", "복지팀", "02-123-4567", LocalDate.now(), "1111051500"
+                "010-1234-5678", "2024001", "복지팀", "02-123-4567",
+                LocalDate.now(), 1111051500L // [수정] String -> Long
         );
 
         given(userRepository.existsByLoginId(request.getLoginId())).willReturn(false); // 중복 아님
+        // [추가] 행정구역 조회 모킹
+        given(divisionRepository.findById(request.getAdmCode())).willReturn(Optional.of(division));
         given(passwordEncoder.encode(request.getPassword())).willReturn("encodedPw");
 
         // when (실행)
@@ -79,6 +97,7 @@ class CounselorServiceTest {
         assertThat(response).isNotNull();
         assertThat(response.getLoginId()).isEqualTo(request.getLoginId());
         assertThat(response.getName()).isEqualTo(request.getName());
+        assertThat(response.getAdmCode()).isEqualTo(1111051500L); // 행정구역 코드 확인
 
         // 실제로 저장이 호출되었는지 확인
         verify(userRepository, times(1)).save(any(User.class));
@@ -107,7 +126,7 @@ class CounselorServiceTest {
         // given
         Long counselorId = 1L;
         User user = createDummyUser();
-        Counselor counselor = createDummyCounselor(user);
+        Counselor counselor = createDummyCounselor(user, division); // [수정] division 전달
 
         given(counselorRepository.findByIdWithUser(counselorId)).willReturn(Optional.of(counselor));
 
@@ -118,6 +137,7 @@ class CounselorServiceTest {
         assertThat(response.getId()).isEqualTo(user.getId());
         assertThat(response.getName()).isEqualTo(user.getName());
         assertThat(response.getDepartment()).isEqualTo(counselor.getDepartment());
+        assertThat(response.getSidoName()).isEqualTo("서울특별시"); // 행정구역 정보 확인
     }
 
     @Test
@@ -137,11 +157,11 @@ class CounselorServiceTest {
     void getAllCounselors() {
         // given
         User user1 = createDummyUser();
-        Counselor c1 = createDummyCounselor(user1);
+        Counselor c1 = createDummyCounselor(user1, division);
 
         User user2 = User.createLocal("c2", "pw", "이상담", "010-0000-0000", "e@e.com", Role.COUNSELOR);
         ReflectionTestUtils.setField(user2, "id", 2L);
-        Counselor c2 = createDummyCounselor(user2);
+        Counselor c2 = createDummyCounselor(user2, division);
 
         given(counselorRepository.findAllWithUser()).willReturn(List.of(c1, c2));
 

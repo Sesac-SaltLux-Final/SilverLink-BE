@@ -48,7 +48,8 @@ class CounselorControllerTest {
                 .email("counselor@test.com")
                 .employeeNo("EMP001")
                 .department("복지과")
-                .admDongCode("1111051500") // 필수값
+                // [수정] admDongCode(String) -> admCode(Long)
+                .admCode(1111051500L)
                 .joinedAt(LocalDate.now())
                 .build();
     }
@@ -64,7 +65,8 @@ class CounselorControllerTest {
                 .employeeNo("EMP001")
                 .department("복지과")
                 .status(UserStatus.ACTIVE)
-                .admDongCode("1111051500")
+                // [수정] admDongCode(String) -> admCode(Long)
+                .admCode(1111051500L)
                 .build();
     }
 

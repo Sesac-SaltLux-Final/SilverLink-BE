@@ -6,6 +6,8 @@ import com.aicc.silverlink.domain.admin.dto.response.AdminResponse;
 import com.aicc.silverlink.domain.admin.entity.Admin;
 import com.aicc.silverlink.domain.admin.entity.Admin.AdminLevel;
 import com.aicc.silverlink.domain.admin.repository.AdminRepository;
+import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
+import com.aicc.silverlink.domain.system.repository.AdministrativeDivisionRepository;
 import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class AdminServiceImpl implements AdminService {
 
     private final AdminRepository adminRepository;
     private final UserRepository userRepository;
+    private final AdministrativeDivisionRepository divisionRepository;
 
     /**
      * 관리자 생성
@@ -34,27 +37,26 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional
     public AdminResponse createAdmin(AdminCreateRequest request) {
-        log.info("관리자 생성 요청 - userId: {}, admDongCode: {}, adminLevel: {}",
-                request.getUserId(), request.getAdmDongCode(), request.getAdminLevel());
+        log.info("관리자 생성 요청 - userId: {}, admCode: {}, adminLevel: {}",
+                request.getUserId(), request.getAdmCode(), request.getAdminLevel());
 
         // 사용자 존재 여부 확인
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
-
-//        // User의 role이 ADMIN인지 확인
-//        if (user.getRole() != User.UserRole.ADMIN) {
-//            throw new IllegalArgumentException("ADMIN 역할의 사용자만 관리자로 등록할 수 있습니다.");
-//        }
 
         // 이미 관리자로 등록되었는지 확인
         if (adminRepository.existsByUserId(request.getUserId())) {
             throw new IllegalArgumentException("이미 관리자로 등록된 사용자입니다.");
         }
 
+        // 행정구역 존재 여부 확인
+        AdministrativeDivision division = divisionRepository.findById(request.getAdmCode())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 행정구역 코드입니다: " + request.getAdmCode()));
+
         // 관리자 생성 (adminLevel이 null이면 자동으로 결정됨)
         Admin admin = Admin.builder()
                 .user(user)
-                .admDongCode(request.getAdmDongCode())
+                .administrativeDivision(division)
                 .adminLevel(request.getAdminLevel())
                 .build();
 
@@ -91,13 +93,13 @@ public class AdminServiceImpl implements AdminService {
     }
 
     /**
-     * 행정동 코드로 관리자 조회
+     * 행정구역 코드로 관리자 조회
      */
     @Override
-    public List<AdminResponse> getAdminsByAdmDongCode(Long admDongCode) {
-        log.info("행정동 코드로 관리자 조회 - admDongCode: {}", admDongCode);
+    public List<AdminResponse> getAdminsByAdmCode(Long admCode) {
+        log.info("행정구역 코드로 관리자 조회 - admCode: {}", admCode);
 
-        return adminRepository.findByAdmDongCode(admDongCode).stream()
+        return adminRepository.findByAdmCode(admCode).stream()
                 .map(AdminResponse::from)
                 .collect(Collectors.toList());
     }
@@ -118,10 +120,10 @@ public class AdminServiceImpl implements AdminService {
      * 특정 행정구역의 상위 관리자들 조회
      */
     @Override
-    public List<AdminResponse> getSupervisors(Long admDongCode) {
-        log.info("상위 관리자 조회 - admDongCode: {}", admDongCode);
+    public List<AdminResponse> getSupervisors(Long admCode) {
+        log.info("상위 관리자 조회 - admCode: {}", admCode);
 
-        return adminRepository.findSupervisors(admDongCode).stream()
+        return adminRepository.findSupervisors(admCode).stream()
                 .map(AdminResponse::from)
                 .collect(Collectors.toList());
     }
@@ -138,7 +140,7 @@ public class AdminServiceImpl implements AdminService {
 
         return adminRepository.findSubordinates(
                         admin.getAdminLevel(),
-                        admin.getAdmDongCode(),
+                        admin.getAdmCode(),
                         admin.getAdminLevel().getCodeLength()
                 ).stream()
                 .map(AdminResponse::from)
@@ -149,14 +151,14 @@ public class AdminServiceImpl implements AdminService {
      * 관리자가 특정 구역에 대한 권한이 있는지 확인
      */
     @Override
-    public boolean hasJurisdiction(Long adminUserId, Long targetAdmDongCode) {
-        log.info("권한 확인 - adminUserId: {}, targetAdmDongCode: {}",
-                adminUserId, targetAdmDongCode);
+    public boolean hasJurisdiction(Long adminUserId, Long targetAdmCode) {
+        log.info("권한 확인 - adminUserId: {}, targetAdmCode: {}",
+                adminUserId, targetAdmCode);
 
         Admin admin = adminRepository.findByIdWithUser(adminUserId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 관리자입니다."));
 
-        boolean hasJurisdiction = admin.hasJurisdiction(targetAdmDongCode);
+        boolean hasJurisdiction = admin.hasJurisdiction(targetAdmCode);
         log.info("권한 확인 결과: {}", hasJurisdiction);
 
         return hasJurisdiction;
@@ -168,14 +170,18 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional
     public AdminResponse updateAdmin(Long userId, AdminUpdateRequest request) {
-        log.info("관리자 정보 수정 - userId: {}, newAdmDongCode: {}",
-                userId, request.getAdmDongCode());
+        log.info("관리자 정보 수정 - userId: {}, newAdmCode: {}",
+                userId, request.getAdmCode());
 
         Admin admin = adminRepository.findByIdWithUser(userId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 관리자입니다."));
 
+        // 새로운 행정구역 존재 여부 확인
+        AdministrativeDivision newDivision = divisionRepository.findById(request.getAdmCode())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 행정구역 코드입니다: " + request.getAdmCode()));
+
         // 담당 구역 변경 (레벨도 자동으로 재계산됨)
-        admin.updateAdmDongCode(request.getAdmDongCode());
+        admin.updateAdministrativeDivision(newDivision);
 
         log.info("관리자 정보 수정 완료 - userId: {}, newLevel: {}",
                 userId, admin.getAdminLevel());

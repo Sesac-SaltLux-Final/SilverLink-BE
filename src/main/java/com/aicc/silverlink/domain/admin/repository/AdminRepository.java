@@ -15,27 +15,38 @@ import java.util.Optional;
 public interface AdminRepository extends JpaRepository<Admin, Long> {
 
     /**
-     * User 정보를 포함하여 조회
+     * User 정보와 행정구역 정보를 포함하여 조회
      */
-    @Query("SELECT a FROM Admin a JOIN FETCH a.user WHERE a.userId = :userId")
+    @Query("SELECT a FROM Admin a " +
+            "JOIN FETCH a.user " +
+            "JOIN FETCH a.administrativeDivision " +
+            "WHERE a.userId = :userId")
     Optional<Admin> findByIdWithUser(@Param("userId") Long userId);
 
     /**
-     * 행정동 코드로 관리자 목록 조회
+     * 행정구역 코드로 관리자 목록 조회
      */
-    @Query("SELECT a FROM Admin a JOIN FETCH a.user WHERE a.admDongCode = :admDongCode")
-    List<Admin> findByAdmDongCode(@Param("admDongCode") Long admDongCode);
+    @Query("SELECT a FROM Admin a " +
+            "JOIN FETCH a.user " +
+            "JOIN FETCH a.administrativeDivision ad " +
+            "WHERE ad.admCode = :admCode")
+    List<Admin> findByAdmCode(@Param("admCode") Long admCode);
 
     /**
      * 관리자 레벨로 조회
      */
-    @Query("SELECT a FROM Admin a JOIN FETCH a.user WHERE a.adminLevel = :adminLevel")
+    @Query("SELECT a FROM Admin a " +
+            "JOIN FETCH a.user " +
+            "JOIN FETCH a.administrativeDivision " +
+            "WHERE a.adminLevel = :adminLevel")
     List<Admin> findByAdminLevel(@Param("adminLevel") AdminLevel adminLevel);
 
     /**
-     * 모든 관리자 조회 (User 정보 포함)
+     * 모든 관리자 조회 (User 정보 및 행정구역 정보 포함)
      */
-    @Query("SELECT a FROM Admin a JOIN FETCH a.user")
+    @Query("SELECT a FROM Admin a " +
+            "JOIN FETCH a.user " +
+            "JOIN FETCH a.administrativeDivision")
     List<Admin> findAllWithUser();
 
     /**
@@ -45,7 +56,8 @@ public interface AdminRepository extends JpaRepository<Admin, Long> {
     @Query(value = """
         SELECT a.* FROM admin a
         JOIN users u ON a.user_id = u.user_id
-        WHERE a.adm_dong_code IN (
+        JOIN administrative_division ad ON a.adm_code = ad.adm_code
+        WHERE a.adm_code IN (
             -- 시/도 레벨 (앞 2자리)
             CAST(SUBSTRING(LPAD(:targetCode, 10, '0'), 1, 2) * 100000000 AS UNSIGNED),
             -- 시/군/구 레벨 (앞 4자리)
@@ -63,11 +75,13 @@ public interface AdminRepository extends JpaRepository<Admin, Long> {
      * 예: 강남구 관리자의 하위 = 역삼동, 삼성동 등의 관리자들
      */
     @Query("""
-        SELECT a FROM Admin a JOIN FETCH a.user
+        SELECT a FROM Admin a 
+        JOIN FETCH a.user 
+        JOIN FETCH a.administrativeDivision ad
         WHERE a.adminLevel > :level
-        AND FUNCTION('SUBSTRING', FUNCTION('LPAD', CAST(a.admDongCode AS string), 10, '0'), 1, :codeLength)
+        AND FUNCTION('SUBSTRING', FUNCTION('LPAD', CAST(ad.admCode AS string), 10, '0'), 1, :codeLength)
             = FUNCTION('SUBSTRING', FUNCTION('LPAD', CAST(:baseCode AS string), 10, '0'), 1, :codeLength)
-        ORDER BY a.adminLevel ASC, a.admDongCode ASC
+        ORDER BY a.adminLevel ASC, ad.admCode ASC
         """)
     List<Admin> findSubordinates(
             @Param("level") AdminLevel level,
@@ -79,4 +93,25 @@ public interface AdminRepository extends JpaRepository<Admin, Long> {
      * 관리자 존재 여부 확인
      */
     boolean existsByUserId(Long userId);
+
+    /**
+     * 특정 시/도에 속한 관리자 목록 조회
+     */
+    @Query("SELECT a FROM Admin a " +
+            "JOIN FETCH a.user " +
+            "JOIN FETCH a.administrativeDivision ad " +
+            "WHERE ad.sidoCode = :sidoCode")
+    List<Admin> findBySidoCode(@Param("sidoCode") String sidoCode);
+
+    /**
+     * 특정 시/군/구에 속한 관리자 목록 조회
+     */
+    @Query("SELECT a FROM Admin a " +
+            "JOIN FETCH a.user " +
+            "JOIN FETCH a.administrativeDivision ad " +
+            "WHERE ad.sidoCode = :sidoCode AND ad.sigunguCode = :sigunguCode")
+    List<Admin> findBySigungu(
+            @Param("sidoCode") String sidoCode,
+            @Param("sigunguCode") String sigunguCode
+    );
 }
