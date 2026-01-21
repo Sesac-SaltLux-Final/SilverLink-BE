@@ -44,7 +44,7 @@ public interface AdminRepository extends JpaRepository<Admin, Long> {
      */
     @Query(value = """
         SELECT a.* FROM admin a
-        JOIN User u ON a.user_id = u.user_id
+        JOIN users u ON a.user_id = u.user_id
         WHERE a.adm_dong_code IN (
             -- 시/도 레벨 (앞 2자리)
             CAST(SUBSTRING(LPAD(:targetCode, 10, '0'), 1, 2) * 100000000 AS UNSIGNED),

@@ -48,7 +48,7 @@ public class AdminServiceImpl implements AdminService {
 
         // 이미 관리자로 등록되었는지 확인
         if (adminRepository.existsByUserId(request.getUserId())) {
-            throw new IllegalStateException("이미 관리자로 등록된 사용자입니다.");
+            throw new IllegalArgumentException("이미 관리자로 등록된 사용자입니다.");
         }
 
         // 관리자 생성 (adminLevel이 null이면 자동으로 결정됨)

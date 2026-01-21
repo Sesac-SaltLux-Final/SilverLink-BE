@@ -43,7 +43,7 @@ jobs:
           SOLAPI_API_KEY: ci_dummy_solapi_key
           SOLAPI_API_SECRET: ci_dummy_solapi_secret
           SOLAPI_SENDER_NUMBER: "01000000000"
-        run: ./gradlew test --no-daemon --stacktrace
+        run: ./gradlew test --no-daemon --stacktrace -Dspring.profiles.active=ci
 
       - name: Build
         run: ./gradlew build -x test --no-daemon
