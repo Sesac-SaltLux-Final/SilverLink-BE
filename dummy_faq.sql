@@ -1,22 +1,50 @@
 USE silverlink;
 
--- 1. 사용자(관리자/어르신) 데이터 생성 (Foreign Key 연결을 위해 필요)
--- 관리자 (FAQ/Notice 등록자, 문의 답변자)
--- 이미 존재할 수 있으므로 ON DUPLICATE UPDATE 등 처리가 좋지만, 
--- 간단히 INSERT IGNORE나, 그냥 실행하도록 함 (에러 나면 무시 가능)
+SET FOREIGN_KEY_CHECKS = 0;
 
-INSERT IGNORE INTO users (login_id, password_hash, role, status, name, phone, phone_verified, created_at, updated_at)
-VALUES ('admin_user', 'dummy_hash', 'ADMIN', 'ACTIVE', '관리자', '010-0000-0000', true, NOW(), NOW());
+-- 0. 기존 데이터 초기화 (중복 방지)
+TRUNCATE TABLE inquiry_answers;
+TRUNCATE TABLE inquiries;
+TRUNCATE TABLE faqs;
+-- 주의: users, guardians, elderly 등은 다른 데이터와 엮일 수 있어 TRUNCATE 대신 INSERT IGNORE 유지
+-- 필요하다면 아래 주석 해제하여 초기화 가능
+-- TRUNCATE TABLE guardian_elderly;
+-- TRUNCATE TABLE guardians;
+-- TRUNCATE TABLE elderly;
+-- TRUNCATE TABLE users;
 
-SET @admin_id = (SELECT user_id FROM users WHERE login_id='admin_user');
+SET FOREIGN_KEY_CHECKS = 1;
 
 
--- 2. FAQ 데이터 생성
--- Mappings:
--- POLICY (정책) -> SERVICE
--- HEALTH (돌봄) -> WELFARE (General), MEDICATION (Pill)
--- SYSTEM (이용안내) -> SERVICE
+-- 1. 사용자(관리자/보호자/어르신) 데이터 생성
+-- 관리자
+INSERT IGNORE INTO users (user_id, login_id, password_hash, role, status, name, phone, phone_verified, created_at, updated_at)
+VALUES (1, 'admin_user', '$2a$10$dummyhash', 'ADMIN', 'ACTIVE', '관리자', '010-0000-0000', true, NOW(), NOW());
 
+-- 보호자 (ID: 2)
+INSERT IGNORE INTO users (user_id, login_id, password_hash, role, status, name, phone, phone_verified, created_at, updated_at)
+VALUES (2, 'test_guardian', '$2a$10$dummyhash', 'GUARDIAN', 'ACTIVE', '김보호', '010-1234-1234', true, NOW(), NOW());
+
+-- 어르신 (ID: 3)
+INSERT IGNORE INTO users (user_id, login_id, password_hash, role, status, name, phone, phone_verified, created_at, updated_at)
+VALUES (3, 'test_elderly', '$2a$10$dummyhash', 'ELDERLY', 'ACTIVE', '이어르신', '010-5678-5678', true, NOW(), NOW());
+
+
+-- 2. 도메인별 상세 정보 생성
+-- 보호자 정보
+INSERT IGNORE INTO guardians (user_id, address_line1, address_line2, zipcode, created_at, updated_at)
+VALUES (2, '서울시 강남구', '삼성동 123-45', '06164', NOW(), NOW());
+
+-- 어르신 정보
+INSERT IGNORE INTO elderly (user_id, adm_dong_code, birth_date, gender, address_line1, address_line2, zipcode, created_at, updated_at)
+VALUES (3, '1168058000', '1950-01-01', 'M', '서울시 강남구', '삼성동 123-45', '06164', NOW(), NOW());
+
+-- 보호자-어르신 1:1 연결
+INSERT IGNORE INTO guardian_elderly (guardian_user_id, elderly_user_id, relation_type, created_at)
+VALUES (2, 3, 'CHILD', NOW());
+
+
+-- 3. FAQ 데이터 생성
 INSERT INTO faqs (category, question, answer_text, view_count, is_active, display_order, created_at, updated_at) VALUES
 -- 정책(POLICY) -> SERVICE
 ('SERVICE', '보호자가 챗봇을 사용하려면 별도 가입이 필요한가요?', 'SilverLink 계정만 있으면 추가 가입 없이 챗봇 기능을 바로 이용하실 수 있습니다.', 0, true, 1, NOW(), NOW()),
@@ -101,3 +129,14 @@ INSERT INTO faqs (category, question, answer_text, view_count, is_active, displa
 ('WELFARE', '복지 혜택이 자주 바뀌는데, SilverLink 정보는 얼마나 자주 업데이트되나요?', '주요 국가·지자체 공지에 맞춰 정기적으로 내용을 점검하며, 큰 변경 사항이 있을 경우 앱 공지와 함께 관련 FAQ를 업데이트합니다.', 0, true, 88, NOW(), NOW()),
 ('WELFARE', '장애를 동반한 어르신을 위한 별도의 지원 정보도 있나요?', '장애 등록 여부에 따라 이용 가능한 추가 복지 서비스(보조기기 지원, 활동 지원, 이동 지원 등)를 요약해서 보여 드리며, 세부 조건은 담당 기관 안내를 참고하셔야 합니다.', 0, true, 89, NOW(), NOW()),
 ('WELFARE', '복지·지원 정보가 너무 복잡한데, SilverLink 챗봇이 정리해 줄 수 있나요?', '네, 기본 정보를 입력하면 챗봇이 관련 복지 제도와 필요한 준비 사항을 한 번에 정리해 주고, 더 자세한 상담이 필요하면 담당자에게 1:1 문의를 연결해 드립니다.', 0, true, 90, NOW(), NOW());
+
+
+-- 4. 1:1 문의(Inquiry) 더미 데이터 생성
+INSERT INTO inquiries (qna_id, elderly_user_id, created_by_user_id, title, question_text, status, is_deleted, created_at, updated_at) VALUES
+(1, 3, 2, '식사량이 줄었어요', '최근 들어 식사를 거의 안 하십니다. 걱정이 되네요.', 'PENDING', false, NOW(), NOW()),
+(2, 3, 2, '약 복용 관련 질문', '약 드시는 시간을 자꾸 잊어버리시는데 알림 기능 없나요?', 'ANSWERED', false, NOW(), NOW());
+
+-- 4-1. 문의 답변(InquiryAnswer) 더미 데이터 생성 (qna_id=2에 대한 답변)
+INSERT INTO inquiry_answers (qna_id, answered_by_user_id, answer_text, is_deleted, created_at, updated_at) VALUES
+(2, 1, '안녕하세요, SilverLink입니다. 어르신 프로필의 "복약 관리" 메뉴에서 약 이름과 시간을 등록하시면 정해진 시간에 알림을 보내드리는 기능을 제공하고 있습니다.', false, NOW(), NOW());
+

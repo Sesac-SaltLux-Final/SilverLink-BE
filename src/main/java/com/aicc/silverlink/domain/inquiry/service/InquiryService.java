@@ -4,8 +4,8 @@ package com.aicc.silverlink.domain.inquiry.service;
 // import com.aicc.silverlink.domain.assignment.entity.Assignment.AssignmentStatus;
 import com.aicc.silverlink.domain.assignment.repository.AssignmentRepository;
 // import com.aicc.silverlink.domain.elderly.entity.Elderly;
-// import com.aicc.silverlink.domain.guardian.entity.GuardianElderly;
-// import com.aicc.silverlink.domain.guardian.repository.GuardianElderlyRepository;
+import com.aicc.silverlink.domain.guardian.entity.GuardianElderly;
+import com.aicc.silverlink.domain.guardian.repository.GuardianElderlyRepository;
 import com.aicc.silverlink.domain.inquiry.dto.InquiryRequest;
 import com.aicc.silverlink.domain.inquiry.dto.InquiryResponse;
 import com.aicc.silverlink.domain.inquiry.entity.Inquiry;
@@ -30,7 +30,7 @@ public class InquiryService {
 
     private final InquiryRepository inquiryRepository;
     private final InquiryAnswerRepository inquiryAnswerRepository;
-    // private final GuardianElderlyRepository guardianElderlyRepository; // 타 팀원 영역
+    private final GuardianElderlyRepository guardianElderlyRepository;
     private final AssignmentRepository assignmentRepository;
 
     // 문의 목록 조회
@@ -39,14 +39,11 @@ public class InquiryService {
 
         if (user.getRole() == Role.GUARDIAN) {
             // 보호자: 매핑된 어르신의 문의만 조회
-            // TODO: GuardianElderlyRepository(팀원 기능) 연동 필요
-            /*
-             * inquiries = guardianElderlyRepository.findByGuardianId(user.getId())
-             * .map(mapping ->
-             * inquiryRepository.findAllByElderlyIdAndIsDeletedFalseOrderByCreatedAtDesc(
-             * mapping.getElderly().getId()))
-             * .orElse(Collections.emptyList());
-             */
+            // 보호자: 매핑된 어르신의 문의만 조회
+            inquiries = guardianElderlyRepository.findByGuardianId(user.getId())
+                    .map(mapping -> inquiryRepository.findAllByElderlyIdAndIsDeletedFalseOrderByCreatedAtDesc(
+                            mapping.getElderly().getId()))
+                    .orElse(Collections.emptyList());
 
         } else if (user.getRole() == Role.COUNSELOR) {
             // 상담사: 배정된(ACTIVE) 어르신의 문의만 조회
@@ -90,17 +87,14 @@ public class InquiryService {
             throw new IllegalArgumentException("보호자만 1:1 문의를 등록할 수 있습니다.");
         }
 
-        // TODO: GuardianElderlyRepository(팀원 기능) 연동 필요 - 현재는 연결된 어르신을 찾을 수 없어 예외 처리
-        // GuardianElderly mapping =
-        // guardianElderlyRepository.findByGuardianId(user.getId())
-        // .orElseThrow(() -> new IllegalArgumentException("연결된 어르신 정보가 없습니다."));
+        GuardianElderly mapping = guardianElderlyRepository.findByGuardianId(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("연결된 어르신 정보가 없습니다."));
 
-        // Inquiry inquiry = new Inquiry(mapping.getElderly(), user, request.getTitle(),
-        // request.getQuestionText());
-        // inquiryRepository.save(inquiry);
+        Inquiry inquiry = new Inquiry(mapping.getElderly(), user, request.getTitle(),
+                request.getQuestionText());
+        inquiryRepository.save(inquiry);
 
-        // return toResponse(inquiry);
-        throw new UnsupportedOperationException("팀원 기능(GuardianElderlyRepository) 연동 대기 중입니다.");
+        return toResponse(inquiry);
     }
 
     // 문의 답변 등록 (상담사만 가능)
