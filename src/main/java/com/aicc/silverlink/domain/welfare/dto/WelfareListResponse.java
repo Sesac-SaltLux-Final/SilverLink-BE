@@ -1,14 +1,13 @@
 package com.aicc.silverlink.domain.welfare.dto;
 
 import com.aicc.silverlink.domain.welfare.entity.Welfare;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter // ModelMapper가 값을 채우기 위해 필요
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class WelfareListResponse {
     private Long id;
     private String servNm;

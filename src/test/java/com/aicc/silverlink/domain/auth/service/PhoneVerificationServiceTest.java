@@ -16,6 +16,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,6 +33,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class PhoneVerificationServiceTest {
 
         @Mock
@@ -82,14 +85,14 @@ class PhoneVerificationServiceTest {
                                 .status(com.aicc.silverlink.domain.user.entity.UserStatus.ACTIVE)
                                 .build();
 
-                // 테스트 인증 - create 메서드 사용
-                testVerification = PhoneVerification.create(
-                                testUser,
-                                "+821012345678",
-                                PhoneVerification.Purpose.SIGNUP,
-                                "$2a$10$hashedCode",
-                                "127.0.0.1",
-                                300);
+                // 테스트 인증 - mock 객체 사용 (JPA @PrePersist가 테스트에서 호출되지 않으므로)
+                testVerification = mock(PhoneVerification.class);
+                given(testVerification.getStatus()).willReturn(PhoneVerification.Status.REQUESTED);
+                given(testVerification.getExpiresAt()).willReturn(LocalDateTime.now().plusMinutes(5));
+                given(testVerification.getFailCount()).willReturn(0);
+                given(testVerification.getCodeHash()).willReturn("$2a$10$hashedCode");
+                given(testVerification.getPhoneE164()).willReturn("+821012345678");
+                given(testVerification.getUser()).willReturn(null);
         }
 
         @Test
@@ -123,7 +126,7 @@ class PhoneVerificationServiceTest {
                 assertThat(response).isNotNull();
                 assertThat(response.expireAt()).isNotNull();
 
-                verify(valueOps).set(eq("pv:cooldown:+821012345678:SIGNUP"), eq("1"), eq(60), eq(TimeUnit.SECONDS));
+                verify(valueOps).set(eq("pv:cooldown:+821012345678:SIGNUP"), eq("1"), eq(60L), eq(TimeUnit.SECONDS));
                 verify(smsSender).sendSms(eq("+821012345678"), contains("인증번호"));
                 verify(repo).save(any(PhoneVerification.class));
         }

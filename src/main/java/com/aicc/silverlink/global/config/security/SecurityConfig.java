@@ -54,10 +54,13 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
-                                        "/api/welfare/**"
+                                "/api/welfare/**",
+                                "/api/faqs/**",
+                                "/api/guardians/signup"
                         ).permitAll()
 
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admins/**").hasRole("ADMIN")
                         .requestMatchers("/counselor/**").hasRole("COUNSELOR")
                         .requestMatchers("/guardian/**").hasRole("GUARDIAN")
                         .requestMatchers("/elderly/**").hasRole("ELDERLY")

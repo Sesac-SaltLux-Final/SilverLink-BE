@@ -4,15 +4,16 @@ import com.aicc.silverlink.domain.admin.entity.Admin;
 import com.aicc.silverlink.domain.counselor.entity.Counselor;
 import com.aicc.silverlink.domain.elderly.entity.Elderly;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "assignments")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 public class Assignment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -50,8 +51,18 @@ public class Assignment {
             this.status = AssignmentStatus.ACTIVE;
         }
     }
-
-    public enum AssignmentStatus {
-        ACTIVE, ENDED
+    public static Assignment create(Counselor counselor, Elderly elderly, Admin admin) {
+        return Assignment.builder()
+                .counselor(counselor)
+                .elderly(elderly)
+                .assignedBy(admin)
+                .status(AssignmentStatus.ACTIVE)
+                .assignedAt(LocalDateTime.now())
+                .build();
     }
-}
+
+    public void endAssignment()
+    {
+        this.status= AssignmentStatus.ENDED;
+        this.endedAt = LocalDateTime.now();
+    }}
