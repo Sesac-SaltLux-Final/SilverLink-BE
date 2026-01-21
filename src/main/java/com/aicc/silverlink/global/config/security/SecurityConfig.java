@@ -37,6 +37,8 @@ public class SecurityConfig {
     private final JwtTokenProvider jwtTokenProvider;
     private final SessionService sessionService;
 
+
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -53,24 +55,28 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
                                 "/api/welfare/**",
-                                "/api/faqs/**")
-                        .permitAll()
+                                "/api/faqs/**",
+                                "/api/guardians/signup"
+                        ).permitAll()
 
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/admins/**").hasRole("ADMIN")
                         .requestMatchers("/counselor/**").hasRole("COUNSELOR")
                         .requestMatchers("/guardian/**").hasRole("GUARDIAN")
                         .requestMatchers("/elderly/**").hasRole("ELDERLY")
-                        .anyRequest().authenticated())
+                        .anyRequest().authenticated()
+                )
 
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint())
-                        .accessDeniedHandler(accessDeniedHandler()))
+                        .accessDeniedHandler(accessDeniedHandler())
+                )
 
                 // JWT 필터 추가
                 .addFilterBefore(
                         new JwtAuthenticationFilter(jwtTokenProvider, sessionService),
-                        UsernamePasswordAuthenticationFilter.class);
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
     }
@@ -83,31 +89,33 @@ public class SecurityConfig {
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("Authorization")); // 프론트에서 헤더 읽을수 있게
-        config.setAllowCredentials(true); // 쿠키 주고받기 허용
+        config.setAllowCredentials(true); //쿠키 주고받기 허용
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
     }
 
+
     // 401
-    private AuthenticationEntryPoint authenticationEntryPoint() {
-        return (request, response, authException) -> {
+    private AuthenticationEntryPoint authenticationEntryPoint(){
+        return (request,response,authException) -> {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter()
-                    .write("{\"error\": \"UNAUTHORIZED\", \"message\": \"" + authException.getMessage() + "\"}");
+            response.getWriter().write("{\"error\": \"UNAUTHORIZED\", \"message\": \"" + authException.getMessage() + "\"}");
         };
 
     }
 
     // 403 (권한 없음)
     private AccessDeniedHandler accessDeniedHandler() {
-        return (request, response, accessDeniedException) -> {
+        return (request,response,accessDeniedException) -> {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"error\": \"FORBIDDEN\", \"message\": \"Access Denied\"}");
         };
     }
+
+
 
 }
