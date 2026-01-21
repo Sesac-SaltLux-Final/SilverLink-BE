@@ -1,6 +1,5 @@
 package com.aicc.silverlink.domain.elderly.service;
 
-import com.aicc.silverlink.domain.assignment.entity.Assignment;
 import com.aicc.silverlink.domain.consent.entity.AccessRequest.AccessScope;
 import com.aicc.silverlink.domain.consent.repository.AccessRequestRepository;
 import com.aicc.silverlink.domain.elderly.dto.request.ElderlyCreateRequest;
@@ -12,6 +11,8 @@ import com.aicc.silverlink.domain.elderly.entity.ElderlyHealthInfo;
 import com.aicc.silverlink.domain.elderly.repository.ElderlyRepository;
 import com.aicc.silverlink.domain.elderly.repository.HealthInfoRepository;
 import com.aicc.silverlink.domain.guardian.repository.GuardianElderlyRepository;
+import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
+import com.aicc.silverlink.domain.system.repository.AdministrativeDivisionRepository;
 import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.entity.UserStatus;
@@ -43,10 +44,9 @@ public class ElderlyService {
     private final ElderlyRepository elderlyRepo;
     private final HealthInfoRepository healthRepo;
     private final UserRepository userRepo;
+    private final AdministrativeDivisionRepository divisionRepository;
     private final AccessRequestRepository accessRequestRepo;
     private final GuardianElderlyRepository guardianElderlyRepo;
-    // CounselorAssignmentRepository가 있다면 주입 (담당 상담사 확인용)
-    // private final AssignmentRepository assignmentRepo;
 
     @Transactional
     public ElderlySummaryResponse createElderly(ElderlyCreateRequest req) {
@@ -60,10 +60,16 @@ public class ElderlyService {
             throw new IllegalStateException("ELDERLY_ALREADY_EXISTS");
         }
 
-        Elderly elderly = Elderly.create(user, req.admDongCode(), req.birthDate(), req.gender());
+        // 행정구역 존재 여부 확인
+        AdministrativeDivision division = divisionRepository.findById(req.admCode())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 행정구역 코드입니다: " + req.admCode()));
+
+        Elderly elderly = Elderly.create(user, division, req.birthDate(), req.gender());
         elderly.updateAddress(req.addressLine1(), req.addressLine2(), req.zipcode());
 
         Elderly saved = elderlyRepo.save(elderly);
+
+        log.info("어르신 등록 완료 - userId: {}, admCode: {}", user.getId(), req.admCode());
 
         return ElderlySummaryResponse.from(saved);
     }
@@ -80,6 +86,21 @@ public class ElderlyService {
         Elderly elderly = elderlyRepo.findById(elderlyUserId)
                 .orElseThrow(() -> new IllegalArgumentException("ELDERLY_NOT_FOUND"));
         elderly.updateAddress(line1, line2, zipcode);
+    }
+
+    /**
+     * 어르신 행정구역 변경
+     */
+    @Transactional
+    public void changeAdministrativeDivision(Long elderlyUserId, Long admCode) {
+        Elderly elderly = elderlyRepo.findById(elderlyUserId)
+                .orElseThrow(() -> new IllegalArgumentException("ELDERLY_NOT_FOUND"));
+
+        AdministrativeDivision division = divisionRepository.findById(admCode)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 행정구역 코드입니다: " + admCode));
+
+        elderly.changeAdministrativeDivision(division);
+        log.info("어르신 행정구역 변경 완료 - userId: {}, newAdmCode: {}", elderlyUserId, admCode);
     }
 
     /**
@@ -120,12 +141,6 @@ public class ElderlyService {
 
     /**
      * 민감정보 읽기 권한 확인
-     *
-     * 접근 허용 조건:
-     * 1. 본인 (어르신이 자신의 정보 조회)
-     * 2. 관리자 (ADMIN)
-     * 3. 담당 상담사 (COUNSELOR) - 배정된 어르신에 대해서만
-     * 4. 보호자 (GUARDIAN) - 동의서 + 가족관계증명서 제출 후 관리자 승인 받은 경우
      */
     private void assertCanReadHealthInfo(Long requesterUserId, Long elderlyUserId) {
         // 1. 본인 확인
@@ -163,12 +178,6 @@ public class ElderlyService {
 
     /**
      * 민감정보 쓰기 권한 확인
-     *
-     * 쓰기 허용 조건:
-     * 1. 관리자 (ADMIN)
-     * 2. 담당 상담사 (COUNSELOR)
-     *
-     * 보호자는 읽기만 가능하고 쓰기는 불가
      */
     private void assertCanWriteHealthInfo(Long requesterUserId, Long elderlyUserId) {
         User requester = userRepo.findById(requesterUserId)
@@ -214,10 +223,6 @@ public class ElderlyService {
 
     /**
      * 보호자의 민감정보 접근 권한 확인
-     *
-     * 조건:
-     * 1. 해당 보호자가 해당 어르신의 보호자인지 확인
-     * 2. 동의서 + 가족관계증명서 제출 후 관리자 승인을 받았는지 확인 (AccessRequest)
      */
     private void validateGuardianAccess(Long guardianUserId, Long elderlyUserId, AccessScope scope) {
         // 1. 보호자-어르신 관계 확인

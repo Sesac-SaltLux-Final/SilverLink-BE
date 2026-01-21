@@ -52,17 +52,17 @@ public class AdminController {
      * 관리자 목록 조회 (다양한 필터 지원)
      * GET /api/admins
      * - Query Parameters:
-     *   - admDongCode: 행정동 코드로 필터링
+     *   - admCode: 행정구역 코드로 필터링
      *   - level: 관리자 레벨로 필터링 (NATIONAL, PROVINCIAL, CITY, DISTRICT)
      */
     @GetMapping
     public ResponseEntity<List<AdminResponse>> getAdmins(
-            @RequestParam(required = false) Long admDongCode,
+            @RequestParam(required = false) Long admCode,
             @RequestParam(required = false) AdminLevel level) {
 
-        if (admDongCode != null) {
-            log.info("GET /api/admins?admDongCode={} - 행정동별 관리자 조회", admDongCode);
-            List<AdminResponse> responses = adminService.getAdminsByAdmDongCode(admDongCode);
+        if (admCode != null) {
+            log.info("GET /api/admins?admCode={} - 행정구역별 관리자 조회", admCode);
+            List<AdminResponse> responses = adminService.getAdminsByAdmCode(admCode);
             return ResponseEntity.ok(responses);
         }
 
@@ -79,14 +79,14 @@ public class AdminController {
 
     /**
      * 특정 행정구역의 상위 관리자들 조회
-     * GET /api/admins/supervisors?admDongCode={code}
+     * GET /api/admins/supervisors?admCode={code}
      * 예: 역삼동의 상위 관리자 → 강남구, 서울시, 전국 관리자
      */
     @GetMapping("/supervisors")
     public ResponseEntity<List<AdminResponse>> getSupervisors(
-            @RequestParam Long admDongCode) {
-        log.info("GET /api/admins/supervisors?admDongCode={} - 상위 관리자 조회", admDongCode);
-        List<AdminResponse> responses = adminService.getSupervisors(admDongCode);
+            @RequestParam Long admCode) {
+        log.info("GET /api/admins/supervisors?admCode={} - 상위 관리자 조회", admCode);
+        List<AdminResponse> responses = adminService.getSupervisors(admCode);
         return ResponseEntity.ok(responses);
     }
 

@@ -28,9 +28,9 @@ public interface AdminService {
     List<AdminResponse> getAllAdmins();
 
     /**
-     * 행정동 코드로 관리자 조회
+     * 행정구역 코드로 관리자 조회
      */
-    List<AdminResponse> getAdminsByAdmDongCode(Long admDongCode);
+    List<AdminResponse> getAdminsByAdmCode(Long admCode);
 
     /**
      * 관리자 레벨로 조회
@@ -41,7 +41,7 @@ public interface AdminService {
      * 특정 행정구역의 상위 관리자들 조회
      * 예: 역삼동의 상위 관리자 → 강남구, 서울시, 전국 관리자
      */
-    List<AdminResponse> getSupervisors(Long admDongCode);
+    List<AdminResponse> getSupervisors(Long admCode);
 
     /**
      * 특정 관리자의 하위 관리자들 조회
@@ -52,7 +52,7 @@ public interface AdminService {
     /**
      * 관리자가 특정 구역에 대한 권한이 있는지 확인
      */
-    boolean hasJurisdiction(Long adminUserId, Long targetAdmDongCode);
+    boolean hasJurisdiction(Long adminUserId, Long targetAdmCode);
 
     /**
      * 관리자 정보 수정 (담당 구역 변경)

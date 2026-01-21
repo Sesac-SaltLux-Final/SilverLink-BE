@@ -1,17 +1,60 @@
 package com.aicc.silverlink.domain.elderly.repository;
 
 import com.aicc.silverlink.domain.elderly.entity.Elderly;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ElderlyRepository extends JpaRepository<Elderly,Long> {
+public interface ElderlyRepository extends JpaRepository<Elderly, Long> {
 
-    @EntityGraph(attributePaths = {"user"})
-    Optional<Elderly> findWithUserById(Long id);
+    @Query("SELECT e FROM Elderly e " +
+            "JOIN FETCH e.user " +
+            "JOIN FETCH e.administrativeDivision " +
+            "WHERE e.id = :id")
+    Optional<Elderly> findWithUserById(@Param("id") Long id);
 
-    boolean existsBy(Long id);
+    boolean existsById(Long id);
+
+    /**
+     * 행정구역 코드로 어르신 목록 조회
+     */
+    @Query("SELECT e FROM Elderly e " +
+            "JOIN FETCH e.user " +
+            "JOIN FETCH e.administrativeDivision ad " +
+            "WHERE ad.admCode = :admCode")
+    List<Elderly> findByAdmCode(@Param("admCode") Long admCode);
+
+    /**
+     * 특정 시/도에 속한 어르신 목록 조회
+     */
+    @Query("SELECT e FROM Elderly e " +
+            "JOIN FETCH e.user " +
+            "JOIN FETCH e.administrativeDivision ad " +
+            "WHERE ad.sidoCode = :sidoCode")
+    List<Elderly> findBySidoCode(@Param("sidoCode") String sidoCode);
+
+    /**
+     * 특정 시/군/구에 속한 어르신 목록 조회
+     */
+    @Query("SELECT e FROM Elderly e " +
+            "JOIN FETCH e.user " +
+            "JOIN FETCH e.administrativeDivision ad " +
+            "WHERE ad.sidoCode = :sidoCode AND ad.sigunguCode = :sigunguCode")
+    List<Elderly> findBySigungu(
+            @Param("sidoCode") String sidoCode,
+            @Param("sigunguCode") String sigunguCode
+    );
+
+    /**
+     * 전체 어르신 목록 조회 (User 및 행정구역 정보 포함)
+     */
+    @Query("SELECT e FROM Elderly e " +
+            "JOIN FETCH e.user " +
+            "JOIN FETCH e.administrativeDivision")
+    List<Elderly> findAllWithUserAndDivision();
 }

@@ -13,6 +13,8 @@ import com.aicc.silverlink.domain.guardian.entity.Guardian;
 import com.aicc.silverlink.domain.guardian.entity.GuardianElderly;
 import com.aicc.silverlink.domain.guardian.entity.RelationType;
 import com.aicc.silverlink.domain.guardian.repository.GuardianElderlyRepository;
+import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
+import com.aicc.silverlink.domain.system.entity.AdministrativeDivision.DivisionLevel;
 import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.entity.UserStatus;
@@ -28,7 +30,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -61,16 +62,29 @@ class AccessRequestServiceTest {
     private User guardianUser;
     private User elderlyUser;
     private User adminUser;
+
+    private AdministrativeDivision yeoksamDong; // [추가] 행정구역 픽스처
+
     private Guardian guardian;
     private Elderly elderly;
     private Admin admin;
     private GuardianElderly guardianElderly;
+
     private AccessRequest pendingRequest;
     private AccessRequest approvedRequest;
 
     @BeforeEach
     void setUp() {
-        // 보호자 User 생성
+        // 1. 행정구역 (AdministrativeDivision) 픽스처 생성
+        yeoksamDong = AdministrativeDivision.builder()
+                .admCode(1168010100L)
+                .sidoName("서울특별시")
+                .sigunguName("강남구")
+                .dongName("역삼1동")
+                .level(DivisionLevel.DONG)
+                .build();
+
+        // 2. 사용자 (User) 생성
         guardianUser = User.builder()
                 .loginId("guardian1")
                 .passwordHash("encoded")
@@ -82,7 +96,6 @@ class AccessRequestServiceTest {
                 .build();
         setId(guardianUser, 1L);
 
-        // 어르신 User 생성
         elderlyUser = User.builder()
                 .loginId("elderly1")
                 .passwordHash("encoded")
@@ -93,7 +106,6 @@ class AccessRequestServiceTest {
                 .build();
         setId(elderlyUser, 2L);
 
-        // 관리자 User 생성
         adminUser = User.builder()
                 .loginId("admin1")
                 .passwordHash("encoded")
@@ -104,35 +116,42 @@ class AccessRequestServiceTest {
                 .build();
         setId(adminUser, 3L);
 
-        // Elderly 엔티티 생성
+        // 3. Elderly 엔티티 생성 (수정: AdministrativeDivision 객체 주입)
+        // 주의: Elderly 엔티티 코드가 제공되지 않았으나, AccessRequestDto를 보면 객체를 참조하는 것으로 추정됩니다.
+        // 만약 Elderly가 String 코드를 쓴다면 원복해야 하지만, Admin과의 일관성을 위해 객체로 가정합니다.
+        // 여기서는 에러 방지를 위해 리플렉션이나 모킹 대신, 일반적인 빌더 패턴을 사용하되
+        // 실제 Elderly 엔티티 정의에 맞게 필드명을 확인해야 합니다.
+        // (AccessRequestDto.ElderlyInfo.from 메서드를 보면 elderly.getAdministrativeDivision() 호출함)
         elderly = Elderly.builder()
                 .user(elderlyUser)
-                .admDongCode("1168010100")
+                .administrativeDivision(yeoksamDong) // [수정] String -> Object
                 .birthDate(LocalDate.of(1940, 5, 15))
                 .gender(Elderly.Gender.M)
                 .build();
         setElderlyId(elderly, 2L);
 
-        // Guardian 엔티티 생성
+        // 4. Guardian 엔티티 생성
         guardian = Guardian.builder()
                 .user(guardianUser)
                 .addressLine1("서울시 강남구")
                 .build();
 
-        // Admin 엔티티 생성
+        // 5. Admin 엔티티 생성 (수정: AdministrativeDivision 객체 주입)
+        // Admin.java 정의에 따르면 admCode(Long)가 아니라 administrativeDivision(Entity)를 받습니다.
         admin = Admin.builder()
                 .user(adminUser)
-                .admDongCode(1168000000L)
+                .administrativeDivision(yeoksamDong) // [수정] admCode -> administrativeDivision
+                .adminLevel(Admin.AdminLevel.DISTRICT)
                 .build();
 
-        // GuardianElderly 관계 생성
+        // 6. GuardianElderly 관계 생성
         guardianElderly = GuardianElderly.builder()
                 .guardian(guardian)
                 .elderly(elderly)
                 .relationType(RelationType.CHILD)
                 .build();
 
-        // 대기 중인 요청
+        // 7. AccessRequest (대기 중)
         pendingRequest = AccessRequest.builder()
                 .requester(guardianUser)
                 .elderly(elderly)
@@ -142,7 +161,7 @@ class AccessRequestServiceTest {
                 .build();
         setAccessRequestId(pendingRequest, 100L);
 
-        // 승인된 요청
+        // 8. AccessRequest (승인됨)
         approvedRequest = AccessRequest.builder()
                 .requester(guardianUser)
                 .elderly(elderly)
