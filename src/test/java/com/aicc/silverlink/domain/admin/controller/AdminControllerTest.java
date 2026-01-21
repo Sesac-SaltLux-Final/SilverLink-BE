@@ -25,6 +25,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
 import com.aicc.silverlink.domain.system.repository.AdministrativeDivisionRepository;
 import org.springframework.test.util.ReflectionTestUtils;
+import jakarta.persistence.EntityManager;
 
 import org.springframework.test.context.ActiveProfiles;
 
@@ -314,12 +315,14 @@ class AdminControllerTest {
         @Autowired
         private AdministrativeDivisionRepository administrativeDivisionRepository;
 
-        // ✅ [Final Fix] 독립적인 데이터 생성 + NULL 값 처리 적용
+        @Autowired
+        private EntityManager entityManager; // ✅ 영속성 컨텍스트 초기화를 위해 주입
+
         @Test
         @WithMockUser(roles = "ADMIN")
         @DisplayName("성공: 상위 관리자 목록 조회")
         void getSupervisors_Success() throws Exception {
-            // 1. [User] 상위 관리자(서울시)용 유저 생성
+            // 1. [User] 상위 관리자(서울시) 생성
             User seoulUser = User.createLocal(
                     "seoul_admin_" + System.currentTimeMillis(),
                     "password",
@@ -328,11 +331,11 @@ class AdminControllerTest {
                     "seoul@test.com",
                     Role.ADMIN
             );
-            // 강제로 ACTIVE 상태 주입
+            // 강제 ACTIVE 설정
             org.springframework.test.util.ReflectionTestUtils.setField(seoulUser, "status", UserStatus.ACTIVE);
             userRepository.saveAndFlush(seoulUser);
 
-            // 2. [User] 하위 관리자(강남구 - 본인)용 유저 생성
+            // 2. [User] 하위 관리자(강남구) 생성
             User gangnamUser = User.createLocal(
                     "gangnam_admin_" + System.currentTimeMillis(),
                     "password",
@@ -344,25 +347,24 @@ class AdminControllerTest {
             org.springframework.test.util.ReflectionTestUtils.setField(gangnamUser, "status", UserStatus.ACTIVE);
             userRepository.saveAndFlush(gangnamUser);
 
-            // 3. [Division] 행정구역 데이터 생성 (NULL 처리 중요!)
-
-            // 3-1. 서울특별시 (SIDO): 하위 코드는 반드시 NULL이어야 함
+            // 3. [Division] 행정구역 데이터 생성 (null 처리)
+            // 서울시 (SIDO)
             AdministrativeDivision seoulDiv = AdministrativeDivision.builder()
                     .admCode(1100000000L)
                     .sidoCode("11")
-                    .sigunguCode(null) // 👈 "000" 아님! null로 설정
-                    .dongCode(null)    // 👈 "000" 아님! null로 설정
+                    .sigunguCode(null)
+                    .dongCode(null)
                     .sidoName("서울특별시")
                     .level(AdministrativeDivision.DivisionLevel.SIDO)
                     .build();
             administrativeDivisionRepository.saveAndFlush(seoulDiv);
 
-            // 3-2. 강남구 (SIGUNGU): 동 코드는 반드시 NULL이어야 함
+            // 강남구 (SIGUNGU)
             AdministrativeDivision gangnamDiv = AdministrativeDivision.builder()
                     .admCode(1168000000L)
                     .sidoCode("11")
                     .sigunguCode("680")
-                    .dongCode(null)    // 👈 "000" 아님! null로 설정
+                    .dongCode(null)
                     .sigunguName("강남구")
                     .sidoName("서울특별시")
                     .level(AdministrativeDivision.DivisionLevel.SIGUNGU)
@@ -370,7 +372,7 @@ class AdminControllerTest {
             administrativeDivisionRepository.saveAndFlush(gangnamDiv);
 
             // 4. [Admin] 관리자 데이터 생성
-            // 서울시 관리자 (조회 대상)
+            // 서울시 관리자
             Admin provincialAdmin = Admin.builder()
                     .user(seoulUser)
                     .admDongCode(1100000000L)
@@ -386,9 +388,14 @@ class AdminControllerTest {
                     .build();
             adminRepository.saveAndFlush(cityAdmin);
 
-            // when: 강남구(1168000000)의 상위 관리자(서울시)를 조회
+            // ✅ [핵심] 영속성 컨텍스트 초기화
+            // 지금까지 저장한(saveAndFlush) 데이터들이 DB에 확정되었음을 보장하고,
+            // 서비스 로직 실행 시점에 1차 캐시가 아닌 DB에서 확실하게 데이터를 조회하도록 강제합니다.
+            entityManager.clear();
+
+            // when
             ResultActions result = mockMvc.perform(get("/api/admins/supervisors")
-                    .param("admDongCode", "1168000000"));
+                    .param("admDongCode", "1168000000")); // 강남구 코드
 
             // then
             result.andDo(print())
