@@ -10,6 +10,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,7 +24,8 @@ public class NoticeResponse {
     private String createdByAdminName; // 작성자 이름
 
     private TargetMode targetMode;
-    private List<Role> targetRoles; // 설정된 타겟 권한들
+    @Builder.Default
+    private List<Role> targetRoles = new ArrayList<>(); // 설정된 타겟 권한들
 
     private boolean isPriority;
     private boolean isPopup;
@@ -35,7 +37,8 @@ public class NoticeResponse {
     private LocalDateTime updatedAt;
 
     // Req 66: 첨부파일 목록
-    private List<AttachmentResponse> attachments;
+    @Builder.Default
+    private List<AttachmentResponse> attachments = new ArrayList<>();
 
     // Req 69: 사용자 조회 시 읽음 여부 확인용
     private boolean isRead;
@@ -47,7 +50,7 @@ public class NoticeResponse {
                 .content(notice.getContent())
                 // .createdByAdminName(notice.getCreatedBy().getName()) // Admin 엔티티 구조에 따라 추가
                 .targetMode(notice.getTargetMode())
-                .targetRoles(roles)
+                .targetRoles(roles != null ? roles : new ArrayList<>())
                 .isPriority(notice.isPriority())
                 .isPopup(notice.isPopup())
                 .popupStartAt(notice.getPopupStartAt())
@@ -55,7 +58,7 @@ public class NoticeResponse {
                 .status(notice.getStatus())
                 .createdAt(notice.getCreatedAt())
                 .updatedAt(notice.getUpdatedAt())
-                .attachments(attachments.stream().map(AttachmentResponse::from).collect(Collectors.toList()))
+                .attachments(attachments != null ? attachments.stream().map(AttachmentResponse::from).collect(Collectors.toList()) : new ArrayList<>())
                 .build();
     }
 
