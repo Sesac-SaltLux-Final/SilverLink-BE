@@ -46,7 +46,7 @@ public class Faq {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
         if (this.isActive == false) { // Default true logic handled elsewhere or assume true by default if needed
-             this.isActive = true;
+            this.isActive = true;
         }
     }
 
@@ -56,6 +56,6 @@ public class Faq {
     }
 
     public enum FaqCategory {
-        SERVICE, CALLBOT, MEDICATION, WELFARE
+        SERVICE, CALLBOT, MEDICATION, WELFARE,
     }
 }

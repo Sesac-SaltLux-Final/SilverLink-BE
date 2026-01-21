@@ -50,4 +50,11 @@ public class InquiryAnswer {
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
+    public InquiryAnswer(Inquiry inquiry, User answeredBy, String answerText) {
+        this.inquiry = inquiry;
+        this.answeredBy = answeredBy;
+        this.answerText = answerText;
+        this.isDeleted = false;
+    }
 }

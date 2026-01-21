@@ -65,4 +65,17 @@ public class Inquiry {
     public enum InquiryStatus {
         PENDING, ANSWERED
     }
+
+    public Inquiry(Elderly elderly, User createdBy, String title, String questionText) {
+        this.elderly = elderly;
+        this.createdBy = createdBy;
+        this.title = title;
+        this.questionText = questionText;
+        this.status = InquiryStatus.PENDING;
+        this.isDeleted = false;
+    }
+
+    public void updateStatus(InquiryStatus status) {
+        this.status = status;
+    }
 }
