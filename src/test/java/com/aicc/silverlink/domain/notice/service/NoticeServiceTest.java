@@ -58,7 +58,7 @@ class NoticeServiceTest {
     @Test
     @DisplayName("공지사항 생성 테스트")
     void createNotice() {
-        // given
+        //
         Admin admin = mock(Admin.class);
         NoticeRequest request = new NoticeRequest();
         request.setTitle("Test Title");
