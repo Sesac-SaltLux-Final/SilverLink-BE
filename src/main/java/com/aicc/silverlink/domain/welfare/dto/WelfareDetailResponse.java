@@ -10,6 +10,8 @@ import lombok.*;
 @Getter
 @Setter
 @NoArgsConstructor
+@Builder
+@AllArgsConstructor
 public class WelfareDetailResponse {
     private Long id;
     private String servNm;

@@ -8,6 +8,7 @@ import com.aicc.silverlink.domain.guardian.entity.RelationType;
 import com.aicc.silverlink.domain.guardian.service.GuardianService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -31,10 +32,12 @@ public class GuardianController {
         return ResponseEntity.ok(guardianService.getGuardian(id));
     }
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<GuardianResponse>> getAllGuardians(){
         return ResponseEntity.ok(guardianService.getAllGuardian());
     }
     @PostMapping("/{id}/connect")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> connectElderly(
             @PathVariable("id")Long guardianId,
             @RequestParam Long elderlyId,
