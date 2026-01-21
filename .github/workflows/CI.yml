@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      checks: write      # Reviewdog가 체크 리포트를 작성하기 위해 필요
+      pull-requests: write # PR에 코멘트를 달기 위해 필요
 
     steps:
       - name: Checkout
@@ -34,6 +36,16 @@ jobs:
       - name: Gradle info
         run: ./gradlew -v
 
+      # Checkstyle 실행 및 Reviewdog로 PR 코멘트 달기
+      - name: Run Checkstyle with Reviewdog
+        uses: reviewdog/action-checkstyle@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review # PR에 직접 코멘트 (첨삭)
+          level: warning # 경고 수준부터 코멘트
+          filter_mode: added # 변경된 코드에 대해서만 검사 (전체 검사는 너무 많을 수 있음)
+          fail_on_error: false # 스타일 오류가 있어도 빌드는 계속 진행 (원하면 true로 변경)
+
       - name: Test (unit only)
         env:
           SPRING_PROFILES_ACTIVE: ci
@@ -47,4 +59,3 @@ jobs:
 
       - name: Build
         run: ./gradlew build -x test --no-daemon
-
