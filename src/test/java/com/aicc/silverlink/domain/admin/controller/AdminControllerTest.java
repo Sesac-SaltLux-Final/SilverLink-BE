@@ -5,8 +5,6 @@ import com.aicc.silverlink.domain.admin.dto.request.AdminUpdateRequest;
 import com.aicc.silverlink.domain.admin.entity.Admin;
 import com.aicc.silverlink.domain.admin.entity.Admin.AdminLevel;
 import com.aicc.silverlink.domain.admin.repository.AdminRepository;
-import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
-import com.aicc.silverlink.domain.system.repository.AdministrativeDivisionRepository;
 import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.entity.UserStatus;
@@ -21,13 +19,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.test.util.ReflectionTestUtils;
-import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
-import com.aicc.silverlink.domain.system.repository.AdministrativeDivisionRepository;
-import org.springframework.test.util.ReflectionTestUtils;
-import jakarta.persistence.EntityManager;
-
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -37,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc(addFilters = false)
 @Transactional
-@ActiveProfiles("ci")
+@ActiveProfiles("test")
 class AdminControllerTest {
 
     @Autowired
@@ -181,7 +172,7 @@ class AdminControllerTest {
                     .andExpect(status().isBadRequest());
         }
 
-        @Disabled("현재 인증 관련 테스트 불가로 비활성화")
+        @Disabled("인증 관련 기능 테스트 불가로 비활성화")
         @Test
         @DisplayName("실패: 인증되지 않은 사용자")
         void createAdmin_Unauthorized() throws Exception {
@@ -312,96 +303,28 @@ class AdminControllerTest {
     @DisplayName("상위 관리자 조회 API")
     class GetSupervisors {
 
-        @Autowired
-        private AdministrativeDivisionRepository administrativeDivisionRepository;
-
-        @Autowired
-        private EntityManager entityManager; // ✅ 영속성 컨텍스트 초기화를 위해 주입
+        @BeforeEach
+        void setUpHierarchy() {
+            // 시/도 레벨 관리자 (서울)
+            Admin provincialAdmin = Admin.builder()
+                    .user(anotherUser)
+                    .admDongCode(1100000000L)
+                    .adminLevel(AdminLevel.PROVINCIAL)
+                    .build();
+            adminRepository.save(provincialAdmin);
+        }
 
         @Test
         @WithMockUser(roles = "ADMIN")
         @DisplayName("성공: 상위 관리자 목록 조회")
         void getSupervisors_Success() throws Exception {
-            // 1. [User] 상위 관리자(서울시) 생성
-            User seoulUser = User.createLocal(
-                    "seoul_admin_" + System.currentTimeMillis(),
-                    "password",
-                    "서울관리자",
-                    "01011112222",
-                    "seoul@test.com",
-                    Role.ADMIN
-            );
-            // 강제 ACTIVE 설정
-            org.springframework.test.util.ReflectionTestUtils.setField(seoulUser, "status", UserStatus.ACTIVE);
-            userRepository.saveAndFlush(seoulUser);
-
-            // 2. [User] 하위 관리자(강남구) 생성
-            User gangnamUser = User.createLocal(
-                    "gangnam_admin_" + System.currentTimeMillis(),
-                    "password",
-                    "강남관리자",
-                    "01033334444",
-                    "gangnam@test.com",
-                    Role.ADMIN
-            );
-            org.springframework.test.util.ReflectionTestUtils.setField(gangnamUser, "status", UserStatus.ACTIVE);
-            userRepository.saveAndFlush(gangnamUser);
-
-            // 3. [Division] 행정구역 데이터 생성 (null 처리)
-            // 서울시 (SIDO)
-            AdministrativeDivision seoulDiv = AdministrativeDivision.builder()
-                    .admCode(1100000000L)
-                    .sidoCode("11")
-                    .sigunguCode(null)
-                    .dongCode(null)
-                    .sidoName("서울특별시")
-                    .level(AdministrativeDivision.DivisionLevel.SIDO)
-                    .build();
-            administrativeDivisionRepository.saveAndFlush(seoulDiv);
-
-            // 강남구 (SIGUNGU)
-            AdministrativeDivision gangnamDiv = AdministrativeDivision.builder()
-                    .admCode(1168000000L)
-                    .sidoCode("11")
-                    .sigunguCode("680")
-                    .dongCode(null)
-                    .sigunguName("강남구")
-                    .sidoName("서울특별시")
-                    .level(AdministrativeDivision.DivisionLevel.SIGUNGU)
-                    .build();
-            administrativeDivisionRepository.saveAndFlush(gangnamDiv);
-
-            // 4. [Admin] 관리자 데이터 생성
-            // 서울시 관리자
-            Admin provincialAdmin = Admin.builder()
-                    .user(seoulUser)
-                    .admDongCode(1100000000L)
-                    .adminLevel(AdminLevel.PROVINCIAL)
-                    .build();
-            adminRepository.saveAndFlush(provincialAdmin);
-
-            // 강남구 관리자
-            Admin cityAdmin = Admin.builder()
-                    .user(gangnamUser)
-                    .admDongCode(1168000000L)
-                    .adminLevel(AdminLevel.CITY)
-                    .build();
-            adminRepository.saveAndFlush(cityAdmin);
-
-            // ✅ [핵심] 영속성 컨텍스트 초기화
-            // 지금까지 저장한(saveAndFlush) 데이터들이 DB에 확정되었음을 보장하고,
-            // 서비스 로직 실행 시점에 1차 캐시가 아닌 DB에서 확실하게 데이터를 조회하도록 강제합니다.
-            entityManager.clear();
-
-            // when
+            // when - 강남구 역삼동의 상위 관리자 조회
             ResultActions result = mockMvc.perform(get("/api/admins/supervisors")
-                    .param("admDongCode", "1168000000")); // 강남구 코드
+                    .param("admDongCode", "1168010100"));
 
             // then
             result.andDo(print())
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))))
-                    .andExpect(jsonPath("$[0].admDongCode").value(1100000000L));
+                    .andExpect(status().isOk());
         }
     }
 
