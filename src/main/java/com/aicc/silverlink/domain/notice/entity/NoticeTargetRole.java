@@ -2,13 +2,13 @@ package com.aicc.silverlink.domain.notice.entity;
 
 import com.aicc.silverlink.domain.user.entity.Role;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "notice_target_roles")
 @Getter
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @IdClass(NoticeTargetRoleId.class)
 public class NoticeTargetRole {
