@@ -9,6 +9,7 @@ import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.util.Map;
 
@@ -101,6 +102,25 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST) // 400
+                .body(ApiResponse.error(errorMessage));
+    }
+
+    /**
+     * @Valid 유효성 검사 실패 시 (DTO의 @NotNull, @NotBlank 등 위반)
+     * 500 에러가 아닌 400 Bad Request를 반환하도록 처리
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    protected ResponseEntity<ApiResponse<?>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+        log.error("handleMethodArgumentNotValidException", e);
+
+        // 에러가 발생한 필드 중 첫 번째 메시지만 가져와서 반환
+        // (필요 시 모든 에러를 리스트로 반환하도록 수정 가능)
+        String errorMessage = e.getBindingResult().getFieldError() != null
+                ? e.getBindingResult().getFieldError().getDefaultMessage()
+                : "잘못된 요청입니다.";
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(errorMessage));
     }
 

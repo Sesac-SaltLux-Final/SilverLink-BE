@@ -73,6 +73,10 @@ tasks.named('test') {
     useJUnitPlatform()
     jvmArgs "-Xshare:off"
 
+    if (System.getProperty('spring.profiles.active')) {
+        systemProperty 'spring.profiles.active', System.getProperty('spring.profiles.active')
+    }
+
     // ✅ PR CI에서는 통합테스트(*IT) 제외
     exclude '**/*IT.class'
 
