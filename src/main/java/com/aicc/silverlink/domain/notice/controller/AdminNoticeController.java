@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminNoticeController {
 
     private final NoticeService noticeService;
-
+    //
     // 공지사항 목록 조회
     @GetMapping
     public ResponseEntity<Page<NoticeResponse>> getAllNotices(
