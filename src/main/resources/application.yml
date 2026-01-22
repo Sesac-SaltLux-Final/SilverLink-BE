@@ -3,12 +3,15 @@ server:
   # 여기에 있던 servlet 설정은 삭제!
 
 spring:
-  # [이동 완료] 최신 스프링 부트에서는 인코딩 설정이 여기로 옵니다.
+  # [수정] servlet 아래에 encoding과 multipart를 같이 둡니다.
   servlet:
     encoding:
       charset: UTF-8
       force: true
       enabled: true
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
   config:
     import: optional:file:.env[.properties]
@@ -70,4 +73,14 @@ solapi:
   api-key: ${SOLAPI_API_KEY}
   api-secret: ${SOLAPI_API_SECRET}
   sender-number: ${SOLAPI_SENDER_NUMBER}
+
+luxia:
+  base-url: "https://bridge.luxiacloud.com"
+  api-key: ${LUXIA_API_KEY}
+  document-ai:
+    path: "/luxia/v1/document-ai"
+    model: "luxia-document-ai"
+  timeout:
+    connect-ms: 3000
+    response-ms: 60000
 

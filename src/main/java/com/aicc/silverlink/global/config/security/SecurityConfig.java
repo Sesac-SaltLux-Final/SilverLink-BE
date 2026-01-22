@@ -56,7 +56,8 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/api/welfare/**",
                                 "/api/faqs/**",
-                                "/api/guardians/signup"
+                                "/api/guardians/signup",
+                                "/ocr/**"
                         ).permitAll()
 
                         .requestMatchers("/admin/**").hasRole("ADMIN")
