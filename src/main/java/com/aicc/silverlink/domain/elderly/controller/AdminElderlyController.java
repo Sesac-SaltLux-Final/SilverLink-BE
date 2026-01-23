@@ -2,6 +2,7 @@ package com.aicc.silverlink.domain.elderly.controller;
 
 import com.aicc.silverlink.domain.elderly.dto.request.ElderlyCreateRequest;
 import com.aicc.silverlink.domain.elderly.dto.request.HealthInfoUpdateRequest;
+import com.aicc.silverlink.domain.elderly.dto.response.ElderlyAdminDetailResponse;
 import com.aicc.silverlink.domain.elderly.dto.response.ElderlySummaryResponse;
 import com.aicc.silverlink.domain.elderly.dto.response.HealthInfoResponse;
 import com.aicc.silverlink.domain.elderly.service.ElderlyService;

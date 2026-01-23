@@ -35,7 +35,7 @@ public interface GuardianElderlyRepository extends JpaRepository<GuardianElderly
     /**
      * 보호자-어르신 관계 존재 여부 확인
      */
-    boolean existsByGuardian_IdAndElderly_Id(Long guardianId, Long elderlyId);
+    boolean existsByGuardianIdAndElderlyId(Long guardianId, Long elderlyId);
 
     /**
      * ✅ 회원 탈퇴 시 호출: 보호자 기준 관계 데이터 삭제

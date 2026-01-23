@@ -263,7 +263,7 @@ public class ElderlyService {
      * 보호자의 민감정보 접근 권한 확인
      */
     private void validateGuardianAccess(Long guardianUserId, Long elderlyUserId, AccessScope scope) {
-        boolean isGuardian = guardianElderlyRepo.existsByGuardian_IdAndElderly_Id(guardianUserId, elderlyUserId);
+        boolean isGuardian = guardianElderlyRepo.existsByGuardianIdAndElderlyId(guardianUserId, elderlyUserId);
         if (!isGuardian) throw new AccessDeniedException("연결된 보호자가 아닙니다.");
 
         boolean hasValidAccess = accessRequestRepo.hasValidAccess(guardianUserId, elderlyUserId, scope, LocalDateTime.now());
