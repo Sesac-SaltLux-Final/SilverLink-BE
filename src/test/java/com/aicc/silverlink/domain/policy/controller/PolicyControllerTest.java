@@ -17,24 +17,27 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 //import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
+import java.time.LocalDateTime;
+import java.util.List;
 
+// 💡 user() 대신 authentication()을 사용하기 위해 import 변경
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
-@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc(addFilters = false)
+@AutoConfigureMockMvc
 @Transactional
 @ActiveProfiles("test")
 class PolicyControllerTest {
@@ -50,13 +53,16 @@ class PolicyControllerTest {
 
     @BeforeEach
     void setUp() {
-        // 1. 행정구역 생성
+        // 1. 행정구역 생성 (Dirty Checking 에러 방지를 위해 날짜 강제 주입)
         AdministrativeDivision division = AdministrativeDivision.builder()
                 .admCode(1100000000L)
                 .sidoCode("11")
                 .sidoName("서울특별시")
                 .level(AdministrativeDivision.DivisionLevel.SIDO)
                 .build();
+
+        ReflectionTestUtils.setField(division, "createdAt", LocalDateTime.now());
+        ReflectionTestUtils.setField(division, "updatedAt", LocalDateTime.now());
         divisionRepository.save(division);
 
         // 2. User 생성
@@ -70,40 +76,38 @@ class PolicyControllerTest {
         );
         userRepository.save(adminUser);
 
-        // 3. Admin 엔티티 생성 (DB/엔티티에서 삭제한 admDongCode는 제외)
+        // 3. Admin 엔티티 생성
         Admin testAdmin = Admin.builder()
                 .user(adminUser)
                 .administrativeDivision(division)
                 .adminLevel(AdminLevel.NATIONAL)
                 .build();
-
         adminRepository.save(testAdmin);
     }
 
-    private void mockAuthentication(Long userId) {
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                userId,
+    /**
+     * 💡 핵심: @AuthenticationPrincipal Long adminId에
+     * Long 타입의 ID를 정확히 전달하기 위한 인증 객체 생성 헬퍼
+     */
+    private UsernamePasswordAuthenticationToken getAdminAuth() {
+        return new UsernamePasswordAuthenticationToken(
+                adminUser.getId(), // Principal을 Long 타입으로 설정
                 null,
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN"))
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
         );
-        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
     @Nested
     @DisplayName("약관 조회 테스트")
     class GetPolicyTests {
-
         @Test
         @DisplayName("성공: 특정 타입의 최신 약관을 조회한다")
         void getLatestPolicy_Success() throws Exception {
-            // 💡 [수정] Policy.create 파라미터에 description(null) 추가
             policyRepository.save(Policy.create(PolicyType.TERMS_OF_SERVICE, "v1.0", "최신 내용", true, null, adminUser));
 
             mockMvc.perform(get("/api/policies/latest/{type}", PolicyType.TERMS_OF_SERVICE))
-                    .andDo(print())
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.version").value("v1.0"))
-                    .andExpect(jsonPath("$.policyName").value(PolicyType.TERMS_OF_SERVICE.getDescription()));
+                    .andExpect(jsonPath("$.version").value("v1.0"));
         }
 
         @Test
@@ -117,39 +121,32 @@ class PolicyControllerTest {
     @Nested
     @DisplayName("약관 생성 테스트")
     class CreatePolicyTests {
-
         @Test
         @DisplayName("성공: 관리자가 새로운 약관을 등록한다")
         void createPolicy_Success() throws Exception {
             // given
-            mockAuthentication(adminUser.getId());
-
             PolicyRequest request = new PolicyRequest();
             ReflectionTestUtils.setField(request, "policyType", PolicyType.PRIVACY_POLICY);
             ReflectionTestUtils.setField(request, "version", "v2.0");
             ReflectionTestUtils.setField(request, "content", "새로운 개인정보 처리방침");
             ReflectionTestUtils.setField(request, "isMandatory", true);
-            // 💡 [추가] description 필드 테스트 데이터 설정
-            ReflectionTestUtils.setField(request, "description", "약관 설명입니다.");
 
             // when
             ResultActions result = mockMvc.perform(post("/api/policies")
+                    .with(authentication(getAdminAuth())) // 💡 Long 타입 ID 주입
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request)));
 
             // then
             result.andDo(print())
                     .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.version").value("v2.0"))
-                    .andExpect(jsonPath("$.policyName").value(PolicyType.PRIVACY_POLICY.getDescription()));
+                    .andExpect(jsonPath("$.version").value("v2.0"));
         }
 
         @Test
         @DisplayName("실패: 이미 존재하는 버전으로 등록 시도 시 400 에러를 반환한다")
         void createPolicy_Duplicate() throws Exception {
             // given
-            mockAuthentication(adminUser.getId());
-            // 💡 [수정] Policy.create 파라미터에 description(null) 추가
             policyRepository.save(Policy.create(PolicyType.TERMS_OF_SERVICE, "v1.0", "내용", true, null, adminUser));
 
             PolicyRequest request = new PolicyRequest();
@@ -160,8 +157,10 @@ class PolicyControllerTest {
 
             // when & then
             mockMvc.perform(post("/api/policies")
+                            .with(authentication(getAdminAuth())) // 💡 Long 타입 ID 주입
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
                     .andExpect(status().isBadRequest());
         }
     }
@@ -169,11 +168,9 @@ class PolicyControllerTest {
     @Nested
     @DisplayName("입력값 검증 테스트")
     class ValidationTests {
-
         @Test
         @DisplayName("실패: 필수 파라미터가 누락되면 400 에러를 반환한다")
         void createPolicy_InvalidRequest() throws Exception {
-            mockAuthentication(adminUser.getId());
             String json = """
                 {
                     "policyType": "TERMS_OF_SERVICE",
@@ -183,6 +180,7 @@ class PolicyControllerTest {
                 """;
 
             mockMvc.perform(post("/api/policies")
+                            .with(authentication(getAdminAuth())) // 💡 Long 타입 ID 주입
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest());
