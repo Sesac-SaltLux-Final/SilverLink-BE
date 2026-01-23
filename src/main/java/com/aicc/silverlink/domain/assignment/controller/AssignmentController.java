@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "상담사 배정", description = "상담사-어르신 배정 관리 API")
 @RestController
 @RequestMapping("/api/assignments")
 @RequiredArgsConstructor
@@ -22,7 +25,7 @@ public class AssignmentController {
     // 상담사-노인 배정
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AssignmentResponse> assignCounselor(@RequestBody AssignmentRequest request){
+    public ResponseEntity<AssignmentResponse> assignCounselor(@RequestBody AssignmentRequest request) {
         AssignmentResponse response = assignmentService.assignCounselor(request);
         return ResponseEntity.created(URI.create("/api/assignments/elderly/" + response.getElderlyId())).body(response);
     }
@@ -32,27 +35,30 @@ public class AssignmentController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> unassignCounselor(
             @RequestParam Long counselorId,
-            @RequestParam Long elderlyId
-    ){
+            @RequestParam Long elderlyId) {
         assignmentService.unassignCounselor(counselorId, elderlyId);
         return ResponseEntity.ok().build();
     }
+
     // 상담사 본인에게 배정된 노인 현황
     @GetMapping("/counselor/me")
     @PreAuthorize("hasRole('COUNSELOR')")
-    public ResponseEntity<List<AssignmentResponse>> getAssignmentByCounselor(@AuthenticationPrincipal Long currentUserId){
+    public ResponseEntity<List<AssignmentResponse>> getAssignmentByCounselor(
+            @AuthenticationPrincipal Long currentUserId) {
         return ResponseEntity.ok(assignmentService.getAssignmentsByCounselor(currentUserId));
     }
+
     // 상담사의 배정현황
     @GetMapping("/admin/counselors/{counselorId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<AssignmentResponse>> getCounselorAssignmentByAdmin(@PathVariable Long counselorId){
+    public ResponseEntity<List<AssignmentResponse>> getCounselorAssignmentByAdmin(@PathVariable Long counselorId) {
         return ResponseEntity.ok(assignmentService.getAssignmentsByCounselor(counselorId));
     }
+
     // 노인의 배정현황
     @GetMapping("/admin/elderly/{elderlyId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AssignmentResponse>getElderlyAssignmentByAdmin(@PathVariable Long elderlyId){
-    return ResponseEntity.ok(assignmentService.getAssignmentByElderly(elderlyId));
+    public ResponseEntity<AssignmentResponse> getElderlyAssignmentByAdmin(@PathVariable Long elderlyId) {
+        return ResponseEntity.ok(assignmentService.getAssignmentByElderly(elderlyId));
     }
 }

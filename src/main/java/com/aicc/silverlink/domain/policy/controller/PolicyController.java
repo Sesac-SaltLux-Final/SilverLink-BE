@@ -14,6 +14,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "약관/정책", description = "이용약관 조회/등록 API")
 @Slf4j
 @RestController
 @RequestMapping("/api/policies")
@@ -33,13 +36,11 @@ public class PolicyController {
         return ResponseEntity.ok(response);
     }
 
-
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PolicyResponse> createPolicy(
             @AuthenticationPrincipal Long adminId,
-            @RequestBody @Valid PolicyRequest request
-    ) {
+            @RequestBody @Valid PolicyRequest request) {
         log.info("POST /api/policies - 약관 생성 요청 (Admin ID: {})", adminId);
 
         // 토큰이 유효하지 않으면 adminId는 null일 수 있음 (필터 예외처리에 따라 다름)

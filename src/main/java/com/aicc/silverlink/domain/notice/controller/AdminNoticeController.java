@@ -13,12 +13,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "공지사항 관리 (관리자)", description = "공지사항 등록/삭제 API (관리자 전용)")
 @RestController
 @RequestMapping("/api/admin/notices")
 @RequiredArgsConstructor
 public class AdminNoticeController {
 
     private final NoticeService noticeService;
+
     //
     // 공지사항 목록 조회
     @GetMapping

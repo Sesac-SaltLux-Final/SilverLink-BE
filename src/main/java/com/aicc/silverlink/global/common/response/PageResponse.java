@@ -1,5 +1,7 @@
 package com.aicc.silverlink.global.common.response;
 
+import org.springframework.data.domain.Page;
+
 import java.util.List;
 
 public record PageResponse<T>(
@@ -9,5 +11,16 @@ public record PageResponse<T>(
         long totalElements,
         boolean hasNext
 ) {
-    // Page 객체(Spring Data)를 받아 변환하는 생성자를 만들어두면 편리합니다.
+    /**
+     * Spring Data Page 객체로부터 PageResponse 생성
+     */
+    public static <T> PageResponse<T> from(Page<T> page) {
+        return new PageResponse<>(
+                page.getContent(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.hasNext()
+        );
+    }
 }

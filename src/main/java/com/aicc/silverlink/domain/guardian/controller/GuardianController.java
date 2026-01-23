@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "보호자", description = "보호자 등록/조회/어르신 연결 API")
 @RestController
 @RequestMapping("/api/guardians")
 @RequiredArgsConstructor

@@ -33,14 +33,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = false) // 테스트 편의를 위해 필터는 제외하되 로직 집중
 class UserControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+        @Autowired
+        private ObjectMapper objectMapper;
 
-    @MockitoBean
-    private UserCommandService userCommandService;
+        @MockitoBean
+        private UserCommandService userCommandService;
 
     @Test
     @DisplayName("내 프로필 조회 성공")

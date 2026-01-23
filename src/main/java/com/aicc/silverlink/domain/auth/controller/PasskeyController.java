@@ -15,8 +15,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseCookie;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "Passkey 인증", description = "WebAuthn 기반 Passkey 등록/로그인 API")
 @RestController
-@RequestMapping("/auth/passkey")
+@RequestMapping("/api/auth/passkey")
 @RequiredArgsConstructor
 public class PasskeyController {
 
@@ -24,8 +27,11 @@ public class PasskeyController {
     private final AuthService authService;
     private final AuthPolicyProperties props;
 
-    public record StartRegReq(@NotNull Long userId) {}
-    public record FinishRegReq(@NotNull Long userId, @NotBlank String requestId, @NotBlank String credentialJson) {}
+    public record StartRegReq(@NotNull Long userId) {
+    }
+
+    public record FinishRegReq(@NotNull Long userId, @NotBlank String requestId, @NotBlank String credentialJson) {
+    }
 
     @PostMapping("/register/options")
     public WebAuthnService.StartRegResponse startReg(@RequestBody StartRegReq req) throws JsonProcessingException {
@@ -37,8 +43,11 @@ public class PasskeyController {
         webAuthnService.finishRegistration(req.userId(), req.requestId(), req.credentialJson(), req.userId());
     }
 
-    public record StartLoginReq(String loginId) {}
-    public record FinishLoginReq(@NotBlank String requestId, @NotBlank String credentialJson) {}
+    public record StartLoginReq(String loginId) {
+    }
+
+    public record FinishLoginReq(@NotBlank String requestId, @NotBlank String credentialJson) {
+    }
 
     @PostMapping("/login/options")
     public WebAuthnService.StartAuthResponse startLogin(@RequestBody StartLoginReq req) throws JsonProcessingException {
@@ -49,8 +58,7 @@ public class PasskeyController {
     public AuthDtos.TokenResponse finishLogin(
             @Valid @RequestBody FinishLoginReq req,
             HttpServletRequest http,
-            HttpServletResponse res
-    ) {
+            HttpServletResponse res) {
         Long userId = webAuthnService.finishAssertion(req.requestId(), req.credentialJson());
         AuthService.AuthResult result = authService.issueForUser(userId, http);
 
@@ -68,6 +76,5 @@ public class PasskeyController {
                 .build();
         res.addHeader("Set-Cookie", cookie.toString());
     }
-
 
 }
