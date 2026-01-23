@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,6 +23,7 @@ public class WelfareController {
 
 
     @PostMapping("/sync/manual")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "데이터 수동 동기화 (관리자)", description = "공공데이터 포털에서 노인 복지 데이터를 즉시 수집합니다.")
     public ResponseEntity<String> manualSync() {
         welfareService.syncAllWelfareScheduled();

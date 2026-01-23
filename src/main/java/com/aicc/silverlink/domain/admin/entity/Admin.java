@@ -3,16 +3,15 @@ package com.aicc.silverlink.domain.admin.entity;
 import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
 import com.aicc.silverlink.domain.user.entity.User;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 /**
  * 관리자 엔티티
  * User 테이블과 1:1 관계
  * AdministrativeDivision과 N:1 관계
  */
+
+
 @Entity
 @Table(name = "admin")
 @Getter
@@ -38,11 +37,14 @@ public class Admin {
     @Column(name = "admin_level", nullable = false)
     private AdminLevel adminLevel;
 
+
+
     @Builder
     public Admin(User user, AdministrativeDivision administrativeDivision, AdminLevel adminLevel) {
         this.user = user;
         this.administrativeDivision = administrativeDivision;
         this.adminLevel = adminLevel != null ? adminLevel : determineAdminLevel(administrativeDivision);
+
     }
 
     /**

@@ -47,6 +47,10 @@ public class AdministrativeDivision {
     /**
      * 행정구역 생성일 (해당 구역이 생성된 날짜)
      */
+    @Column(name = "created_at", nullable = false, updatable = false)
+
+    private LocalDateTime createdAt;
+
     @Column(name = "established_at")
     private LocalDate establishedAt;
 
@@ -56,8 +60,8 @@ public class AdministrativeDivision {
     @Column(name = "abolished_at")
     private LocalDate abolishedAt;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+
+
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
