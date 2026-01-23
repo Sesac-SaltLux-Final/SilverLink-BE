@@ -1,6 +1,6 @@
-package com.aicc.silverlink.domain.call.service;
+package com.aicc.silverlink.domain.chatbot.service;
 
-import com.aicc.silverlink.domain.call.dto.InquiryDataDto;
+import com.aicc.silverlink.domain.chatbot.dto.InquiryDataDto;
 import com.aicc.silverlink.domain.inquiry.entity.Inquiry;
 import com.aicc.silverlink.domain.inquiry.entity.Inquiry.InquiryStatus;
 import com.aicc.silverlink.domain.inquiry.repository.InquiryAnswerRepository;

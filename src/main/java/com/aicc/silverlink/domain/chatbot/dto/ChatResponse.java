@@ -1,4 +1,4 @@
-package com.aicc.silverlink.domain.call.dto;
+package com.aicc.silverlink.domain.chatbot.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

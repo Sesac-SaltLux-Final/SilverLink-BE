@@ -1,4 +1,4 @@
-package com.aicc.silverlink.domain.call.dto;
+package com.aicc.silverlink.domain.chatbot.dto;
 
 import com.aicc.silverlink.domain.inquiry.entity.Inquiry;
 import com.aicc.silverlink.domain.inquiry.entity.InquiryAnswer;

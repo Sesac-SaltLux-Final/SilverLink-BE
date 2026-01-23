@@ -1,7 +1,7 @@
-package com.aicc.silverlink.domain.call.controller;
+package com.aicc.silverlink.domain.chatbot.controller;
 
-import com.aicc.silverlink.domain.call.dto.InquiryDataDto;
-import com.aicc.silverlink.domain.call.service.InquiryDataService;
+import com.aicc.silverlink.domain.chatbot.dto.InquiryDataDto;
+import com.aicc.silverlink.domain.chatbot.service.InquiryDataService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
