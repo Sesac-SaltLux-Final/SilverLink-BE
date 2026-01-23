@@ -1,4 +1,4 @@
-package com.aicc.silverlink.domain.system.dto;
+package com.aicc.silverlink.domain.system.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

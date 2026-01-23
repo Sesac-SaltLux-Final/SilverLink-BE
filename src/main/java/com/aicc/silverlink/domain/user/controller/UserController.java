@@ -10,8 +10,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "사용자", description = "사용자 프로필 관리 API")
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class UserController {
 
@@ -36,6 +39,5 @@ public class UserController {
         UserStatus status = UserStatus.valueOf(req.status());
         userCommandService.ChangeStatus(userId, status);
     }
-
 
 }

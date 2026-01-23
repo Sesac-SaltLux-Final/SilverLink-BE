@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "공지사항", description = "공지사항 조회 API")
 @RestController
 @RequestMapping("/api/notices")
 @RequiredArgsConstructor
