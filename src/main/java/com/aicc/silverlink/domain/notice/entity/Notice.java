@@ -23,6 +23,10 @@ public class Notice {
     private Admin createdBy;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "category", nullable = false)
+    private NoticeCategory category;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "target_mode", nullable = false)
     private TargetMode targetMode;
 
@@ -66,6 +70,9 @@ public class Notice {
         }
         if (this.status == null) {
             this.status = NoticeStatus.DRAFT;
+        }
+        if (this.category == null) {
+            this.category = NoticeCategory.NOTICE;
         }
     }
 
