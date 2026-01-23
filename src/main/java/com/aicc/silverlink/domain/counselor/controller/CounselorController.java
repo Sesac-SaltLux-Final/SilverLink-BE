@@ -11,7 +11,9 @@ import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
@@ -30,13 +32,21 @@ public class CounselorController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/admin/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CounselorResponse>getCounselor(@PathVariable("id")Long id){
+    public ResponseEntity<CounselorResponse>getCounselorByAdmin(@PathVariable("id")Long id){
         CounselorResponse response = counselorService.getCounselor(id);
 
         return ResponseEntity.ok(response);
     }
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('COUNSELOR')")
+    public ResponseEntity<CounselorResponse>getCounselor(@AuthenticationPrincipal Long currentUserId){
+        CounselorResponse response = counselorService.getCounselor(currentUserId);
+
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<CounselorResponse>>getAllCounselors(){
