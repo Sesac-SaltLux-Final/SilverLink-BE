@@ -3,6 +3,7 @@ package com.aicc.silverlink.domain.notice.dto;
 // Notice 클래스 안에 있는 것을 꺼내 쓴다고 명시
 import com.aicc.silverlink.domain.notice.entity.Notice.NoticeStatus;
 import com.aicc.silverlink.domain.notice.entity.Notice.TargetMode;
+import com.aicc.silverlink.domain.notice.entity.NoticeCategory;
 import com.aicc.silverlink.domain.user.entity.Role;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,6 +17,8 @@ public class NoticeRequest {
 
     private String title;
     private String content;
+
+    private NoticeCategory category; // 카테고리 추가
 
     // 타겟 설정 (ALL 또는 ROLE_SET)
     private TargetMode targetMode;
