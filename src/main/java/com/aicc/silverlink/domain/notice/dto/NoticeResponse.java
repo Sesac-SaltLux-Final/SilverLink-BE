@@ -5,6 +5,7 @@ import com.aicc.silverlink.domain.notice.entity.NoticeAttachment;
 // Notice 클래스 안에 있는 것을 꺼내 쓴다고 명시
 import com.aicc.silverlink.domain.notice.entity.Notice.NoticeStatus;
 import com.aicc.silverlink.domain.notice.entity.Notice.TargetMode;
+import com.aicc.silverlink.domain.notice.entity.NoticeCategory;
 import com.aicc.silverlink.domain.user.entity.Role;
 import lombok.Builder;
 import lombok.Data;
@@ -22,6 +23,8 @@ public class NoticeResponse {
     private String title;
     private String content;
     private String createdByAdminName; // 작성자 이름
+
+    private NoticeCategory category; // 카테고리 추가
 
     private TargetMode targetMode;
     @Builder.Default
@@ -43,11 +46,16 @@ public class NoticeResponse {
     // Req 69: 사용자 조회 시 읽음 여부 확인용
     private boolean isRead;
 
+    // 이전글/다음글 ID (추후 구현)
+    private Long prevNoticeId;
+    private Long nextNoticeId;
+
     public static NoticeResponse from(Notice notice, List<Role> roles, List<NoticeAttachment> attachments) {
         return NoticeResponse.builder()
                 .id(notice.getId())
                 .title(notice.getTitle())
                 .content(notice.getContent())
+                .category(notice.getCategory())
                 // .createdByAdminName(notice.getCreatedBy().getName()) // Admin 엔티티 구조에 따라 추가
                 .targetMode(notice.getTargetMode())
                 .targetRoles(roles != null ? roles : new ArrayList<>())

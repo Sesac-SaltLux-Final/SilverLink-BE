@@ -21,7 +21,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -53,11 +52,12 @@ class NoticeControllerTest {
     private NoticeService noticeService;
 
     private MockMvc mockMvc;
+    private ObjectMapper objectMapper; // 테스트 메서드에서 사용하기 위해 필드로 유지
 
     @BeforeEach
     void setUp() {
         // 1. ObjectMapper 설정 (LocalDateTime 등 날짜 타입 지원)
-        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
 
         // 2. Mock User 생성 (테스트용 사용자)
@@ -69,8 +69,7 @@ class NoticeControllerTest {
 
         // 3. MockMvc 설정
         mockMvc = MockMvcBuilders.standaloneSetup(noticeController)
-                // JSON 변환기 명시적 설정 (위에서 만든 objectMapper 사용)
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                // setMessageConverters 제거 (기본 컨버터 사용)
                 // Pageable 파라미터 해석기 설정
                 .setCustomArgumentResolvers(
                         new PageableHandlerMethodArgumentResolver(),
@@ -110,7 +109,8 @@ class NoticeControllerTest {
         Pageable pageable = PageRequest.of(0, 10);
         Page<NoticeResponse> pageResult = new PageImpl<>(content, pageable, 1);
 
-        given(noticeService.getNoticesForUser(any(User.class), any(Pageable.class)))
+        // 검색 키워드 파라미터(null) 추가
+        given(noticeService.getNoticesForUser(any(User.class), eq(null), any(Pageable.class)))
                 .willReturn(pageResult);
 
         // when & then

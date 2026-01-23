@@ -6,8 +6,7 @@ import com.aicc.silverlink.domain.notice.dto.NoticeResponse;
 import com.aicc.silverlink.domain.notice.entity.Notice;
 import com.aicc.silverlink.domain.notice.entity.Notice.NoticeStatus;
 import com.aicc.silverlink.domain.notice.entity.Notice.TargetMode;
-import com.aicc.silverlink.domain.notice.entity.NoticeAttachment;
-import com.aicc.silverlink.domain.notice.entity.NoticeTargetRole;
+import com.aicc.silverlink.domain.notice.entity.NoticeCategory;
 import com.aicc.silverlink.domain.notice.repository.NoticeAttachmentRepository;
 import com.aicc.silverlink.domain.notice.repository.NoticeReadLogRepository;
 import com.aicc.silverlink.domain.notice.repository.NoticeRepository;
@@ -33,7 +32,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -58,11 +58,12 @@ class NoticeServiceTest {
     @Test
     @DisplayName("공지사항 생성 테스트")
     void createNotice() {
-        //
+        // given
         Admin admin = mock(Admin.class);
         NoticeRequest request = new NoticeRequest();
         request.setTitle("Test Title");
         request.setContent("Test Content");
+        request.setCategory(NoticeCategory.NOTICE); // 카테고리 설정
         request.setTargetMode(TargetMode.ALL);
         request.setPriority(true);
         request.setPopup(false);
@@ -72,6 +73,7 @@ class NoticeServiceTest {
                 .id(1L)
                 .title("Test Title")
                 .content("Test Content")
+                .category(NoticeCategory.NOTICE)
                 .targetMode(TargetMode.ALL)
                 .status(NoticeStatus.PUBLISHED)
                 .build();
@@ -100,8 +102,6 @@ class NoticeServiceTest {
         noticeService.deleteNotice(noticeId);
 
         // then
-        // 실제 삭제 로직이 엔티티 내부 메서드 호출이라면 verify가 어려울 수 있으나,
-        // 여기서는 예외가 발생하지 않는지 확인
         verify(noticeRepository, times(1)).findById(noticeId);
     }
 
@@ -135,17 +135,18 @@ class NoticeServiceTest {
     }
 
     @Test
-    @DisplayName("사용자용 공지사항 목록 조회 테스트")
+    @DisplayName("사용자용 공지사항 목록 조회 테스트 (검색 포함)")
     void getNoticesForUser() {
         // given
         User user = mock(User.class);
         given(user.getId()).willReturn(100L);
         given(user.getRole()).willReturn(Role.ELDERLY);
 
+        String keyword = "Test"; // 검색 키워드
         Pageable pageable = PageRequest.of(0, 10);
         Notice notice = Notice.builder()
                 .id(1L)
-                .title("User Notice")
+                .title("User Notice Test")
                 .content("Content")
                 .targetMode(TargetMode.ALL)
                 .status(NoticeStatus.PUBLISHED)
@@ -154,13 +155,14 @@ class NoticeServiceTest {
                 .build();
         Page<Notice> noticePage = new PageImpl<>(Collections.singletonList(notice));
 
-        given(noticeRepository.findAllForUser(Role.ELDERLY, pageable)).willReturn(noticePage);
+        // 검색 키워드 파라미터 추가
+        given(noticeRepository.findAllForUser(Role.ELDERLY, keyword, pageable)).willReturn(noticePage);
         given(noticeReadLogRepository.existsByNoticeIdAndUserId(1L, "100")).willReturn(false);
         given(noticeTargetRoleRepository.findAllByNoticeId(anyLong())).willReturn(Collections.emptyList());
         given(noticeAttachmentRepository.findAllByNoticeId(anyLong())).willReturn(Collections.emptyList());
 
         // when
-        Page<NoticeResponse> result = noticeService.getNoticesForUser(user, pageable);
+        Page<NoticeResponse> result = noticeService.getNoticesForUser(user, keyword, pageable);
 
         // then
         assertNotNull(result);
@@ -217,18 +219,17 @@ class NoticeServiceTest {
         noticeService.readNotice(noticeId, user);
 
         // then
-        // NoticeReadLog 생성 및 저장은 Service 내부 로직에 주석처리 되어 있어 검증 생략 가능하나,
-        // 로직이 활성화된다면 verify(noticeReadLogRepository).save(...) 필요
         verify(noticeRepository, times(1)).findById(noticeId);
     }
 
     @Test
-    @DisplayName("공지사항 상세 조회 테스트")
+    @DisplayName("공지사항 상세 조회 테스트 (이전/다음 글 포함)")
     void getNoticeDetail() {
         // given
         Long noticeId = 1L;
         User user = mock(User.class);
         given(user.getId()).willReturn(100L);
+        given(user.getRole()).willReturn(Role.ELDERLY);
 
         Notice notice = Notice.builder()
                 .id(noticeId)
@@ -245,6 +246,10 @@ class NoticeServiceTest {
         given(noticeTargetRoleRepository.findAllByNoticeId(noticeId)).willReturn(Collections.emptyList());
         given(noticeAttachmentRepository.findAllByNoticeId(noticeId)).willReturn(Collections.emptyList());
 
+        // 이전/다음 글 ID Mocking
+        given(noticeRepository.findPrevNoticeId(Role.ELDERLY, noticeId)).willReturn(Optional.of(0L));
+        given(noticeRepository.findNextNoticeId(Role.ELDERLY, noticeId)).willReturn(Optional.of(2L));
+
         // when
         NoticeResponse response = noticeService.getNoticeDetail(noticeId, user);
 
@@ -252,5 +257,7 @@ class NoticeServiceTest {
         assertNotNull(response);
         assertEquals("Detail Notice", response.getTitle());
         assertTrue(response.isRead());
+        assertEquals(0L, response.getPrevNoticeId());
+        assertEquals(2L, response.getNextNoticeId());
     }
 }

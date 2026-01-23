@@ -42,6 +42,7 @@ public class NoticeService {
                 .createdBy(admin)
                 .title(request.getTitle())
                 .content(request.getContent())
+                .category(request.getCategory()) // 카테고리 추가
                 .targetMode(request.getTargetMode())
                 .isPriority(request.isPriority())
                 .isPopup(request.isPopup())
@@ -112,9 +113,9 @@ public class NoticeService {
 
     // --- 사용자(User) 기능 ---
 
-    // Req 64, 65: 사용자 권한별 목록 조회 + 중요공지 우선
-    public Page<NoticeResponse> getNoticesForUser(User user, Pageable pageable) {
-        Page<Notice> notices = noticeRepository.findAllForUser(user.getRole(), pageable);
+    // Req 64, 65: 사용자 권한별 목록 조회 + 중요공지 우선 (검색 기능 추가)
+    public Page<NoticeResponse> getNoticesForUser(User user, String keyword, Pageable pageable) {
+        Page<Notice> notices = noticeRepository.findAllForUser(user.getRole(), keyword, pageable);
 
         return notices.map(notice -> {
             boolean isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(notice.getId(), String.valueOf(user.getId()));
@@ -161,7 +162,17 @@ public class NoticeService {
             isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(noticeId, String.valueOf(user.getId()));
         }
 
-        return convertToResponse(notice, isRead);
+        NoticeResponse response = convertToResponse(notice, isRead);
+
+        // 이전글/다음글 ID 조회
+        if (user != null) {
+            noticeRepository.findPrevNoticeId(user.getRole(), noticeId)
+                    .ifPresent(response::setPrevNoticeId);
+            noticeRepository.findNextNoticeId(user.getRole(), noticeId)
+                    .ifPresent(response::setNextNoticeId);
+        }
+
+        return response;
     }
 
     // Helper: Response 변환기
