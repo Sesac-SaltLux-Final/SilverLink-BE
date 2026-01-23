@@ -33,12 +33,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/**
- * [교수님의 조언]
- * 1. @WebMvcTest vs @SpringBootTest: 컨트롤러 레이어만 빠르게 테스트하려면 @WebMvcTest가 좋지만,
- * Security 설정이 복잡하게 얽혀있다면 현재처럼 @SpringBootTest를 유지하되 필요한 Bean만 Mocking하는 전략도 유효합니다.
- * 2. @AuthenticationPrincipal Long 처리: 테스트 코드에서 인증 객체(Principal)에 Long 타입을 직접 주입하는 법을 적용했습니다.
- */
+
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
