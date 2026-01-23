@@ -6,6 +6,7 @@ import com.aicc.silverlink.domain.assignment.service.AssignmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -34,15 +35,22 @@ public class AssignmentController {
         assignmentService.unassignCounselor(counselorId, elderlyId);
         return ResponseEntity.ok().build();
     }
-
-    @GetMapping("/counselor/{counselorId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'COUNSELOR')")
-    public ResponseEntity<List<AssignmentResponse>> getAssignmentByCounselor(@PathVariable Long counselorId){
+    // 상담사 본인에게 배정된 노인 현황
+    @GetMapping("/counselor/me")
+    @PreAuthorize("hasRole('COUNSELOR')")
+    public ResponseEntity<List<AssignmentResponse>> getAssignmentByCounselor(@AuthenticationPrincipal Long currentUserId){
+        return ResponseEntity.ok(assignmentService.getAssignmentsByCounselor(currentUserId));
+    }
+    // 상담사의 배정현황
+    @GetMapping("/admin/counselors/{counselorId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<AssignmentResponse>> getCounselorAssignmentByAdmin(@PathVariable Long counselorId){
         return ResponseEntity.ok(assignmentService.getAssignmentsByCounselor(counselorId));
     }
-
-    @GetMapping("/elderly/{elderlyId}")
-    public ResponseEntity<AssignmentResponse>getAssignmentByElderly(@PathVariable Long elderlyId){
+    // 노인의 배정현황
+    @GetMapping("/admin/elderly/{elderlyId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AssignmentResponse>getElderlyAssignmentByAdmin(@PathVariable Long elderlyId){
     return ResponseEntity.ok(assignmentService.getAssignmentByElderly(elderlyId));
     }
 }
