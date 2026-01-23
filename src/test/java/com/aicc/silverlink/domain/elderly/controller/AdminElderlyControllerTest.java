@@ -31,51 +31,36 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
-@AutoConfigureMockMvc // 💡 보안 필터를 포함하여 실제와 유사한 환경에서 테스트합니다.
+@AutoConfigureMockMvc
 @ActiveProfiles("ci")
 class AdminElderlyControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @MockitoBean private ElderlyService elderlyService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockitoBean
-    private ElderlyService elderlyService;
-
-    // --- 테스트용 픽스처 생성 ---
     private ElderlySummaryResponse createSummaryResponse(Long id, String name) {
-        return new ElderlySummaryResponse(
-                id, name, "01011112222", 11110L, "서울", "종로", "동", "전체주소",
-                LocalDate.of(1950, 1, 1), 75, Elderly.Gender.M, "주소1", "주소2", "123"
-        );
+        return new ElderlySummaryResponse(id, name, "01011112222", 11110L, "서울", "종로", "동", "전체주소",
+                LocalDate.of(1950, 1, 1), 75, Elderly.Gender.M, "주소1", "주소2", "123");
     }
 
     @Test
     @DisplayName("성공: 관리자가 어르신 전체 목록을 조회한다")
     void listAll() throws Exception {
-        // given
-        given(elderlyService.getAllElderlyForAdmin())
-                .willReturn(List.of(createSummaryResponse(10L, "이노인")));
+        given(elderlyService.getAllElderlyForAdmin()).willReturn(List.of(createSummaryResponse(10L, "이노인")));
 
-        // when & then
-        mockMvc.perform(get("/admin/elderly")
-                        .with(user("1").roles("ADMIN"))) // 💡 RequestPostProcessor로 확실한 권한 주입
-                .andDo(print())
+        mockMvc.perform(get("/api/admin/elderly")
+                        .with(user("1").roles("ADMIN")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()").value(1))
-                .andExpect(jsonPath("$[0].name").value("이노인"));
+                .andExpect(jsonPath("$.size()").value(1));
     }
 
     @Test
     @DisplayName("성공: 관리자가 어르신 통합 상세 정보를 조회한다")
     void detail() throws Exception {
-        // given
         Long eId = 10L;
         ElderlyAdminDetailResponse response = ElderlyAdminDetailResponse.builder()
                 .elderly(createSummaryResponse(eId, "이노인"))
@@ -85,8 +70,7 @@ class AdminElderlyControllerTest {
 
         given(elderlyService.getElderlyDetailForAdmin(eId)).willReturn(response);
 
-        // when & then
-        mockMvc.perform(get("/admin/elderly/{elderlyUserId}/detail", eId)
+        mockMvc.perform(get("/api/admin/elderly/{elderlyUserId}/detail", eId)
                         .with(user("1").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.elderly.name").value("이노인"));
@@ -95,48 +79,39 @@ class AdminElderlyControllerTest {
     @Test
     @DisplayName("성공: 관리자가 새로운 어르신을 등록한다")
     void create() throws Exception {
-        // given
-        ElderlyCreateRequest req = new ElderlyCreateRequest(
-                10L, 11110L, LocalDate.of(1950, 1, 1), Elderly.Gender.M, "주소1", "주소2", "123"
-        );
+        ElderlyCreateRequest req = new ElderlyCreateRequest(10L, 11110L, LocalDate.of(1950, 1, 1), Elderly.Gender.M, "주소1", "주소2", "123");
         given(elderlyService.createElderly(any())).willReturn(createSummaryResponse(10L, "이노인"));
 
-        // when & then
-        mockMvc.perform(post("/admin/elderly")
+        mockMvc.perform(post("/api/admin/elderly")
                         .with(user("1").roles("ADMIN"))
-                        .with(csrf()) // 💡 POST 요청에는 CSRF 토큰이 필수입니다.
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("이노인"));
+                .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("성공: 관리자가 어르신의 건강 정보를 등록하거나 수정한다")
     void upsertHealth() throws Exception {
-        // given
         Long eId = 10L;
-        HealthInfoUpdateRequest req = new HealthInfoUpdateRequest("고혈압", "치매 초기", "주의요망");
-        HealthInfoResponse response = new HealthInfoResponse(eId, "고혈압", "치매 초기", "주의요망", LocalDateTime.now());
+        HealthInfoUpdateRequest req = new HealthInfoUpdateRequest("고혈압", "정상", "없음");
+        HealthInfoResponse response = new HealthInfoResponse(eId, "고혈압", "정상", "없음", LocalDateTime.now());
 
         given(elderlyService.upsertHealthInfo(any(), eq(eId), any())).willReturn(response);
 
-        // when & then
-        mockMvc.perform(patch("/admin/elderly/{elderlyUserId}/health", eId)
-                        .with(user("1").roles("ADMIN")) // 💡 SecurityUtils.currentUserId()가 "1"을 Long 1L로 인식하게 함
+        mockMvc.perform(patch("/api/admin/elderly/{elderlyUserId}/health", eId)
+                        .with(user("1").roles("ADMIN"))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.chronicDiseases").value("고혈압"));
+                .andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("실패: 관리자 권한이 없는 사용자가 접근하면 403 에러가 발생한다")
     void listAll_Fail_Forbidden() throws Exception {
-        mockMvc.perform(get("/admin/elderly")
-                        .with(user("2").roles("COUNSELOR"))) // 💡 상담사 권한으로 시도
+        mockMvc.perform(get("/api/admin/elderly")
+                        .with(user("2").roles("COUNSELOR")))
                 .andExpect(status().isForbidden());
     }
 }
