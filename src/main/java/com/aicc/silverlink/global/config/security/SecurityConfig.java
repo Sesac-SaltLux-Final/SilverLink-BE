@@ -58,6 +58,8 @@ public class SecurityConfig {
                                 "/api/welfare/**",
                                 "/api/faqs/**",
                                 "/api/guardians/signup",
+                                "/ocr/**",
+                                "/api/guardians/signup",
                                 "/api/policies/latest/**"
                         ).permitAll()
 
