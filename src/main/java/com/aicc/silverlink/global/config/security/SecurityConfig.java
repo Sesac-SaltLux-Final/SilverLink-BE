@@ -65,9 +65,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admins/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/policies").hasRole("ADMIN")
 
-                        .requestMatchers("/api/counselors/**").hasRole("COUNSELOR")
-                        .requestMatchers("/api/guardians/**").hasRole("GUARDIAN")
-                        .requestMatchers("/api/elderly/**").hasRole("ELDERLY")
+                        // 각 컨트롤러에서 @PreAuthorize로 권한을 세분화하므로 여기서는 인증만 요구
                         .anyRequest().authenticated())
 
                 .exceptionHandling(ex -> ex
