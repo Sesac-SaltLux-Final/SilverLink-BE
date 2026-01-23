@@ -23,8 +23,9 @@ public class NoticeController {
     @GetMapping
     public ResponseEntity<Page<NoticeResponse>> getMyNotices(
             @AuthenticationPrincipal User user, // 현재 로그인한 사용자
+            @RequestParam(required = false) String keyword, // 검색 키워드 추가
             Pageable pageable) {
-        return ResponseEntity.ok(noticeService.getNoticesForUser(user, pageable));
+        return ResponseEntity.ok(noticeService.getNoticesForUser(user, keyword, pageable));
     }
 
     // Req 67: 메인 화면 팝업 공지 조회
