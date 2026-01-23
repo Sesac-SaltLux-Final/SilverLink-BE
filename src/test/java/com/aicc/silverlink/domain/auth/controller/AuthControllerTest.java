@@ -68,7 +68,7 @@ class AuthControllerIT {
                 given(authService.login(any(AuthDtos.LoginRequest.class))).willReturn(authResult);
 
                 // when & then
-                mockMvc.perform(post("/auth/login")
+                mockMvc.perform(post("/api/auth/login")
                                 .with(csrf()) // ✅ Spring Security 켜져 있으면 POST는 기본적으로 CSRF 필요할 때 많음
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
@@ -94,7 +94,7 @@ class AuthControllerIT {
                                 .willThrow(new IllegalArgumentException("LOGIN_FAIL"));
 
                 // when & then
-                mockMvc.perform(post("/auth/login")
+                mockMvc.perform(post("/api/auth/login")
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
@@ -120,7 +120,7 @@ class AuthControllerIT {
                                 .willReturn(authResult);
 
                 // when & then
-                mockMvc.perform(post("/auth/refresh")
+                mockMvc.perform(post("/api/auth/refresh")
                                 .with(csrf())
                                 .cookie(cookie))
                                 .andDo(print())
@@ -137,7 +137,7 @@ class AuthControllerIT {
                 Cookie cookie = new Cookie("refresh_token", cookieValue);
 
                 // when & then
-                mockMvc.perform(post("/auth/logout")
+                mockMvc.perform(post("/api/auth/logout")
                                 .with(csrf())
                                 .cookie(cookie))
                                 .andDo(print())

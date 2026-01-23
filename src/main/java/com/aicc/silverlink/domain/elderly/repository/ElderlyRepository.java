@@ -30,31 +30,19 @@ public interface ElderlyRepository extends JpaRepository<Elderly, Long> {
     List<Elderly> findByAdmCode(@Param("admCode") Long admCode);
 
     /**
-     * 특정 시/도에 속한 어르신 목록 조회
+     * ✅ 전체 어르신 목록 조회 (관리자용: User 및 행정구역 정보 포함)
+     */
+    @Query("SELECT e FROM Elderly e " +
+            "JOIN FETCH e.user " +
+            "JOIN FETCH e.administrativeDivision")
+    List<Elderly> findAllWithUserAndDivision();
+
+    /**
+     * ✅ 특정 시/도에 속한 어르신 목록 조회
      */
     @Query("SELECT e FROM Elderly e " +
             "JOIN FETCH e.user " +
             "JOIN FETCH e.administrativeDivision ad " +
             "WHERE ad.sidoCode = :sidoCode")
     List<Elderly> findBySidoCode(@Param("sidoCode") String sidoCode);
-
-    /**
-     * 특정 시/군/구에 속한 어르신 목록 조회
-     */
-    @Query("SELECT e FROM Elderly e " +
-            "JOIN FETCH e.user " +
-            "JOIN FETCH e.administrativeDivision ad " +
-            "WHERE ad.sidoCode = :sidoCode AND ad.sigunguCode = :sigunguCode")
-    List<Elderly> findBySigungu(
-            @Param("sidoCode") String sidoCode,
-            @Param("sigunguCode") String sigunguCode
-    );
-
-    /**
-     * 전체 어르신 목록 조회 (User 및 행정구역 정보 포함)
-     */
-    @Query("SELECT e FROM Elderly e " +
-            "JOIN FETCH e.user " +
-            "JOIN FETCH e.administrativeDivision")
-    List<Elderly> findAllWithUserAndDivision();
 }

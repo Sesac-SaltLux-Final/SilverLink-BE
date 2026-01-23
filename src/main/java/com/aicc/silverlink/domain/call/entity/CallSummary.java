@@ -1,29 +1,40 @@
 package com.aicc.silverlink.domain.call.entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.time.LocalDateTime;
 
+/**
+ * 통화 요약
+ */
 @Entity
 @Table(name = "call_summaries")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 public class CallSummary {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "summary_id")
     private Long id;
 
-    // TODO: Add fields mapping to call_summaries table columns
-    // e.g., call_record_id, summary_text, keywords, etc.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "call_id", nullable = false)
+    private CallRecord callRecord;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "content", columnDefinition = "TEXT", nullable = false)
+    private String content;
+
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
     }
 }

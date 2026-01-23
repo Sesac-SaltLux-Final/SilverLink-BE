@@ -137,6 +137,18 @@ public class User {
     public void updateEmail(String email) {
         this.email = (email == null || email.isBlank()) ? null : email.trim();
     }
+    // User.java에 추가
+    public void updatePhone(String phone) {
+        if (phone == null || phone.isBlank()) throw new IllegalArgumentException("PHONE_INVALID");
+        this.phone = normalizePhone(phone); // 저장 시 숫자만 남기도록 정규화
+    }
+
+    // 서비스 레이어에서 편하게 쓰기 위해 통합 메서드를 만드는 것도 실무 팁입니다.
+    public void updateProfile(String name, String phone, String email) {
+        updateName(name);
+        updatePhone(phone);
+        updateEmail(email);
+    }
 
 
 }

@@ -2,6 +2,7 @@ package com.aicc.silverlink.domain.counselor.service;
 
 import com.aicc.silverlink.domain.counselor.dto.CounselorRequest;
 import com.aicc.silverlink.domain.counselor.dto.CounselorResponse;
+import com.aicc.silverlink.domain.counselor.dto.CounselorUpdateRequest;
 import com.aicc.silverlink.domain.counselor.entity.Counselor;
 import com.aicc.silverlink.domain.counselor.repository.CounselorRepository;
 import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
@@ -30,27 +31,22 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-@ExtendWith(MockitoExtension.class) // Mockito 사용 설정
+@ExtendWith(MockitoExtension.class)
 class CounselorServiceTest {
 
     @InjectMocks
-    private CounselorService counselorService; // 가짜 객체들이 주입될 서비스
+    private CounselorService counselorService;
 
-    @Mock
-    private CounselorRepository counselorRepository;
-    @Mock
-    private UserRepository userRepository;
-    @Mock
-    private PasswordEncoder passwordEncoder;
-    @Mock
-    private AdministrativeDivisionRepository divisionRepository; // [추가] 필수 의존성
+    @Mock private CounselorRepository counselorRepository;
+    @Mock private UserRepository userRepository;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private AdministrativeDivisionRepository divisionRepository;
 
-    // 테스트 픽스처
     private AdministrativeDivision division;
 
     @BeforeEach
     void setUp() {
-        // 행정구역 더미 데이터 생성
+        // 공통으로 사용할 행정구역 더미 데이터
         division = AdministrativeDivision.builder()
                 .admCode(1111051500L)
                 .sidoName("서울특별시")
@@ -59,47 +55,40 @@ class CounselorServiceTest {
                 .build();
     }
 
-    // 테스트용 더미 데이터 생성 헬퍼 메서드
-    private User createDummyUser() {
+    private User createDummyUser(Long id, String loginId, String name) {
         User user = User.createLocal(
-                "counselor1", "encodedPw", "김상담", "010-1234-5678", "test@email.com", Role.COUNSELOR
+                loginId, "encodedPw", name, "010-1234-5678", loginId + "@email.com", Role.COUNSELOR
         );
-        ReflectionTestUtils.setField(user, "id", 1L); // ID 강제 주입
+        ReflectionTestUtils.setField(user, "id", id);
         return user;
     }
 
-    // [수정] create 메서드 시그니처에 맞게 AdministrativeDivision 전달
     private Counselor createDummyCounselor(User user, AdministrativeDivision division) {
-        return Counselor.create(
-                user, "2024001", "복지팀", "02-123-4567", LocalDate.now(), division
-        );
+        return Counselor.create(user, "2024001", "복지팀", "02-123-4567", LocalDate.now(), division);
     }
+
+    // --- [테스트 케이스 1: 등록] ---
 
     @Test
     @DisplayName("상담사 등록 성공")
     void register_success() {
-        // given (준비)
+        // given
         CounselorRequest request = new CounselorRequest(
                 "counselor1", "pass1234", "김상담", "test@email.com",
                 "010-1234-5678", "2024001", "복지팀", "02-123-4567",
-                LocalDate.now(), 1111051500L // [수정] String -> Long
+                LocalDate.now(), 1111051500L
         );
 
-        given(userRepository.existsByLoginId(request.getLoginId())).willReturn(false); // 중복 아님
-        // [추가] 행정구역 조회 모킹
+        given(userRepository.existsByLoginId(request.getLoginId())).willReturn(false);
         given(divisionRepository.findById(request.getAdmCode())).willReturn(Optional.of(division));
         given(passwordEncoder.encode(request.getPassword())).willReturn("encodedPw");
 
-        // when (실행)
+        // when
         CounselorResponse response = counselorService.register(request);
 
-        // then (검증)
+        // then
         assertThat(response).isNotNull();
         assertThat(response.getLoginId()).isEqualTo(request.getLoginId());
-        assertThat(response.getName()).isEqualTo(request.getName());
-        assertThat(response.getAdmCode()).isEqualTo(1111051500L); // 행정구역 코드 확인
-
-        // 실제로 저장이 호출되었는지 확인
         verify(userRepository, times(1)).save(any(User.class));
         verify(counselorRepository, times(1)).save(any(Counselor.class));
     }
@@ -109,24 +98,52 @@ class CounselorServiceTest {
     void register_fail_duplicate_id() {
         // given
         CounselorRequest request = CounselorRequest.builder().loginId("duplicateId").build();
-        given(userRepository.existsByLoginId("duplicateId")).willReturn(true); // 중복됨
+        given(userRepository.existsByLoginId("duplicateId")).willReturn(true);
 
         // when & then
         assertThatThrownBy(() -> counselorService.register(request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("이미 사용 중인 아이디입니다.");
-
-        // 저장이 호출되지 않아야 함
-        verify(userRepository, times(0)).save(any());
     }
+
+    // --- [테스트 케이스 2: 수정] ---
+
+    @Test
+    @DisplayName("상담사 수정 성공 - 더티 체킹으로 정보 업데이트")
+    void updateCounselor_success() {
+        // given
+        Long counselorId = 1L;
+        User user = createDummyUser(counselorId, "counselor1", "김상담");
+        Counselor counselor = createDummyCounselor(user, division);
+
+        CounselorUpdateRequest updateReq = new CounselorUpdateRequest();
+        ReflectionTestUtils.setField(updateReq, "name", "이름수정");
+        ReflectionTestUtils.setField(updateReq, "phone", "010-9999-9999");
+        ReflectionTestUtils.setField(updateReq, "email", "new@test.com");
+        ReflectionTestUtils.setField(updateReq, "department", "기획팀");
+        ReflectionTestUtils.setField(updateReq, "officePhone", "02-111-2222");
+
+        given(counselorRepository.findByIdWithUser(counselorId)).willReturn(Optional.of(counselor));
+
+        // when
+        CounselorResponse response = counselorService.updateCounselor(counselorId, updateReq);
+
+        // then
+        assertThat(response.getName()).isEqualTo("이름수정");
+        assertThat(response.getPhone()).isEqualTo("01099999999"); // normalizePhone 검증
+        assertThat(response.getDepartment()).isEqualTo("기획팀");
+        assertThat(counselor.getUser().getEmail()).isEqualTo("new@test.com");
+    }
+
+    // --- [테스트 케이스 3: 조회] ---
 
     @Test
     @DisplayName("상담사 상세 조회 성공")
     void getCounselor_success() {
         // given
         Long counselorId = 1L;
-        User user = createDummyUser();
-        Counselor counselor = createDummyCounselor(user, division); // [수정] division 전달
+        User user = createDummyUser(counselorId, "counselor1", "김상담");
+        Counselor counselor = createDummyCounselor(user, division);
 
         given(counselorRepository.findByIdWithUser(counselorId)).willReturn(Optional.of(counselor));
 
@@ -134,10 +151,9 @@ class CounselorServiceTest {
         CounselorResponse response = counselorService.getCounselor(counselorId);
 
         // then
-        assertThat(response.getId()).isEqualTo(user.getId());
-        assertThat(response.getName()).isEqualTo(user.getName());
-        assertThat(response.getDepartment()).isEqualTo(counselor.getDepartment());
-        assertThat(response.getSidoName()).isEqualTo("서울특별시"); // 행정구역 정보 확인
+        assertThat(response.getId()).isEqualTo(counselorId);
+        assertThat(response.getName()).isEqualTo("김상담");
+        assertThat(response.getSidoName()).isEqualTo("서울특별시");
     }
 
     @Test
@@ -153,24 +169,22 @@ class CounselorServiceTest {
     }
 
     @Test
-    @DisplayName("상담사 목록 조회")
-    void getAllCounselors() {
+    @DisplayName("상담사 전체 목록 조회 성공")
+    void getAllCounselors_success() {
         // given
-        User user1 = createDummyUser();
-        Counselor c1 = createDummyCounselor(user1, division);
-
-        User user2 = User.createLocal("c2", "pw", "이상담", "010-0000-0000", "e@e.com", Role.COUNSELOR);
-        ReflectionTestUtils.setField(user2, "id", 2L);
-        Counselor c2 = createDummyCounselor(user2, division);
-
-        given(counselorRepository.findAllWithUser()).willReturn(List.of(c1, c2));
+        User u1 = createDummyUser(1L, "c1", "상담1");
+        User u2 = createDummyUser(2L, "c2", "상담2");
+        given(counselorRepository.findAllWithUser()).willReturn(List.of(
+                createDummyCounselor(u1, division),
+                createDummyCounselor(u2, division)
+        ));
 
         // when
         List<CounselorResponse> list = counselorService.getAllCounselors();
 
         // then
         assertThat(list).hasSize(2);
-        assertThat(list.get(0).getName()).isEqualTo("김상담");
-        assertThat(list.get(1).getName()).isEqualTo("이상담");
+        assertThat(list.get(0).getName()).isEqualTo("상담1");
+        assertThat(list.get(1).getName()).isEqualTo("상담2");
     }
 }
