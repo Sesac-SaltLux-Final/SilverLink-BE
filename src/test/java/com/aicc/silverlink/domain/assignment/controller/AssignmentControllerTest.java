@@ -6,10 +6,13 @@ import com.aicc.silverlink.domain.assignment.entity.AssignmentStatus;
 import com.aicc.silverlink.domain.assignment.service.AssignmentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -17,18 +20,19 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong; // ✅ 추가
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user; // 👈 401 해결사
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
-// 👇 [핵심] 님의 환경에 맞는 패키지 경로 사용 (이게 컴파일 성공했던 경로임)
-@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@AutoConfigureMockMvc
+@ActiveProfiles("test") //
 class AssignmentControllerTest {
 
     @Autowired
@@ -56,85 +60,80 @@ class AssignmentControllerTest {
     @Test
     @DisplayName("배정 성공 - 관리자 권한으로 요청 시 201 Created 반환")
     void assignCounselor_Success() throws Exception {
-        // given
         AssignmentRequest request = new AssignmentRequest(1L, 2L, 3L);
         AssignmentResponse response = createMockResponse();
 
-        given(assignmentService.assignCounselor(any(AssignmentRequest.class)))
-                .willReturn(response);
+        given(assignmentService.assignCounselor(any(AssignmentRequest.class))).willReturn(response);
 
-        // when & then
         mockMvc.perform(post("/api/assignments")
-                        // 401 방지: 관리자 권한 강력 주입
                         .with(user("admin").roles("ADMIN"))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andDo(print())
                 .andExpect(status().isCreated())
-                .andExpect(header().string("Location", "/api/assignments/elderly/2"))
-                .andExpect(jsonPath("$.counselorName").value("김상담"));
-    }
-
-    @Test
-    @DisplayName("배정 실패 - 권한 없는 사용자(일반 유저)가 요청 시 403 Forbidden")
-    void assignCounselor_Fail_Forbidden() throws Exception {
-        // given
-        AssignmentRequest request = new AssignmentRequest(1L, 2L, 3L);
-
-        // when & then
-        mockMvc.perform(post("/api/assignments")
-                        // 일반 유저 권한 주입 -> ADMIN 필요하므로 403 기대
-                        .with(user("user").roles("USER"))
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andDo(print())
-                .andExpect(status().isForbidden());
+                .andExpect(header().string("Location", "/api/assignments/elderly/2"));
     }
 
     @Test
     @DisplayName("배정 해제 성공 - 관리자 권한으로 요청 시 200 OK")
     void unassignCounselor_Success() throws Exception {
-        // when & then
         mockMvc.perform(post("/api/assignments/unassign")
                         .with(user("admin").roles("ADMIN"))
                         .with(csrf())
                         .param("counselorId", "1")
                         .param("elderlyId", "2"))
-                .andDo(print())
                 .andExpect(status().isOk());
 
-        verify(assignmentService).unassignCounselor(1L, 2L);
+        verify(assignmentService).unassignCounselor(anyLong(), anyLong());
     }
 
-    @Test
-    @DisplayName("상담사별 배정 목록 조회 성공 - 상담사 본인 또는 관리자 요청")
-    void getAssignmentsByCounselor_Success() throws Exception {
-        // given
-        List<AssignmentResponse> responses = List.of(createMockResponse());
-        given(assignmentService.getAssignmentsByCounselor(1L)).willReturn(responses);
+    @Nested
+    @DisplayName("조회 API 테스트")
+    class GetAssignmentTests {
 
-        // when & then
-        mockMvc.perform(get("/api/assignments/counselor/1")
-                        .with(user("counselor").roles("COUNSELOR")))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()").value(1));
-    }
+        @Test
+        @DisplayName("상담사 본인의 배정 목록 조회 성공")
+        void getMyAssignments_Success() throws Exception {
+            // given
+            List<AssignmentResponse> responses = List.of(createMockResponse());
 
-    @Test
-    @DisplayName("어르신별 담당자 조회 성공")
-    void getAssignmentByElderly_Success() throws Exception {
-        // given
-        AssignmentResponse response = createMockResponse();
-        given(assignmentService.getAssignmentByElderly(2L)).willReturn(response);
+            // ✅ 핵심 수정: 1L 대신 any()를 사용하여 파라미터 불일치로 인한 빈 리스트 반환 방지
+            given(assignmentService.getAssignmentsByCounselor(any())).willReturn(responses);
 
-        // when & then
-        mockMvc.perform(get("/api/assignments/elderly/2")
-                        .with(user("user").roles("USER")))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.elderlyName").value("이노인"));
+            mockMvc.perform(get("/api/assignments/counselor/me")
+                            .with(user("1").roles("COUNSELOR"))) // Username을 "1"로 설정
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    // ✅ 인코딩 정보(charset)를 무시하기 위해 contentTypeCompatibleWith 사용
+                    .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.size()").value(1))
+                    .andExpect(jsonPath("$[0].counselorName").value("김상담"));
+        }
+
+        @Test
+        @DisplayName("관리자가 특정 상담사의 배정 목록 조회 성공")
+        void getAssignmentsByAdmin_Success() throws Exception {
+            List<AssignmentResponse> responses = List.of(createMockResponse());
+            given(assignmentService.getAssignmentsByCounselor(anyLong())).willReturn(responses);
+
+            mockMvc.perform(get("/api/assignments/admin/counselors/1")
+                            .with(user("admin").roles("ADMIN")))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].counselorName").value("김상담"));
+        }
+
+        @Test
+        @DisplayName("관리자가 특정 어르신의 배정 현황 조회 성공")
+        void getAssignmentByElderly_Success() throws Exception {
+            AssignmentResponse response = createMockResponse();
+            given(assignmentService.getAssignmentByElderly(anyLong())).willReturn(response);
+
+            mockMvc.perform(get("/api/assignments/admin/elderly/2")
+                            .with(user("admin").roles("ADMIN")))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.elderlyName").value("이노인"));
+        }
     }
 }

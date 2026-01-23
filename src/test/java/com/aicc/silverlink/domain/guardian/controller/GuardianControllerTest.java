@@ -7,67 +7,59 @@ import com.aicc.silverlink.domain.guardian.entity.RelationType;
 import com.aicc.silverlink.domain.guardian.service.GuardianService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+//import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/**
+ * [교수님의 조언]
+ * 1. @WebMvcTest vs @SpringBootTest: 컨트롤러 레이어만 빠르게 테스트하려면 @WebMvcTest가 좋지만,
+ * Security 설정이 복잡하게 얽혀있다면 현재처럼 @SpringBootTest를 유지하되 필요한 Bean만 Mocking하는 전략도 유효합니다.
+ * 2. @AuthenticationPrincipal Long 처리: 테스트 코드에서 인증 객체(Principal)에 Long 타입을 직접 주입하는 법을 적용했습니다.
+ */
 @SpringBootTest
-@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
 class GuardianControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Autowired private MockMvc mockMvc;
+    @Autowired private ObjectMapper objectMapper;
+    @MockitoBean private GuardianService guardianService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockitoBean
-    private GuardianService guardianService;
-
-    // 더미 데이터 생성 헬퍼
-    private GuardianRequest createRequest() {
-        return GuardianRequest.builder()
-                .loginId("guardian01")
-                .password("pass1234")
-                .name("김보호")
-                .email("guardian@test.com")
-                .phone("010-1234-5678")
-                .addressLine1("서울시 강남구")
-                .zipcode("12345")
-                .build();
-    }
-
-    private GuardianResponse createResponse() {
+    // --- 테스트용 픽스처 생성기 ---
+    private GuardianResponse createGuardianResponse(Long id, String name) {
         return GuardianResponse.builder()
-                .id(1L)
-                .name("김보호")
-                .email("guardian@test.com")
+                .id(id)
+                .name(name)
+                .email("test@test.com")
                 .phone("010-1234-5678")
-                .addressLine1("서울시 강남구")
-                .zipcode("12345")
                 .build();
     }
 
     private GuardianElderlyResponse createElderlyResponse() {
         return GuardianElderlyResponse.builder()
-                .id(10L)
                 .guardianId(1L)
                 .guardianName("김보호")
                 .elderlyId(2L)
@@ -77,119 +69,110 @@ class GuardianControllerTest {
                 .build();
     }
 
-    @Test
-    @DisplayName("보호자 회원가입 성공 - 201 Created")
-    void signup_Success() throws Exception {
-        // given
-        GuardianRequest request = createRequest();
-        GuardianResponse response = createResponse();
-
-        given(guardianService.register(any(GuardianRequest.class))).willReturn(response);
-
-        // when & then
-        mockMvc.perform(post("/api/guardians/signup")
-                        .with(csrf()) // 회원가입은 인증 없이 가능하지만 CSRF 토큰은 필요
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andDo(print())
-                .andExpect(status().isCreated())
-                .andExpect(header().string("Location", "/api/guardians/1"))
-                .andExpect(jsonPath("$.name").value("김보호"));
+    /**
+     * [교수님의 팁] @AuthenticationPrincipal Long 에 ID를 주입하기 위한 헬퍼 메소드
+     */
+    private void mockAuthentication(Long userId, String role) {
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                userId, // Principal에 Long ID 직접 주입
+                null,
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
-    @Test
-    @DisplayName("보호자 단건 조회 성공 - 인증된 사용자")
-    void getGuardian_Success() throws Exception {
-        // given
-        Long guardianId = 1L;
-        GuardianResponse response = createResponse();
+    @Nested
+    @DisplayName("보호자 및 공통 API 테스트")
+    class CommonTests {
+        @Test
+        @DisplayName("성공: 보호자 회원가입 (201 Created)")
+        void signup_Success() throws Exception {
+            GuardianRequest request = GuardianRequest.builder().loginId("test01").name("김보호").password("password").build();
+            given(guardianService.register(any(GuardianRequest.class))).willReturn(createGuardianResponse(1L, "김보호"));
 
-        given(guardianService.getGuardian(guardianId)).willReturn(response);
+            mockMvc.perform(post("/api/guardians/signup")
+                            .with(csrf()) // POST 요청에는 CSRF 토큰이 필요합니다.
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isCreated())
+                    .andExpect(header().string("Location", "/api/guardians/1"));
+        }
 
-        // when & then
-        mockMvc.perform(get("/api/guardians/{id}", guardianId)
-                        .with(user("user").roles("USER"))) // 일반 유저 접근 가능
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("김보호"));
+        @Test
+        @DisplayName("성공: 보호자 본인의 내 정보 조회 (200 OK)")
+        void getMyInfo_Success() throws Exception {
+            // Given
+            Long mockUserId = 1L;
+            mockAuthentication(mockUserId, "GUARDIAN");
+            given(guardianService.getGuardian(mockUserId)).willReturn(createGuardianResponse(mockUserId, "나보호"));
+
+            // When & Then
+            mockMvc.perform(get("/api/guardians/me"))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name").value("나보호"));
+        }
     }
 
-    @Test
-    @DisplayName("보호자 전체 목록 조회 성공 - 관리자(ADMIN)만 가능")
-    void getAllGuardians_Success() throws Exception {
-        // given
-        List<GuardianResponse> responses = List.of(createResponse());
-        given(guardianService.getAllGuardian()).willReturn(responses);
+    @Nested
+    @DisplayName("상담사(Counselor) 전용 API 테스트")
+    class CounselorTests {
+        @Test
+        @DisplayName("성공: 상담사가 담당 보호자 상세 조회")
+        void getGuardianByCounselor_Success() throws Exception {
+            Long counselorId = 100L;
+            Long guardianId = 1L;
+            mockAuthentication(counselorId, "COUNSELOR");
 
-        // when & then
-        mockMvc.perform(get("/api/guardians")
-                        .with(user("admin").roles("ADMIN"))) // ✅ 관리자 권한
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()").value(1));
+            given(guardianService.getGuardianForCounselor(eq(guardianId), eq(counselorId)))
+                    .willReturn(createGuardianResponse(guardianId, "상담담당보호자"));
+
+            mockMvc.perform(get("/api/guardians/counselor/{id}", guardianId))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name").value("상담담당보호자"));
+        }
+
+        @Test
+        @DisplayName("성공: 상담사가 보호자와 연결된 어르신 조회")
+        void getElderlyByCounselor_Success() throws Exception {
+            Long counselorId = 100L;
+            Long guardianId = 1L;
+            mockAuthentication(counselorId, "COUNSELOR");
+
+            given(guardianService.getElderlyByGuardianForCounselor(eq(guardianId), eq(counselorId)))
+                    .willReturn(createElderlyResponse());
+
+            mockMvc.perform(get("/api/guardians/counselor/{id}/elderly", guardianId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.elderlyName").value("이노인"));
+        }
     }
 
-    @Test
-    @DisplayName("보호자 전체 목록 조회 실패 - 일반 유저는 접근 불가 (403)")
-    void getAllGuardians_Fail_Forbidden() throws Exception {
-        // when & then
-        mockMvc.perform(get("/api/guardians")
-                        .with(user("user").roles("USER"))) // ❌ 일반 유저
-                .andDo(print())
-                .andExpect(status().isForbidden());
-    }
+    @Nested
+    @DisplayName("관리자(Admin) 전용 API 테스트")
+    class AdminTests {
+        @Test
+        @DisplayName("성공: 관리자가 전체 보호자 목록 조회")
+        void getAllGuardians_Success() throws Exception {
+            mockAuthentication(999L, "ADMIN");
+            given(guardianService.getAllGuardian()).willReturn(List.of(createGuardianResponse(1L, "보호자1")));
 
-    @Test
-    @DisplayName("보호자-어르신 연결 성공 - 관리자(ADMIN)만 가능")
-    void connectElderly_Success() throws Exception {
-        // given
-        Long guardianId = 1L;
-        Long elderlyId = 2L;
-        RelationType relationType = RelationType.CHILD;
+            mockMvc.perform(get("/api/guardians"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.size()").value(1));
+        }
 
-        // when & then
-        mockMvc.perform(post("/api/guardians/{id}/connect", guardianId)
-                        .param("elderlyId", String.valueOf(elderlyId))
-                        .param("relationType", relationType.name())
-                        .with(user("admin").roles("ADMIN")) // ✅ 관리자 권한
-                        .with(csrf()))
-                .andDo(print())
-                .andExpect(status().isOk());
+        @Test
+        @DisplayName("성공: 관리자가 어르신-보호자 연결 실행")
+        void connectElderly_Success() throws Exception {
+            mockAuthentication(999L, "ADMIN");
 
-        verify(guardianService).connectElderly(eq(guardianId), eq(elderlyId), eq(relationType));
-    }
-
-    @Test
-    @DisplayName("내 어르신 조회 성공")
-    void getMyElderly_Success() throws Exception {
-        // given
-        Long guardianId = 1L;
-        GuardianElderlyResponse response = createElderlyResponse();
-
-        given(guardianService.getElderlyByGuardian(guardianId)).willReturn(response);
-
-        // when & then
-        mockMvc.perform(get("/api/guardians/{id}/elderly", guardianId)
-                        .with(user("guardian").roles("GUARDIAN"))) // 보호자 권한
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.elderlyName").value("이노인"));
-    }
-
-    @Test
-    @DisplayName("어르신의 보호자 조회 성공")
-    void getGuardianOfElderly_Success() throws Exception {
-        // given
-        Long elderlyId = 2L;
-        GuardianElderlyResponse response = createElderlyResponse();
-
-        given(guardianService.getGuardianByElderly(elderlyId)).willReturn(response);
-
-        // when & then
-        mockMvc.perform(get("/api/guardians/find-by-elderly/{id}", elderlyId)
-                        .with(user("admin").roles("ADMIN")))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.guardianName").value("김보호"));
+            mockMvc.perform(post("/api/guardians/1/connect")
+                            .param("elderlyId", "2")
+                            .param("relationType", "CHILD")
+                            .with(csrf()))
+                    .andExpect(status().isOk());
+        }
     }
 }

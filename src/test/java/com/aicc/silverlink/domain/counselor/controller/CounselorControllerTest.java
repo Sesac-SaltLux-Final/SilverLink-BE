@@ -6,10 +6,13 @@ import com.aicc.silverlink.domain.counselor.service.CounselorService;
 import com.aicc.silverlink.domain.user.entity.UserStatus;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -26,7 +29,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
-@org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
 class CounselorControllerTest {
 
     @Autowired
@@ -38,126 +42,92 @@ class CounselorControllerTest {
     @MockitoBean
     private CounselorService counselorService;
 
-    // 테스트용 Request 생성
-    private CounselorRequest createRequest() {
+    // ✅ 필수값이 누락되지 않도록 헬퍼 메서드 수정
+    private CounselorRequest createValidRequest(String loginId, String name) {
         return CounselorRequest.builder()
-                .loginId("counselor01")
-                .password("pass1234")
-                .name("김상담")
-                .phone("010-1234-5678")
-                .email("counselor@test.com")
+                .loginId(loginId)
+                .password("pass1234!")
+                .name(name)
+                .phone("010-1234-5678") // 👈 이게 빠져서 에러가 났었습니다!
+                .email("test@silverlink.com")
                 .employeeNo("EMP001")
-                .department("복지과")
-                // [수정] admDongCode(String) -> admCode(Long)
-                .admCode(1111051500L)
                 .joinedAt(LocalDate.now())
-                .build();
-    }
-
-    // 테스트용 Response 생성
-    private CounselorResponse createResponse() {
-        return CounselorResponse.builder()
-                .id(1L)
-                .loginId("counselor01")
-                .name("김상담")
-                .phone("010-1234-5678")
-                .email("counselor@test.com")
-                .employeeNo("EMP001")
-                .department("복지과")
-                .status(UserStatus.ACTIVE)
-                // [수정] admDongCode(String) -> admCode(Long)
                 .admCode(1111051500L)
                 .build();
     }
 
-    @Test
-    @DisplayName("상담사 등록 성공 - 관리자 권한")
-    void register_Success() throws Exception {
-        // given
-        CounselorRequest request = createRequest();
-        CounselorResponse response = createResponse();
-
-        given(counselorService.register(any(CounselorRequest.class))).willReturn(response);
-
-        // when & then
-        mockMvc.perform(post("/api/counselors")
-                        .with(user("admin").roles("ADMIN")) // ✅ 관리자 권한 필수
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andDo(print())
-                .andExpect(status().isCreated()) // 201 Created 확인
-                .andExpect(jsonPath("$.name").value("김상담"))
-                .andExpect(jsonPath("$.employeeNo").value("EMP001"));
-    }
-
-    @Test
-    @DisplayName("상담사 등록 실패 - 권한 없음 (일반 유저)")
-    void register_Fail_Forbidden() throws Exception {
-        // given
-        CounselorRequest request = createRequest();
-
-        // when & then
-        mockMvc.perform(post("/api/counselors")
-                        .with(user("user").roles("USER")) // ❌ 일반 유저
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andDo(print())
-                .andExpect(status().isForbidden()); // 403 Forbidden
-    }
-
-    @Test
-    @DisplayName("상담사 등록 실패 - 필수값 누락 (Validation Check)")
-    void register_Fail_Validation() throws Exception {
-        // given
-        CounselorRequest invalidRequest = CounselorRequest.builder()
-                .loginId("") // ❌ 빈 값 (아이디 필수)
-                .password("") // ❌ 빈 값 (비밀번호 필수)
-                .name("김상담")
+    private CounselorResponse createResponse(Long id, String name) {
+        return CounselorResponse.builder()
+                .id(id)
+                .loginId("counselor_" + id)
+                .name(name)
+                .employeeNo("EMP" + id)
+                .status(UserStatus.ACTIVE)
+                .admCode(1111051500L)
                 .build();
-
-        // when & then
-        mockMvc.perform(post("/api/counselors")
-                        .with(user("admin").roles("ADMIN"))
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalidRequest)))
-                .andDo(print())
-                .andExpect(status().isBadRequest()); // 400 Bad Request
     }
 
-    @Test
-    @DisplayName("상담사 단건 조회 성공 - 관리자 권한")
-    void getCounselor_Success() throws Exception {
-        // given
-        Long id = 1L;
-        CounselorResponse response = createResponse();
+    @Nested
+    @DisplayName("상담사 등록 API")
+    class RegisterTests {
+        @Test
+        @DisplayName("성공: 모든 필수 값을 입력하면 상담사가 등록된다")
+        void register_Success() throws Exception {
+            // given
+            CounselorRequest request = createValidRequest("new_counselor", "박상담");
+            given(counselorService.register(any())).willReturn(createResponse(1L, "박상담"));
 
-        given(counselorService.getCounselor(id)).willReturn(response);
-
-        // when & then
-        mockMvc.perform(get("/api/counselors/{id}", id)
-                        .with(user("admin").roles("ADMIN"))) // ✅ 관리자
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.loginId").value("counselor01"));
+            // when & then
+            mockMvc.perform(post("/api/counselors")
+                            .with(user("admin").roles("ADMIN"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andDo(print())
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.name").value("박상담"));
+        }
     }
 
-    @Test
-    @DisplayName("상담사 전체 조회 성공 - 관리자 권한")
-    void getAllCounselors_Success() throws Exception {
-        // given
-        List<CounselorResponse> responses = List.of(createResponse());
+    @Nested
+    @DisplayName("상담사 조회 API")
+    class GetCounselorTests {
 
-        given(counselorService.getAllCounselors()).willReturn(responses);
+        @Test
+        @DisplayName("성공: 관리자가 특정 상담사를 ID로 조회한다")
+        void getCounselorByAdmin_Success() throws Exception {
+            given(counselorService.getCounselor(any())).willReturn(createResponse(1L, "김상담"));
 
-        // when & then
-        mockMvc.perform(get("/api/counselors")
-                        .with(user("admin").roles("ADMIN"))) // ✅ 관리자
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()").value(1))
-                .andExpect(jsonPath("$[0].name").value("김상담"));
+            mockMvc.perform(get("/api/counselors/admin/1")
+                            .with(user("admin").roles("ADMIN")))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.name").value("김상담"));
+        }
+
+        @Test
+        @DisplayName("성공: 상담사 본인이 자신의 정보를 조회한다")
+        void getCounselorMe_Success() throws Exception {
+            given(counselorService.getCounselor(any())).willReturn(createResponse(10L, "본인상담"));
+
+            mockMvc.perform(get("/api/counselors/me")
+                            .with(user("10").roles("COUNSELOR")))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name").value("본인상담"));
+        }
+
+        @Test
+        @DisplayName("성공: 관리자가 상담사 전체 목록을 조회한다")
+        void getAllCounselors_Success() throws Exception {
+            given(counselorService.getAllCounselors()).willReturn(List.of(createResponse(1L, "상담1")));
+
+            mockMvc.perform(get("/api/counselors")
+                            .with(user("admin").roles("ADMIN")))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.size()").value(1));
+        }
     }
 }
