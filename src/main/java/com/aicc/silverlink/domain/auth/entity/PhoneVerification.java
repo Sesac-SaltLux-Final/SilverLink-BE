@@ -29,7 +29,7 @@ public class PhoneVerification {
     @Column(name = "purpose", nullable = false)
     private Purpose purpose;
 
-    @Column(name = "code_hash", nullable = false, length = 255)
+    @Column(name = "code_hash", length = 255)
     private String codeHash;
 
     @Enumerated(EnumType.STRING)
@@ -60,8 +60,7 @@ public class PhoneVerification {
             LocalDateTime expiresAt,
             String requestIp,
             Status status,
-            int failCount
-    ) {
+            int failCount) {
         this.user = user;
         this.phoneE164 = phoneE164;
         this.purpose = purpose;
@@ -73,7 +72,8 @@ public class PhoneVerification {
         this.failCount = 0;
     }
 
-    public static PhoneVerification create(User user, String phoneE164, Purpose purpose, String codeHash, String requestIp, long ttlSeconds) {
+    public static PhoneVerification create(User user, String phoneE164, Purpose purpose, String codeHash,
+            String requestIp, long ttlSeconds) {
         return PhoneVerification.builder()
                 .user(user)
                 .phoneE164(phoneE164)
@@ -100,23 +100,21 @@ public class PhoneVerification {
         REQUESTED, VERIFIED, EXPIRED, FAILED
     }
 
-    public void increaseFailCount(){
+    public void increaseFailCount() {
         this.failCount++;
     }
 
-    public void verify(){
+    public void verify() {
         this.status = Status.VERIFIED;
         this.verifiedAt = LocalDateTime.now();
     }
 
-    public void expire(){
+    public void expire() {
         this.status = Status.EXPIRED;
     }
 
-    public void fail(){
+    public void fail() {
         this.status = Status.FAILED;
     }
-
-
 
 }

@@ -69,10 +69,10 @@ logging:
     com.aicc.silverlink: debug
     org.hibernate.SQL: debug
 
-solapi:
-  api-key: ${SOLAPI_API_KEY}
-  api-secret: ${SOLAPI_API_SECRET}
-  sender-number: ${SOLAPI_SENDER_NUMBER}
+twilio:
+  account-sid: ${TWILIO_ACCOUNT_SID}
+  auth-token: ${TWILIO_AUTH_TOKEN}
+  verify-service-sid: ${TWILIO_VERIFY_SERVICE_SID}
 
 luxia:
   base-url: "https://bridge.luxiacloud.com"

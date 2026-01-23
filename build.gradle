@@ -58,7 +58,7 @@ dependencies {
     // Passkey(WebAuthn)
     implementation 'com.yubico:webauthn-server-core:2.8.0'
 //    implementation 'com.twilio.sdk:twilio:10.0.0'
-    implementation 'com.solapi:sdk:1.0.3'
+    implementation 'com.twilio.sdk:twilio:10.0.0'
     testRuntimeOnly 'com.h2database:h2'
     // Mockito agent를 위한 의존성 추가
     testRuntimeOnly 'org.mockito:mockito-core'
