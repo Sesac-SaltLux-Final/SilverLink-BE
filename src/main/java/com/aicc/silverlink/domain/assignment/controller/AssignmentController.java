@@ -19,6 +19,7 @@ public class AssignmentController {
 
     private final AssignmentService assignmentService;
 
+    // 상담사-노인 배정
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AssignmentResponse> assignCounselor(@RequestBody AssignmentRequest request){
@@ -26,6 +27,7 @@ public class AssignmentController {
         return ResponseEntity.created(URI.create("/api/assignments/elderly/" + response.getElderlyId())).body(response);
     }
 
+    // 상담사-노인 배정 해제
     @PostMapping("/unassign")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> unassignCounselor(

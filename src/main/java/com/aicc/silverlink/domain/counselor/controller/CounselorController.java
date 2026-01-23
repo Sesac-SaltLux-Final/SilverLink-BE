@@ -24,6 +24,7 @@ public class CounselorController {
 
     private final CounselorService counselorService;
 
+    // 관리자는 상담사 회원가입을 할 수 있다.
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CounselorResponse> register(@RequestBody @Valid CounselorRequest request){
@@ -31,7 +32,7 @@ public class CounselorController {
         CounselorResponse response = counselorService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-
+    // 관리자는 상담사 상세정보확인 가능
     @GetMapping("/admin/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CounselorResponse>getCounselorByAdmin(@PathVariable("id")Long id){
@@ -39,6 +40,7 @@ public class CounselorController {
 
         return ResponseEntity.ok(response);
     }
+    // 상담사 본인 정보 조회
     @GetMapping("/me")
     @PreAuthorize("hasRole('COUNSELOR')")
     public ResponseEntity<CounselorResponse>getCounselor(@AuthenticationPrincipal Long currentUserId){
@@ -46,7 +48,7 @@ public class CounselorController {
 
         return ResponseEntity.ok(response);
     }
-
+    // 관리자는 상담사 목록 조회할 수 있다.
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<CounselorResponse>>getAllCounselors(){
