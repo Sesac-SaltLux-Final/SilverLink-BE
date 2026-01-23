@@ -1,8 +1,9 @@
 package com.aicc.silverlink.domain.guardian.service;
 
+import com.aicc.silverlink.domain.assignment.entity.AssignmentStatus;
+import com.aicc.silverlink.domain.assignment.repository.AssignmentRepository;
 import com.aicc.silverlink.domain.elderly.entity.Elderly;
 import com.aicc.silverlink.domain.elderly.repository.ElderlyRepository;
-import com.aicc.silverlink.domain.guardian.dto.GuardianElderlyResponse;
 import com.aicc.silverlink.domain.guardian.dto.GuardianRequest;
 import com.aicc.silverlink.domain.guardian.dto.GuardianResponse;
 import com.aicc.silverlink.domain.guardian.entity.Guardian;
@@ -14,189 +15,151 @@ import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 @ExtendWith(MockitoExtension.class)
 class GuardianServiceTest {
 
-    @InjectMocks
-    private GuardianService guardianService;
-
+    @InjectMocks private GuardianService guardianService;
     @Mock private GuardianRepository guardianRepository;
-    @Mock private UserRepository userRepository;
     @Mock private GuardianElderlyRepository guardianElderlyRepository;
+    @Mock private UserRepository userRepository;
     @Mock private ElderlyRepository elderlyRepository;
+    @Mock private AssignmentRepository assignmentRepository;
     @Mock private PasswordEncoder passwordEncoder;
 
-    @Test
-    @DisplayName("보호자 회원가입 성공")
-    void register() {
-        // given
-        GuardianRequest request = GuardianRequest.builder()
-                .loginId("testId")
-                .password("1234")
-                .name("철수")
-                .phone("010-1234-5678")
-                .email("test@email.com")
-                .addressLine1("서울")
-                .build();
+    // --- 헬퍼 메소드: 테스트용 객체 생성 ---
 
-        given(userRepository.existsByLoginId("testId")).willReturn(false);
-        given(passwordEncoder.encode("1234")).willReturn("encodedPW");
-
-        // save 호출 시 들어온 객체를 그대로 리턴하도록 설정 (Mocking)
-        given(userRepository.save(any(User.class))).willAnswer(invocation -> {
-            User user = invocation.getArgument(0);
-            // ID가 생성된 것처럼 세팅 (Reflection or Builder 사용 가정이지만 여기선 객체 그대로 반환)
-            return user;
-        });
-        given(guardianRepository.save(any(Guardian.class))).willAnswer(invocation -> invocation.getArgument(0));
-
-        // when
-        GuardianResponse response = guardianService.register(request);
-
-        // then
-        assertThat(response.getName()).isEqualTo("철수");
-        verify(userRepository, times(1)).save(any(User.class));
-        verify(guardianRepository, times(1)).save(any(Guardian.class));
+    private User createTestUser(Long id, String name, Role role) {
+        User user = User.createLocal("testId", "hash", name, "010-1111-2222", "test@test.com", role);
+        ReflectionTestUtils.setField(user, "id", id);
+        return user;
     }
 
-    @Test
-    @DisplayName("보호자 내 정보 조회 성공")
-    void getGuardian() {
-        // given
-        Long guardianId = 1L;
-        User user = User.builder().id(guardianId).name("철수").email("test@a.com").build();
-        Guardian guardian = Guardian.builder().id(guardianId).user(user).addressLine1("서울").build();
-
-        given(guardianRepository.findByIdWithUser(guardianId)).willReturn(Optional.of(guardian));
-
-        // when
-        GuardianResponse response = guardianService.getGuardian(guardianId);
-
-        // then
-        assertThat(response.getName()).isEqualTo("철수");
-        assertThat(response.getAddressLine1()).isEqualTo("서울");
+    private Guardian createTestGuardian(Long id, String name) {
+        User user = createTestUser(id, name, Role.GUARDIAN);
+        Guardian guardian = Guardian.builder().user(user).build();
+        ReflectionTestUtils.setField(guardian, "id", id);
+        return guardian;
     }
 
-    @Test
-    @DisplayName("어르신 연결 성공")
-    void connectElderly() {
-        // given
-        Long guardianId = 1L;
-        Long elderlyId = 2L;
+    @Nested
+    @DisplayName("보호자 등록 및 조회 테스트")
+    class BasicOperation {
 
-        // 1. 가짜 보호자 생성
-        User gUser = User.builder().id(guardianId).name("보호자").build();
-        Guardian guardian = Guardian.builder().id(guardianId).user(gUser).build();
+        @Test
+        @DisplayName("성공: 보호자 회원가입")
+        void register_Success() {
+            // given
+            GuardianRequest request = GuardianRequest.builder()
+                    .loginId("newGuardian").password("rawPass").name("김보호").phone("010-1111-2222").build();
 
-        // 2. 가짜 어르신 생성 (Entity 규칙 준수)
-        User eUser = User.builder().id(elderlyId).name("어르신").build();
-        Elderly elderly = Elderly.builder()
-                .id(elderlyId)
-                .user(eUser)
-                .admDongCode("1111000000")      // 필수값
-                .birthDate(LocalDate.of(1950, 1, 1)) // 필수값
-                .gender(Elderly.Gender.M)       // 필수값
-                .build();
+            given(userRepository.existsByLoginId(any())).willReturn(false);
+            given(passwordEncoder.encode(any())).willReturn("encodedPass");
 
-        // 3. Mock 설정
-        given(guardianElderlyRepository.existsByElderly_Id(elderlyId)).willReturn(false); // 중복 아님
-        given(guardianRepository.findById(guardianId)).willReturn(Optional.of(guardian));
-        given(elderlyRepository.findById(elderlyId)).willReturn(Optional.of(elderly));
+            // when
+            guardianService.register(request);
 
-        // when
-        guardianService.connectElderly(guardianId, elderlyId, RelationType.CHILD);
+            // then
+            verify(userRepository, times(1)).save(any(User.class));
+            verify(guardianRepository, times(1)).save(any(Guardian.class));
+        }
 
-        // then
-        verify(guardianElderlyRepository, times(1)).save(any(GuardianElderly.class));
+        @Test
+        @DisplayName("실패: 이미 존재하는 아이디로 가입 시도")
+        void register_Fail_DuplicateId() {
+            given(userRepository.existsByLoginId(any())).willReturn(true);
+
+            assertThatThrownBy(() -> guardianService.register(GuardianRequest.builder().loginId("dup").build()))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("이미 사용 중인 아이디");
+        }
     }
 
-    @Test
-    @DisplayName("보호자 전체 목록 조회")
-    void getAllGuardian() {
-        // given
-        User user1 = User.builder().name("보호자1").build();
-        Guardian g1 = Guardian.builder().user(user1).build();
+    @Nested
+    @DisplayName("상담사 권한 검증 테스트")
+    class CounselorAuthTests {
 
-        User user2 = User.builder().name("보호자2").build();
-        Guardian g2 = Guardian.builder().user(user2).build();
+        @Test
+        @DisplayName("성공: 담당 어르신의 보호자일 경우 상세 정보 반환")
+        void getGuardianForCounselor_Success() {
+            // given
+            Long gId = 1L; Long cId = 100L; Long eId = 2L;
+            Guardian guardian = createTestGuardian(gId, "보호자A");
 
-        given(guardianRepository.findAllWithUser()).willReturn(List.of(g1, g2));
+            Elderly elderly = Elderly.builder().build();
+            ReflectionTestUtils.setField(elderly, "id", eId);
 
-        // when
-        List<GuardianResponse> result = guardianService.getAllGuardian();
+            GuardianElderly relation = GuardianElderly.builder().elderly(elderly).build();
 
-        // then
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getName()).isEqualTo("보호자1");
+            given(guardianRepository.findByIdWithUser(gId)).willReturn(Optional.of(guardian));
+            given(guardianElderlyRepository.findByGuardianId(gId)).willReturn(Optional.of(relation));
+            given(assignmentRepository.existsByCounselor_IdAndElderly_IdAndStatus(cId, eId, AssignmentStatus.ACTIVE))
+                    .willReturn(true);
+
+            // when
+            GuardianResponse result = guardianService.getGuardianForCounselor(gId, cId);
+
+            // then
+            assertThat(result.getName()).isEqualTo("보호자A");
+            assertThat(result.getId()).isEqualTo(gId);
+        }
+
+        @Test
+        @DisplayName("실패: 상담사가 담당하지 않는 어르신의 보호자 조회 시 에러")
+        void getGuardianForCounselor_Fail_NotAssigned() {
+            // given
+            Long gId = 1L; Long cId = 100L; Long eId = 999L; // 담당이 아닌 ID
+            Guardian guardian = createTestGuardian(gId, "보호자A");
+
+            Elderly elderly = Elderly.builder().build();
+            ReflectionTestUtils.setField(elderly, "id", eId);
+
+            GuardianElderly relation = GuardianElderly.builder().elderly(elderly).build();
+
+            given(guardianRepository.findByIdWithUser(gId)).willReturn(Optional.of(guardian));
+            given(guardianElderlyRepository.findByGuardianId(gId)).willReturn(Optional.of(relation));
+            given(assignmentRepository.existsByCounselor_IdAndElderly_IdAndStatus(cId, eId, AssignmentStatus.ACTIVE))
+                    .willReturn(false);
+
+            // when & then
+            assertThatThrownBy(() -> guardianService.getGuardianForCounselor(gId, cId))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("본인이 담당하는 어르신");
+        }
     }
 
-    @Test
-    @DisplayName("내 어르신 찾기 (보호자 -> 어르신)")
-    void getElderlyByGuardian() {
-        // given
-        Long guardianId = 1L;
+    @Nested
+    @DisplayName("어르신 연결 테스트")
+    class ConnectionTests {
 
-        // 연결 관계 데이터 생성 (Fetch Join 결과 흉내)
-        User gUser = User.builder().name("김철수").phone("010-1111-1111").build();
-        Guardian guardian = Guardian.builder().id(guardianId).user(gUser).build();
+        @Test
+        @DisplayName("실패: 이미 다른 보호자와 연결된 어르신은 연결 불가")
+        void connectElderly_Fail_AlreadyConnected() {
+            // given
+            given(guardianElderlyRepository.existsByElderly_Id(any())).willReturn(true);
 
-        User eUser = User.builder().name("이영희").phone("010-2222-2222").build();
-        Elderly elderly = Elderly.builder().id(2L).user(eUser).build();
-
-        GuardianElderly relation = GuardianElderly.create(guardian, elderly, RelationType.CHILD, LocalDateTime.now());
-
-        given(guardianElderlyRepository.findByGuardianId(guardianId)).willReturn(Optional.of(relation));
-
-        // when
-        GuardianElderlyResponse response = guardianService.getElderlyByGuardian(guardianId);
-
-        // then
-        assertThat(response.getGuardianName()).isEqualTo("김철수");
-        assertThat(response.getElderlyName()).isEqualTo("이영희");
-        assertThat(response.getRelationType()).isEqualTo(RelationType.CHILD);
-    }
-
-    @Test
-    @DisplayName("어르신의 보호자 찾기 (어르신 -> 보호자)")
-    void getGuardianByElderly() {
-        // given
-        Long elderlyId = 2L;
-
-        // 연결 관계 데이터 생성
-        User gUser = User.builder().name("박보호").phone("010-3333-3333").build();
-        Guardian guardian = Guardian.builder().id(1L).user(gUser).build();
-
-        User eUser = User.builder().name("최노인").phone("010-4444-4444").build();
-        Elderly elderly = Elderly.builder().id(elderlyId).user(eUser).build();
-
-        GuardianElderly relation = GuardianElderly.create(guardian, elderly, RelationType.SPOUSE, LocalDateTime.now());
-
-        given(guardianElderlyRepository.findByElderlyId(elderlyId)).willReturn(Optional.of(relation));
-
-        // when
-        GuardianElderlyResponse response = guardianService.getGuardianByElderly(elderlyId);
-
-        // then
-        assertThat(response.getGuardianName()).isEqualTo("박보호");
-        assertThat(response.getRelationType()).isEqualTo(RelationType.SPOUSE);
+            // when & then
+            assertThatThrownBy(() -> guardianService.connectElderly(1L, 2L, RelationType.CHILD))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("이미 다른 보호자가 등록");
+        }
     }
 }

@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -43,8 +44,24 @@ public class AdministrativeDivision {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
-    @Column(name = "created_at", nullable = false)
+    /**
+     * 행정구역 생성일 (해당 구역이 생성된 날짜)
+     */
+    @Column(name = "created_at", nullable = false, updatable = false)
+
     private LocalDateTime createdAt;
+
+    @Column(name = "established_at")
+    private LocalDate establishedAt;
+
+    /**
+     * 행정구역 말소일 (해당 구역이 폐지된 날짜)
+     */
+    @Column(name = "abolished_at")
+    private LocalDate abolishedAt;
+
+
+
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
@@ -56,7 +73,8 @@ public class AdministrativeDivision {
     @Builder
     public AdministrativeDivision(Long admCode, String sidoCode, String sigunguCode,
                                   String dongCode, String sidoName, String sigunguName,
-                                  String dongName, DivisionLevel level) {
+                                  String dongName, DivisionLevel level,
+                                  LocalDate establishedAt, LocalDate abolishedAt) {
         this.admCode = admCode;
         this.sidoCode = sidoCode;
         this.sigunguCode = sigunguCode;
@@ -65,7 +83,9 @@ public class AdministrativeDivision {
         this.sigunguName = sigunguName;
         this.dongName = dongName;
         this.level = level;
-        this.isActive = true;
+        this.establishedAt = establishedAt;
+        this.abolishedAt = abolishedAt;
+        this.isActive = (abolishedAt == null);
     }
 
     public String getFullAddress() {

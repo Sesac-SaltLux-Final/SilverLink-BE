@@ -1,5 +1,6 @@
 package com.aicc.silverlink.domain.elderly.entity;
 
+import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
 import com.aicc.silverlink.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -25,8 +26,10 @@ public class Elderly {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(name = "adm_dong_code", nullable = false, length = 20)
-    private String admDongCode;
+    // 담당 행정 구역 - AdministrativeDivision과 FK 관계
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "adm_code", nullable = false)
+    private AdministrativeDivision administrativeDivision;
 
     @Column(name = "birth_date", nullable = false)
     private LocalDate birthDate;
@@ -63,20 +66,28 @@ public class Elderly {
         this.updatedAt = LocalDateTime.now();
     }
 
-    private Elderly(User user, String admDongCode, LocalDate birthDate, Gender gender) {
+    /**
+     * 편의 메서드: 행정구역 코드 반환
+     */
+    public Long getAdmCode() {
+        return administrativeDivision != null ? administrativeDivision.getAdmCode() : null;
+    }
+
+    private Elderly(User user, AdministrativeDivision administrativeDivision, LocalDate birthDate, Gender gender) {
         if (user == null) throw new IllegalArgumentException("USER_REQUIRED");
-        if (admDongCode == null || admDongCode.isBlank()) throw new IllegalArgumentException("ADM_DONG_REQUIRED");
+        if (administrativeDivision == null) throw new IllegalArgumentException("ADM_DIVISION_REQUIRED");
         if (birthDate == null) throw new IllegalArgumentException("BIRTH_REQUIRED");
         if (gender == null) throw new IllegalArgumentException("GENDER_REQUIRED");
 
         this.user = user;
-        this.admDongCode = admDongCode;
+        this.administrativeDivision = administrativeDivision;
         this.birthDate = birthDate;
         this.gender = gender;
     }
 
-    public static Elderly create(User user, String admDongCode, LocalDate birthDate, Gender gender) {
-        return new Elderly(user, admDongCode, birthDate, gender);
+    public static Elderly create(User user, AdministrativeDivision administrativeDivision,
+                                 LocalDate birthDate, Gender gender) {
+        return new Elderly(user, administrativeDivision, birthDate, gender);
     }
 
     public void updateAddress(String line1, String line2, String zipcode) {
@@ -85,9 +96,9 @@ public class Elderly {
         this.zipcode = normalize(zipcode, 10);
     }
 
-    public void changeAdmDongCode(String admDongCode) {
-        if (admDongCode == null || admDongCode.isBlank()) throw new IllegalArgumentException("ADM_DONG_REQUIRED");
-        this.admDongCode = admDongCode;
+    public void changeAdministrativeDivision(AdministrativeDivision administrativeDivision) {
+        if (administrativeDivision == null) throw new IllegalArgumentException("ADM_DIVISION_REQUIRED");
+        this.administrativeDivision = administrativeDivision;
     }
 
     public int age() {

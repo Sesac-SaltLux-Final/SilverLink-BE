@@ -1,6 +1,7 @@
 package com.aicc.silverlink.domain.elderly.dto.response;
 
 import com.aicc.silverlink.domain.elderly.entity.Elderly;
+import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
 
 import java.time.LocalDate;
 
@@ -8,7 +9,13 @@ public record ElderlySummaryResponse(
         Long userId,
         String name,
         String phone,
-        String admDongCode,
+        // 행정구역 정보
+        Long admCode,
+        String sidoName,
+        String sigunguName,
+        String dongName,
+        String fullAddress,
+        // 기본 정보
         LocalDate birthDate,
         int age,
         Elderly.Gender gender,
@@ -17,11 +24,17 @@ public record ElderlySummaryResponse(
         String zipcode
 ) {
     public static ElderlySummaryResponse from(Elderly e) {
+        AdministrativeDivision division = e.getAdministrativeDivision();
+
         return new ElderlySummaryResponse(
                 e.getId(),
                 e.getUser().getName(),
                 e.getUser().getPhone(),
-                e.getAdmDongCode(),
+                e.getAdmCode(),
+                division != null ? division.getSidoName() : null,
+                division != null ? division.getSigunguName() : null,
+                division != null ? division.getDongName() : null,
+                division != null ? division.getFullAddress() : null,
                 e.getBirthDate(),
                 e.age(),
                 e.getGender(),

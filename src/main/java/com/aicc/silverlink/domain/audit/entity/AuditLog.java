@@ -2,15 +2,16 @@ package com.aicc.silverlink.domain.audit.entity;
 
 import com.aicc.silverlink.domain.user.entity.User;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "audit_logs")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Builder
+@AllArgsConstructor
 public class AuditLog {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

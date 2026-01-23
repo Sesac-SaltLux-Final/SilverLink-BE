@@ -17,12 +17,12 @@ public class AdminCreateRequest {
     @NotNull(message = "사용자 ID는 필수입니다.")
     private Long userId;
 
-    @NotNull(message = "담당 행정동 코드는 필수입니다.")
-    private Long admDongCode;
+    @NotNull(message = "담당 행정구역 코드는 필수입니다.")
+    private Long admCode;
 
     /**
      * 관리자 레벨 (선택사항)
-     * null이면 행정동 코드로 자동 결정
+     * null이면 행정구역 코드로 자동 결정
      * (entity.Admin 참조)
      */
     private AdminLevel adminLevel;

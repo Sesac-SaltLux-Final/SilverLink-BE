@@ -1,60 +1,71 @@
 package com.aicc.silverlink.domain.counselor.entity;
 
+import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
 import com.aicc.silverlink.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
 
-    @Builder
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
-    @Entity
-    @Table(name = "counselors")
-    @Getter
-    @NoArgsConstructor(access = AccessLevel.PROTECTED)
-    public class Counselor {
-        @Id
-        @Column(name = "user_id")
-        private Long id;
+@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Entity
+@Table(name = "counselors")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Counselor {
+    @Id
+    @Column(name = "user_id")
+    private Long id;
 
-        @OneToOne(fetch = FetchType.LAZY)
-        @MapsId
-        @JoinColumn(name = "user_id")
-        private User user;
+    @OneToOne(fetch = FetchType.LAZY)
+    @MapsId
+    @JoinColumn(name = "user_id")
+    private User user;
 
-        @Column(name = "employee_no", length = 20)
-        private String employeeNo;
+    @Column(name = "employee_no", length = 20)
+    private String employeeNo;
 
-        @Column(name = "department", length = 100)
-        private String department;
+    @Column(name = "department", length = 100)
+    private String department;
 
-        @Column(name = "office_phone", length = 20)
-        private String officePhone;
+    @Column(name = "office_phone", length = 20)
+    private String officePhone;
 
-        @Column(name = "joined_at")
-        private LocalDate joinedAt;
+    @Column(name = "joined_at")
+    private LocalDate joinedAt;
 
-        @Column(name = "adm_dong_code", nullable = false, length = 20)
-        private String admDongCode;
+    // 담당 행정 구역 - AdministrativeDivision과 FK 관계
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "adm_code", nullable = false)
+    private AdministrativeDivision administrativeDivision;
 
-        public void updateInfo(String department, String officePhone, String admDongCode){
-            if (department != null) this.department = department;
-            if (officePhone != null) this.officePhone = officePhone;
-            if (admDongCode != null) this.admDongCode = admDongCode;
-        }
-        public static Counselor create(User user, String employeeNo, String department, String officePhone, LocalDate joinedAt,String admDongCode){
-            if (user==null) throw new IllegalArgumentException("사용자 정보는 필수입니다.");
-            if (admDongCode == null || admDongCode.isBlank()) throw new IllegalArgumentException("담당 행정동 코드는 필수입니다.");
-
-            return Counselor.builder()
-                    .user(user)
-                    .employeeNo(employeeNo)
-                    .department(department)
-                    .officePhone(officePhone)
-                    .admDongCode(admDongCode)
-                    .joinedAt(joinedAt)
-                    .build();
-        }
+    /**
+     * 편의 메서드: 행정구역 코드 반환
+     */
+    public Long getAdmCode() {
+        return administrativeDivision != null ? administrativeDivision.getAdmCode() : null;
     }
 
+    public void updateInfo(String department, String officePhone, AdministrativeDivision administrativeDivision) {
+        if (department != null) this.department = department;
+        if (officePhone != null) this.officePhone = officePhone;
+        if (administrativeDivision != null) this.administrativeDivision = administrativeDivision;
+    }
 
+    public static Counselor create(User user, String employeeNo, String department,
+                                   String officePhone, LocalDate joinedAt,
+                                   AdministrativeDivision administrativeDivision) {
+        if (user == null) throw new IllegalArgumentException("사용자 정보는 필수입니다.");
+        if (administrativeDivision == null) throw new IllegalArgumentException("담당 행정구역은 필수입니다.");
+
+        return Counselor.builder()
+                .user(user)
+                .employeeNo(employeeNo)
+                .department(department)
+                .officePhone(officePhone)
+                .administrativeDivision(administrativeDivision)
+                .joinedAt(joinedAt)
+                .build();
+    }
+}

@@ -3,6 +3,7 @@ package com.aicc.silverlink.domain.consent.dto;
 import com.aicc.silverlink.domain.consent.entity.AccessRequest;
 import com.aicc.silverlink.domain.consent.entity.AccessRequest.AccessRequestStatus;
 import com.aicc.silverlink.domain.consent.entity.AccessRequest.AccessScope;
+import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -143,14 +144,23 @@ public class AccessRequestDto {
             Long userId,
             String name,
             String phone,
-            String admDongCode
+            Long admCode,
+            String sidoName,
+            String sigunguName,
+            String dongName,
+            String fullAddress
     ) {
         public static ElderlyInfo from(com.aicc.silverlink.domain.elderly.entity.Elderly elderly) {
+            AdministrativeDivision division = elderly.getAdministrativeDivision();
             return new ElderlyInfo(
                     elderly.getId(),
                     elderly.getUser().getName(),
                     elderly.getUser().getPhone(),
-                    elderly.getAdmDongCode()
+                    elderly.getAdmCode(),
+                    division != null ? division.getSidoName() : null,
+                    division != null ? division.getSigunguName() : null,
+                    division != null ? division.getDongName() : null,
+                    division != null ? division.getFullAddress() : null
             );
         }
     }

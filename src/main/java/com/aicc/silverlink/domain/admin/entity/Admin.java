@@ -1,16 +1,17 @@
 package com.aicc.silverlink.domain.admin.entity;
 
+import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
 import com.aicc.silverlink.domain.user.entity.User;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 /**
  * 관리자 엔티티
  * User 테이블과 1:1 관계
+ * AdministrativeDivision과 N:1 관계
  */
+
+
 @Entity
 @Table(name = "admin")
 @Getter
@@ -26,40 +27,53 @@ public class Admin {
     @JoinColumn(name = "user_id")
     private User user;
 
-    // 담당 행정 구역 코드
-    @Column(name = "adm_dong_code", nullable = false)
-    private Long admDongCode;
+    // 담당 행정 구역 - AdministrativeDivision과 FK 관계
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "adm_code", nullable = false)
+    private AdministrativeDivision administrativeDivision;
 
     // 관리자 레벨
     @Enumerated(EnumType.STRING)
     @Column(name = "admin_level", nullable = false)
     private AdminLevel adminLevel;
 
+
+
     @Builder
-    public Admin(User user, Long admDongCode, AdminLevel adminLevel) {
+    public Admin(User user, AdministrativeDivision administrativeDivision, AdminLevel adminLevel) {
         this.user = user;
-        this.admDongCode = admDongCode;
-        this.adminLevel = adminLevel != null ? adminLevel : determineAdminLevel(admDongCode);
+        this.administrativeDivision = administrativeDivision;
+        this.adminLevel = adminLevel != null ? adminLevel : determineAdminLevel(administrativeDivision);
+
     }
 
     /**
-     * 행정동 코드로 관리자 레벨 자동 결정
-     *
-     * 행정동 코드 체계:
-     * - 시/도: 11XXXXXXXX (2자리 + 8자리 0)
-     * - 시/군/구: 1168XXXXXX (4자리 + 6자리 0)
-     * - 읍/면/동: 1168010XXX (7자리 + 3자리)
-     * - 리: 1168010100 (10자리 전체)
+     * 행정구역 레벨로 관리자 레벨 자동 결정
      */
-    private static AdminLevel determineAdminLevel(Long admDongCode) {
-        if (admDongCode == null) {
+    private static AdminLevel determineAdminLevel(AdministrativeDivision division) {
+        if (division == null) {
             return AdminLevel.DISTRICT;
         }
 
-        String code = String.format("%010d", admDongCode);
+        return switch (division.getLevel()) {
+            case SIDO -> AdminLevel.PROVINCIAL;
+            case SIGUNGU -> AdminLevel.CITY;
+            case DONG -> AdminLevel.DISTRICT;
+        };
+    }
+
+    /**
+     * 행정동 코드로 관리자 레벨 자동 결정 (하위 호환용)
+     */
+    private static AdminLevel determineAdminLevelByCode(Long admCode) {
+        if (admCode == null) {
+            return AdminLevel.DISTRICT;
+        }
+
+        String code = String.format("%010d", admCode);
 
         // 전국 관리자 (00 0000 000 00)
-        if (admDongCode == 0L) {
+        if (admCode == 0L) {
             return AdminLevel.NATIONAL;
         }
 
@@ -104,18 +118,25 @@ public class Admin {
     }
 
     /**
+     * 편의 메서드: 행정구역 코드 반환
+     */
+    public Long getAdmCode() {
+        return administrativeDivision != null ? administrativeDivision.getAdmCode() : null;
+    }
+
+    /**
      * 비즈니스 로직: 담당 구역 변경
      */
-    public void updateAdmDongCode(Long newAdmDongCode) {
-        this.admDongCode = newAdmDongCode;
-        this.adminLevel = determineAdminLevel(newAdmDongCode);
+    public void updateAdministrativeDivision(AdministrativeDivision newDivision) {
+        this.administrativeDivision = newDivision;
+        this.adminLevel = determineAdminLevel(newDivision);
     }
 
     /**
      * 특정 행정구역이 이 관리자의 관할 구역인지 확인
      */
-    public boolean hasJurisdiction(Long targetAdmDongCode) {
-        if (targetAdmDongCode == null) {
+    public boolean hasJurisdiction(Long targetAdmCode) {
+        if (targetAdmCode == null) {
             return false;
         }
 
@@ -124,8 +145,13 @@ public class Admin {
             return true;
         }
 
-        String myCode = String.format("%010d", this.admDongCode);
-        String targetCode = String.format("%010d", targetAdmDongCode);
+        Long myAdmCode = getAdmCode();
+        if (myAdmCode == null) {
+            return false;
+        }
+
+        String myCode = String.format("%010d", myAdmCode);
+        String targetCode = String.format("%010d", targetAdmCode);
 
         // 내 코드 길이만큼 비교
         int compareLength = this.adminLevel.getCodeLength();
@@ -138,10 +164,20 @@ public class Admin {
     }
 
     /**
+     * 특정 행정구역이 이 관리자의 관할 구역인지 확인 (AdministrativeDivision으로)
+     */
+    public boolean hasJurisdiction(AdministrativeDivision targetDivision) {
+        if (targetDivision == null) {
+            return false;
+        }
+        return hasJurisdiction(targetDivision.getAdmCode());
+    }
+
+    /**
      * 다른 관리자가 내 상위 관리자인지 확인
      */
     public boolean isSubordinateOf(Admin other) {
-        return other.hasJurisdiction(this.admDongCode)
+        return other.hasJurisdiction(this.getAdmCode())
                 && this.adminLevel.ordinal() > other.adminLevel.ordinal();
     }
 
