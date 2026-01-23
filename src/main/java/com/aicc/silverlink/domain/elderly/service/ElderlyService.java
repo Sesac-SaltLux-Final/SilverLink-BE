@@ -1,5 +1,6 @@
 package com.aicc.silverlink.domain.elderly.service;
 
+import com.aicc.silverlink.domain.assignment.repository.AssignmentRepository;
 import com.aicc.silverlink.domain.consent.entity.AccessRequest.AccessScope;
 import com.aicc.silverlink.domain.consent.repository.AccessRequestRepository;
 import com.aicc.silverlink.domain.elderly.dto.request.ElderlyCreateRequest;
@@ -47,6 +48,7 @@ public class ElderlyService {
     private final AdministrativeDivisionRepository divisionRepository;
     private final AccessRequestRepository accessRequestRepo;
     private final GuardianElderlyRepository guardianElderlyRepo;
+    private final AssignmentRepository assignmentRepo;
 
     @Transactional
     public ElderlySummaryResponse createElderly(ElderlyCreateRequest req) {
@@ -206,19 +208,16 @@ public class ElderlyService {
      * 상담사의 담당 어르신 접근 권한 확인
      */
     private void validateCounselorAccess(Long counselorUserId, Long elderlyUserId) {
-        // TODO: AssignmentRepository가 구현되면 아래 로직 활성화
-        // boolean isAssigned = assignmentRepo.existsByCounselorUserIdAndElderlyUserIdAndStatus(
-        //         counselorUserId, elderlyUserId, Assignment.AssignmentStatus.ACTIVE);
-        //
-        // if (!isAssigned) {
-        //     log.warn("상담사 접근 거부 - 담당 어르신 아님 (counselorId: {}, elderlyId: {})",
-        //             counselorUserId, elderlyUserId);
-        //     throw new AccessDeniedException("담당하지 않는 어르신의 정보에 접근할 수 없습니다.");
-        // }
-
-        // 임시: AssignmentRepository 미구현 시 모든 상담사 접근 허용
-        log.debug("상담사 접근 권한 검증 - counselorId: {}, elderlyId: {} (임시 허용)",
+        boolean isAssigned = assignmentRepo.existsByCounselorIdAndElderlyIdAndStatusActive(
                 counselorUserId, elderlyUserId);
+
+        if (!isAssigned) {
+            log.warn("상담사 접근 거부 - 담당 어르신 아님 (counselorId: {}, elderlyId: {})",
+                    counselorUserId, elderlyUserId);
+            throw new AccessDeniedException("담당하지 않는 어르신의 정보에 접근할 수 없습니다.");
+        }
+
+        log.debug("상담사 접근 권한 검증 완료 - counselorId: {}, elderlyId: {}", counselorUserId, elderlyUserId);
     }
 
     /**

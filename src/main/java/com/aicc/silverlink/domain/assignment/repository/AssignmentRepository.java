@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -46,4 +48,22 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
             "WHERE a.elderly.id = :elderlyId " +
             "AND a.status = 'ACTIVE'")
     Optional<Assignment> findActiveByElderlyId(@Param("elderlyId") Long elderlyId);
+
+    // ===== AssignmentRepository.java에 추가 =====
+    // 파일 위치: com.aicc.silverlink.domain.assignment.repository.AssignmentRepository
+
+    /**
+     * 상담사-어르신 배정 관계 존재 여부 확인 (ACTIVE 상태)
+     * @param counselorId 상담사 ID
+     * @param elderlyId 어르신 ID
+     * @return 활성 배정 관계 존재 여부
+     */
+    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END " +
+            "FROM Assignment a " +
+            "WHERE a.counselor.id = :counselorId " +
+            "AND a.elderly.id = :elderlyId " +
+            "AND a.status = com.aicc.silverlink.domain.assignment.entity.AssignmentStatus.ACTIVE")
+    boolean existsByCounselorIdAndElderlyIdAndStatusActive(
+            @Param("counselorId") Long counselorId,
+            @Param("elderlyId") Long elderlyId);
 }
