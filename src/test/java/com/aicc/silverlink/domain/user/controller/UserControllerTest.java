@@ -53,7 +53,7 @@ class UserControllerTest {
                 given(userCommandService.getMyProfile(any())).willReturn(response);
 
                 // when & then
-                mockMvc.perform(get("/users/me")
+                mockMvc.perform(get("/api/users/me")
                                 .with(csrf()))
                                 .andDo(print())
                                 .andExpect(status().isOk())
@@ -77,7 +77,7 @@ class UserControllerTest {
                                 .willReturn(response);
 
                 // when & then
-                mockMvc.perform(patch("/users/me")
+                mockMvc.perform(patch("/api/users/me")
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
@@ -96,7 +96,7 @@ class UserControllerTest {
                 UserRequests.ChangeStatusRequest request = new UserRequests.ChangeStatusRequest("LOCKED");
 
                 // when & then
-                mockMvc.perform(patch("/users/{userId}/status", targetUserId)
+                mockMvc.perform(patch("/api/users/{userId}/status", targetUserId)
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
@@ -115,7 +115,7 @@ class UserControllerTest {
                 UserRequests.ChangeStatusRequest request = new UserRequests.ChangeStatusRequest("LOCKED");
 
                 // when & then
-                mockMvc.perform(patch("/users/{userId}/status", targetUserId)
+                mockMvc.perform(patch("/api/users/{userId}/status", targetUserId)
                                 .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
