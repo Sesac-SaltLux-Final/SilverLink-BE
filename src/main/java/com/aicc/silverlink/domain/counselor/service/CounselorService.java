@@ -2,6 +2,7 @@ package com.aicc.silverlink.domain.counselor.service;
 
 import com.aicc.silverlink.domain.counselor.dto.CounselorRequest;
 import com.aicc.silverlink.domain.counselor.dto.CounselorResponse;
+import com.aicc.silverlink.domain.counselor.dto.CounselorUpdateRequest;
 import com.aicc.silverlink.domain.counselor.entity.Counselor;
 import com.aicc.silverlink.domain.counselor.repository.CounselorRepository;
 import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
@@ -35,7 +36,6 @@ public class CounselorService {
             throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
         }
 
-        // 행정구역 존재 여부 확인
         AdministrativeDivision division = divisionRepository.findById(request.getAdmCode())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 행정구역 코드입니다: " + request.getAdmCode()));
 
@@ -80,17 +80,33 @@ public class CounselorService {
     }
 
     /**
-     * 행정구역 코드로 상담사 목록 조회
+     * 상담사 본인 정보 수정 로직
      */
+    @Transactional
+    public CounselorResponse updateCounselor(Long id, CounselorUpdateRequest request) {
+        // 1. 기존 상담사 정보 조회 (Fetch Join 등을 통해 User를 함께 가져오는 것을 권장)
+        Counselor counselor = counselorRepository.findByIdWithUser(id)
+                .orElseThrow(() -> new IllegalArgumentException("해당 상담사를 찾을 수 없습니다."));
+
+        // 2. 연관된 User 정보 업데이트 (User 엔티티에 updateProfile 메서드가 있어야 함)
+        User user = counselor.getUser();
+        user.updateProfile(request.getName(), request.getPhone(), request.getEmail());
+
+        // 3. Counselor 전용 정보 업데이트
+        counselor.updateInfo(request.getDepartment(), request.getOfficePhone());
+
+        log.info("상담사 정보 수정 완료 - userId: {}", id);
+
+        // 4. Dirty Checking에 의해 트랜잭션 종료 시 자동 반영됨
+        return CounselorResponse.from(counselor);
+    }
+
     public List<CounselorResponse> getCounselorsByAdmCode(Long admCode) {
         return counselorRepository.findByAdmCode(admCode).stream()
                 .map(CounselorResponse::from)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 시/도 코드로 상담사 목록 조회
-     */
     public List<CounselorResponse> getCounselorsBySido(String sidoCode) {
         return counselorRepository.findBySidoCode(sidoCode).stream()
                 .map(CounselorResponse::from)
