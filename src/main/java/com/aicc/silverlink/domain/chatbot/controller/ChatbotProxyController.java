@@ -1,8 +1,8 @@
-package com.aicc.silverlink.domain.call.controller;
+package com.aicc.silverlink.domain.chatbot.controller;
 
-import com.aicc.silverlink.domain.call.dto.ChatRequest;
-import com.aicc.silverlink.domain.call.dto.ChatResponse;
-import com.aicc.silverlink.domain.call.dto.ChatbotRequest;
+import com.aicc.silverlink.domain.chatbot.dto.ChatRequest;
+import com.aicc.silverlink.domain.chatbot.dto.ChatResponse;
+import com.aicc.silverlink.domain.chatbot.dto.ChatbotRequest;
 import com.aicc.silverlink.domain.guardian.repository.GuardianElderlyRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

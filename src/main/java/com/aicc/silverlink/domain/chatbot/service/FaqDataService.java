@@ -1,6 +1,6 @@
-package com.aicc.silverlink.domain.call.service;
+package com.aicc.silverlink.domain.chatbot.service;
 
-import com.aicc.silverlink.domain.call.dto.FaqDataDto;
+import com.aicc.silverlink.domain.chatbot.dto.FaqDataDto;
 import com.aicc.silverlink.domain.inquiry.repository.FaqRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
