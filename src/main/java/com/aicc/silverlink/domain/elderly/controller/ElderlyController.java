@@ -8,9 +8,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "어르신", description = "어르신 정보 조회 API")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/elderly")
+@RequestMapping("/api/elderly")
 public class ElderlyController {
 
     private final ElderlyService elderlyService;

@@ -14,9 +14,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 /**
  * 관리자 API Controller
  */
+@Tag(name = "관리자", description = "관리자 등록/조회/권한 관리 API")
 @Slf4j
 @RestController
 @RequestMapping("/api/admins")
@@ -52,8 +55,8 @@ public class AdminController {
      * 관리자 목록 조회 (다양한 필터 지원)
      * GET /api/admins
      * - Query Parameters:
-     *   - admCode: 행정구역 코드로 필터링
-     *   - level: 관리자 레벨로 필터링 (NATIONAL, PROVINCIAL, CITY, DISTRICT)
+     * - admCode: 행정구역 코드로 필터링
+     * - level: 관리자 레벨로 필터링 (NATIONAL, PROVINCIAL, CITY, DISTRICT)
      */
     @GetMapping
     public ResponseEntity<List<AdminResponse>> getAdmins(

@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "주소", description = "행정구역 주소 조회 API")
 @Slf4j
 @RestController
 @RequestMapping("/api/address")

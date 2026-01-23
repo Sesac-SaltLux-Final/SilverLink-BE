@@ -17,6 +17,9 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "상담사", description = "상담사 등록/조회 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/counselors")
@@ -26,7 +29,7 @@ public class CounselorController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CounselorResponse> register(@RequestBody @Valid CounselorRequest request){
+    public ResponseEntity<CounselorResponse> register(@RequestBody @Valid CounselorRequest request) {
 
         CounselorResponse response = counselorService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -34,14 +37,15 @@ public class CounselorController {
 
     @GetMapping("/admin/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<CounselorResponse>getCounselorByAdmin(@PathVariable("id")Long id){
+    public ResponseEntity<CounselorResponse> getCounselorByAdmin(@PathVariable("id") Long id) {
         CounselorResponse response = counselorService.getCounselor(id);
 
         return ResponseEntity.ok(response);
     }
+
     @GetMapping("/me")
     @PreAuthorize("hasRole('COUNSELOR')")
-    public ResponseEntity<CounselorResponse>getCounselor(@AuthenticationPrincipal Long currentUserId){
+    public ResponseEntity<CounselorResponse> getCounselor(@AuthenticationPrincipal Long currentUserId) {
         CounselorResponse response = counselorService.getCounselor(currentUserId);
 
         return ResponseEntity.ok(response);
@@ -49,7 +53,7 @@ public class CounselorController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<CounselorResponse>>getAllCounselors(){
+    public ResponseEntity<List<CounselorResponse>> getAllCounselors() {
         List<CounselorResponse> responses = counselorService.getAllCounselors();
         return ResponseEntity.ok(responses);
     }

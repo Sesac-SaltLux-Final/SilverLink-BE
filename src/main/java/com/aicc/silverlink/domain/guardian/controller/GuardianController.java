@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "보호자", description = "보호자 등록/조회/어르신 연결 API")
 @RestController
 @RequestMapping("/api/guardians")
 @RequiredArgsConstructor
@@ -22,30 +25,29 @@ public class GuardianController {
     private final GuardianService guardianService;
 
     @PostMapping("/signup")
-    public ResponseEntity<GuardianResponse> signup(@RequestBody GuardianRequest request){
+    public ResponseEntity<GuardianResponse> signup(@RequestBody GuardianRequest request) {
         GuardianResponse response = guardianService.register(request);
         return ResponseEntity.created((URI.create("/api/guardians/" + response.getId()))).body(response);
     }
 
     @GetMapping("/me")
     @PreAuthorize("hasRole('GUARDIAN')")
-    public ResponseEntity<GuardianResponse> getMyInfo(@AuthenticationPrincipal Long currentUserId){
+    public ResponseEntity<GuardianResponse> getMyInfo(@AuthenticationPrincipal Long currentUserId) {
         return ResponseEntity.ok(guardianService.getGuardian(currentUserId));
     }
 
     @GetMapping("/admin/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<GuardianResponse> getGuardianByAdminId(@PathVariable Long id){
+    public ResponseEntity<GuardianResponse> getGuardianByAdminId(@PathVariable Long id) {
         return ResponseEntity.ok(guardianService.getGuardian(id));
     }
 
-    //  상담사 식별을 위해 @AuthenticationPrincipal 추가
+    // 상담사 식별을 위해 @AuthenticationPrincipal 추가
     @GetMapping("/counselor/{id}")
     @PreAuthorize("hasRole('COUNSELOR')")
     public ResponseEntity<GuardianResponse> getGuardianByCounselorId(
             @PathVariable Long id,
-            @AuthenticationPrincipal Long currentUserId
-    ){
+            @AuthenticationPrincipal Long currentUserId) {
         return ResponseEntity.ok(guardianService.getGuardianForCounselor(id, currentUserId));
     }
 
@@ -60,20 +62,19 @@ public class GuardianController {
     @PreAuthorize("hasRole('COUNSELOR')")
     public ResponseEntity<GuardianElderlyResponse> getElderlyByGuardianForCounselor(
             @PathVariable("id") Long guardianId,
-            @AuthenticationPrincipal Long currentUserId
-    ) {
+            @AuthenticationPrincipal Long currentUserId) {
         return ResponseEntity.ok(guardianService.getElderlyByGuardianForCounselor(guardianId, currentUserId));
     }
 
     @GetMapping("/me/elderly")
     @PreAuthorize("hasRole('GUARDIAN')")
-    public ResponseEntity<GuardianElderlyResponse> getMyElderly(@AuthenticationPrincipal Long currentUserId){
+    public ResponseEntity<GuardianElderlyResponse> getMyElderly(@AuthenticationPrincipal Long currentUserId) {
         return ResponseEntity.ok(guardianService.getElderlyByGuardian(currentUserId));
     }
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<GuardianResponse>> getAllGuardians(){
+    public ResponseEntity<List<GuardianResponse>> getAllGuardians() {
         return ResponseEntity.ok(guardianService.getAllGuardian());
     }
 
@@ -82,8 +83,7 @@ public class GuardianController {
     public ResponseEntity<Void> connectElderly(
             @PathVariable("id") Long guardianId,
             @RequestParam Long elderlyId,
-            @RequestParam RelationType relationType
-    ){
+            @RequestParam RelationType relationType) {
         guardianService.connectElderly(guardianId, elderlyId, relationType);
         return ResponseEntity.ok().build();
     }
