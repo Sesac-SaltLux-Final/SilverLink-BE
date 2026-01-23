@@ -26,4 +26,21 @@ public interface GuardianElderlyRepository extends JpaRepository<GuardianElderly
      * 보호자-어르신 관계 존재 여부 확인 (챗봇 권한 검증용)
      */
     boolean existsByGuardian_IdAndElderly_Id(Long guardianId, Long elderlyId);
+
+    // ===== GuardianElderlyRepository.java에 추가 =====
+    // 파일 위치: com.aicc.silverlink.domain.guardian.repository.GuardianElderlyRepository
+
+    /**
+     * 보호자-어르신 관계 존재 여부 확인
+     * @param guardianId 보호자 ID
+     * @param elderlyId 어르신 ID
+     * @return 보호 관계 존재 여부
+     */
+    @Query("SELECT CASE WHEN COUNT(ge) > 0 THEN true ELSE false END " +
+            "FROM GuardianElderly ge " +
+            "WHERE ge.guardian.id = :guardianId " +
+            "AND ge.elderly.id = :elderlyId")
+    boolean existsByGuardianIdAndElderlyId(
+            @Param("guardianId") Long guardianId,
+            @Param("elderlyId") Long elderlyId);
 }
