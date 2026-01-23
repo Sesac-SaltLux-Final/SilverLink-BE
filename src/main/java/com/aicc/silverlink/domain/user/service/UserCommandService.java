@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+// UserCommandService.java
 @Service
 @RequiredArgsConstructor
 public class UserCommandService {
@@ -18,38 +19,36 @@ public class UserCommandService {
     @Transactional(readOnly = true)
     public UserResponses.MyProfileResponse getMyProfile(Long userId) {
         User user = userRepo.findById(userId)
-                .orElseThrow(()-> new IllegalArgumentException("USER_NOT_FOUND"));
+                .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
         return UserResponses.MyProfileResponse.from(user);
-
     }
 
     @Transactional
     public UserResponses.MyProfileResponse updateMyProfile(Long userId, UserRequests.UpdateMyProfileRequest req) {
         User user = userRepo.findById(userId)
-                .orElseThrow(()-> new IllegalArgumentException("USER_NOT_FOUND"));
+                .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
 
-        if (user.getStatus() == UserStatus.DELETED) throw new IllegalStateException("USER_DELETED");
-        if (user.getStatus() == UserStatus.LOCKED) throw new IllegalStateException("USER_LOCKED");
+        // 활성화된 유저만 수정 가능하도록 방어 로직 강화
+        if (!user.isActive()) {
+            throw new IllegalStateException("USER_NOT_ACTIVE_STATUS: " + user.getStatus());
+        }
 
-        user.updateName(req.name());
-        user.updateEmail(req.email());
+        // 💡 엔티티의 통합 수정 메서드 호출 (이름, 전화번호, 이메일 한 번에 처리)
+        user.updateProfile(req.name(), req.phone(), req.email());
 
         return UserResponses.MyProfileResponse.from(user);
-
     }
 
     @Transactional
     public void ChangeStatus(Long targetUserId, UserStatus status) {
         User user = userRepo.findById(targetUserId)
-                .orElseThrow(()-> new IllegalArgumentException("USER_NOT_FOUND"));
+                .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
 
         switch (status) {
             case ACTIVE -> user.activate();
             case LOCKED -> user.suspend();
             case DELETED -> user.softDelete();
+            default -> throw new IllegalArgumentException("INVALID_STATUS_TRANSITION");
         }
     }
-
-
-
 }

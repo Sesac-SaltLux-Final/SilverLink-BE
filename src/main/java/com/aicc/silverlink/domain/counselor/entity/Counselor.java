@@ -35,22 +35,34 @@ public class Counselor {
     @Column(name = "joined_at")
     private LocalDate joinedAt;
 
-    // 담당 행정 구역 - AdministrativeDivision과 FK 관계
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "adm_code", nullable = false)
     private AdministrativeDivision administrativeDivision;
 
-    /**
-     * 편의 메서드: 행정구역 코드 반환
-     */
     public Long getAdmCode() {
         return administrativeDivision != null ? administrativeDivision.getAdmCode() : null;
     }
 
-    public void updateInfo(String department, String officePhone, AdministrativeDivision administrativeDivision) {
-        if (department != null) this.department = department;
-        if (officePhone != null) this.officePhone = officePhone;
-        if (administrativeDivision != null) this.administrativeDivision = administrativeDivision;
+    /**
+     * [수정] 상담사 정보 업데이트
+     * 서비스 레이어의 요구에 맞춰 행정구역은 선택적으로 수정 가능하게 변경했습니다.
+     */
+    public void updateInfo(String department, String officePhone) {
+        if (department != null && !department.isBlank()) {
+            this.department = department;
+        }
+        if (officePhone != null && !officePhone.isBlank()) {
+            this.officePhone = officePhone;
+        }
+    }
+
+    /**
+     * [추가] 관리자용 행정구역 변경 메서드
+     */
+    public void updateAdministrativeDivision(AdministrativeDivision administrativeDivision) {
+        if (administrativeDivision != null) {
+            this.administrativeDivision = administrativeDivision;
+        }
     }
 
     public static Counselor create(User user, String employeeNo, String department,

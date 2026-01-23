@@ -10,10 +10,10 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface GuardianRepository extends JpaRepository<Guardian,Long> {
+public interface GuardianRepository extends JpaRepository<Guardian, Long> {
 
     @Query("SELECT g FROM Guardian g JOIN FETCH g.user WHERE g.id = :id")
-    Optional<Guardian>findByIdWithUser(@Param("id")Long id);
+    Optional<Guardian> findByIdWithUser(@Param("id") Long id);
 
     @Query("SELECT g FROM Guardian g JOIN FETCH g.user")
     List<Guardian> findAllWithUser();

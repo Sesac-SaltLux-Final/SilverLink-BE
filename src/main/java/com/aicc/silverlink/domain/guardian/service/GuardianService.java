@@ -1,12 +1,13 @@
 package com.aicc.silverlink.domain.guardian.service;
 
-import com.aicc.silverlink.domain.assignment.entity.AssignmentStatus; // ✅ 추가
+import com.aicc.silverlink.domain.assignment.entity.AssignmentStatus;
 import com.aicc.silverlink.domain.assignment.repository.AssignmentRepository;
 import com.aicc.silverlink.domain.elderly.entity.Elderly;
 import com.aicc.silverlink.domain.elderly.repository.ElderlyRepository;
 import com.aicc.silverlink.domain.guardian.dto.GuardianElderlyResponse;
 import com.aicc.silverlink.domain.guardian.dto.GuardianRequest;
 import com.aicc.silverlink.domain.guardian.dto.GuardianResponse;
+import com.aicc.silverlink.domain.guardian.dto.GuardianUpdateRequest;
 import com.aicc.silverlink.domain.guardian.entity.Guardian;
 import com.aicc.silverlink.domain.guardian.entity.GuardianElderly;
 import com.aicc.silverlink.domain.guardian.entity.RelationType;
@@ -71,7 +72,14 @@ public class GuardianService {
         return GuardianResponse.from(guardian);
     }
 
-    // [상담사용] 권한 체크가 포함된 상세 조회
+    // ✅ [추가] 어르신 ID를 통해 연결된 보호자 정보 조회
+    public GuardianResponse getGuardianByElderly(Long elderlyId) {
+        GuardianElderly relation = guardianElderlyRepository.findByElderlyId(elderlyId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 어르신과 연결된 보호자 정보가 없습니다."));
+
+        return GuardianResponse.from(relation.getGuardian());
+    }
+
     public GuardianResponse getGuardianForCounselor(Long guardianId, Long counselorId) {
         Guardian guardian = guardianRepository.findByIdWithUser(guardianId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 보호자를 찾을 수 없습니다."));
@@ -85,9 +93,15 @@ public class GuardianService {
 
     @Transactional
     public void connectElderly(Long guardianId, Long elderlyId, RelationType relationType){
+        // 어르신 기준으로 이미 보호자가 있는지 체크 (1:1 규칙)
         if(guardianElderlyRepository.existsByElderly_Id(elderlyId)){
             throw new IllegalArgumentException("이미 다른 보호자가 등록한 어르신입니다.");
         }
+        // 보호자 기준으로 이미 어르신이 있는지 체크 (추가된 1:1 규칙)
+        if(guardianElderlyRepository.existsByGuardian_Id(guardianId)){
+            throw new IllegalArgumentException("이 보호자는 이미 다른 어르신을 담당하고 있습니다.");
+        }
+
         Guardian guardian = guardianRepository.findById(guardianId)
                 .orElseThrow(() -> new IllegalArgumentException("보호자를 찾을 수 없습니다."));
         Elderly elderly = elderlyRepository.findById(elderlyId)
@@ -109,7 +123,6 @@ public class GuardianService {
         return GuardianElderlyResponse.from(guardianElderly);
     }
 
-    // [상담사용] 권한 체크가 포함된 연결 정보 조회
     public GuardianElderlyResponse getElderlyByGuardianForCounselor(Long guardianId, Long counselorId) {
         GuardianElderly guardianElderly = guardianElderlyRepository.findByGuardianId(guardianId)
                 .orElseThrow(() -> new IllegalArgumentException("보호할 어르신이 없습니다."));
@@ -118,7 +131,6 @@ public class GuardianService {
         return GuardianElderlyResponse.from(guardianElderly);
     }
 
-    // ✅ 상담사 권한 검증 (ACTIVE 상태인 배정 정보가 있는지 확인)
     private void validateAssignment(Long counselorId, Long elderlyId) {
         boolean isAssigned = assignmentRepository.existsByCounselor_IdAndElderly_IdAndStatus(
                 counselorId, elderlyId, AssignmentStatus.ACTIVE);
@@ -127,5 +139,34 @@ public class GuardianService {
             log.warn("Access Denied: Counselor {} tried to access unassigned Elderly {}", counselorId, elderlyId);
             throw new IllegalArgumentException("본인이 담당하는 어르신의 보호자 정보만 조회할 수 있습니다.");
         }
+    }
+    @Transactional
+    public void withdrawGuardian(Long guardianId) {
+        Guardian guardian = guardianRepository.findById(guardianId)
+                .orElseThrow(() -> new IllegalArgumentException("GUARDIAN_NOT_FOUND"));
+
+        // 1. 관계 데이터 삭제 (서비스 상에서 즉시 분리)
+        // 법적 보관이 필요하다면 이 매핑 데이터도 Soft Delete를 고려할 수 있지만,
+        // 보통 유저 로그로 증빙이 가능하므로 매핑은 Hard Delete 하거나 '종료일'을 기록합니다.
+        guardianElderlyRepository.deleteByGuardianId(guardianId);
+
+        // 2. 유저 소프트 딜리트 (5년 보관을 위해 상태만 변경)
+        guardian.getUser().softDelete();
+
+        log.info("보호자 탈퇴 처리 완료 (5년 보관 모드) - guardianId: {}", guardianId);
+    }
+
+    @Transactional
+    public GuardianResponse updateGuardianProfile(Long guardianId, GuardianUpdateRequest req) {
+        Guardian guardian = guardianRepository.findByIdWithUser(guardianId)
+                .orElseThrow(() -> new IllegalArgumentException("GUARDIAN_NOT_FOUND"));
+
+        // User 정보 수정
+        guardian.getUser().updateProfile(req.name(), req.phone(), req.email());
+
+        // Guardian 주소 정보 수정
+        guardian.updateAddress(req.addressLine1(), req.addressLine2(), req.zipcode());
+
+        return GuardianResponse.from(guardian);
     }
 }
