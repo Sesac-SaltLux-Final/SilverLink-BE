@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class ConsentHistory {
 
     @Id
+    @Column(name="consent_history_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 

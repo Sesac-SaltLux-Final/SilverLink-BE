@@ -78,7 +78,8 @@ public class PhoneVerification {
                 .user(user)
                 .phoneE164(phoneE164)
                 .purpose(purpose)
-                .codeHash(codeHash)
+                // Twilio Verify API 사용 시 codeHash는 null이 올 수 있음 → 플레이스홀더 저장
+                .codeHash(codeHash != null ? codeHash : "TWILIO_MANAGED")
                 .requestIp(requestIp)
                 .expiresAt(LocalDateTime.now().plusSeconds(ttlSeconds))
                 .build();
