@@ -47,16 +47,25 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ElderlyServiceTest {
 
-    @InjectMocks private ElderlyService elderlyService;
+    @InjectMocks
+    private ElderlyService elderlyService;
 
-    @Mock private ElderlyRepository elderlyRepo;
-    @Mock private HealthInfoRepository healthRepo;
-    @Mock private UserRepository userRepo;
-    @Mock private AdministrativeDivisionRepository divisionRepository;
-    @Mock private GuardianElderlyRepository guardianElderlyRepo;
-    @Mock private AssignmentRepository assignmentRepo;
-    @Mock private CounselorService counselorService;
-    @Mock private AccessRequestRepository accessRequestRepo; // 누락된 Mock 추가
+    @Mock
+    private ElderlyRepository elderlyRepo;
+    @Mock
+    private HealthInfoRepository healthRepo;
+    @Mock
+    private UserRepository userRepo;
+    @Mock
+    private AdministrativeDivisionRepository divisionRepository;
+    @Mock
+    private GuardianElderlyRepository guardianElderlyRepo;
+    @Mock
+    private AssignmentRepository assignmentRepo;
+    @Mock
+    private CounselorService counselorService;
+    @Mock
+    private AccessRequestRepository accessRequestRepo; // 누락된 Mock 추가
 
     private AdministrativeDivision division;
     private User elderlyUser;
@@ -66,7 +75,7 @@ class ElderlyServiceTest {
         division = AdministrativeDivision.builder()
                 .admCode(11110L).sidoName("서울시").build();
 
-        elderlyUser = User.createLocal("elder01", "pw", "이노인", "01011112222", null, Role.ELDERLY);
+        elderlyUser = User.createLocal("elder01", "pw", "이노인", "01011112222", null, Role.ELDERLY, null);
         ReflectionTestUtils.setField(elderlyUser, "id", 10L);
     }
 
@@ -74,7 +83,8 @@ class ElderlyServiceTest {
     @DisplayName("성공: 어르신 등록 시 행정구역 및 유저 정보가 정상 매핑된다")
     void createElderly() {
         // given
-        ElderlyCreateRequest req = new ElderlyCreateRequest(10L, 11110L, LocalDate.of(1950, 1, 1), Elderly.Gender.M, "주소1", "주소2", "123");
+        ElderlyCreateRequest req = new ElderlyCreateRequest(10L, 11110L, LocalDate.of(1950, 1, 1), Elderly.Gender.M,
+                "주소1", "주소2", "123");
         given(userRepo.findById(10L)).willReturn(Optional.of(elderlyUser));
         given(divisionRepository.findById(11110L)).willReturn(Optional.of(division));
 
@@ -128,12 +138,14 @@ class ElderlyServiceTest {
     @DisplayName("성공: 담당 상담사가 어르신의 건강 정보를 조회한다")
     void getHealthInfo_Success() {
         // given
-        Long counselorId = 1L; Long eId = 10L;
-        User counselorUser = User.createLocal("c1", "p", "상담사", "010", null, Role.COUNSELOR);
+        Long counselorId = 1L;
+        Long eId = 10L;
+        User counselorUser = User.createLocal("c1", "p", "상담사", "010", null, Role.COUNSELOR, null);
         ElderlyHealthInfo hi = ElderlyHealthInfo.create(mock(Elderly.class));
 
         given(userRepo.findById(counselorId)).willReturn(Optional.of(counselorUser));
-        given(assignmentRepo.existsByCounselor_IdAndElderly_IdAndStatus(counselorId, eId, AssignmentStatus.ACTIVE)).willReturn(true);
+        given(assignmentRepo.existsByCounselor_IdAndElderly_IdAndStatus(counselorId, eId, AssignmentStatus.ACTIVE))
+                .willReturn(true);
         given(healthRepo.findById(eId)).willReturn(Optional.of(hi));
 
         // when
@@ -147,11 +159,13 @@ class ElderlyServiceTest {
     @DisplayName("실패: 담당이 아닌 상담사가 어르신 건강 정보 조회 시 예외 발생 (IDOR 방어)")
     void getHealthInfo_Fail_Forbidden() {
         // given
-        Long counselorId = 1L; Long eId = 10L;
-        User counselorUser = User.createLocal("c1", "p", "상담사", "010", null, Role.COUNSELOR);
+        Long counselorId = 1L;
+        Long eId = 10L;
+        User counselorUser = User.createLocal("c1", "p", "상담사", "010", null, Role.COUNSELOR, null);
 
         given(userRepo.findById(counselorId)).willReturn(Optional.of(counselorUser));
-        given(assignmentRepo.existsByCounselor_IdAndElderly_IdAndStatus(counselorId, eId, AssignmentStatus.ACTIVE)).willReturn(false);
+        given(assignmentRepo.existsByCounselor_IdAndElderly_IdAndStatus(counselorId, eId, AssignmentStatus.ACTIVE))
+                .willReturn(false);
 
         // when & then
         assertThatThrownBy(() -> elderlyService.getHealthInfo(counselorId, eId))
@@ -162,8 +176,9 @@ class ElderlyServiceTest {
     @DisplayName("성공: 건강 정보를 등록하거나 수정한다(Upsert)")
     void upsertHealthInfo() {
         // given
-        Long adminId = 999L; Long eId = 10L;
-        User admin = User.createLocal("admin", "p", "관", "010", null, Role.ADMIN);
+        Long adminId = 999L;
+        Long eId = 10L;
+        User admin = User.createLocal("admin", "p", "관", "010", null, Role.ADMIN, null);
         Elderly elderly = Elderly.create(elderlyUser, division, LocalDate.of(1950, 1, 1), Elderly.Gender.M);
         HealthInfoUpdateRequest req = new HealthInfoUpdateRequest("당뇨", "양호", "특이사항");
 

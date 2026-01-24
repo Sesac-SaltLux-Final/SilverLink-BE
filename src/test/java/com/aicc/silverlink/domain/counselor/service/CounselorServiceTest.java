@@ -37,10 +37,14 @@ class CounselorServiceTest {
     @InjectMocks
     private CounselorService counselorService;
 
-    @Mock private CounselorRepository counselorRepository;
-    @Mock private UserRepository userRepository;
-    @Mock private PasswordEncoder passwordEncoder;
-    @Mock private AdministrativeDivisionRepository divisionRepository;
+    @Mock
+    private CounselorRepository counselorRepository;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private AdministrativeDivisionRepository divisionRepository;
 
     private AdministrativeDivision division;
 
@@ -57,8 +61,7 @@ class CounselorServiceTest {
 
     private User createDummyUser(Long id, String loginId, String name) {
         User user = User.createLocal(
-                loginId, "encodedPw", name, "010-1234-5678", loginId + "@email.com", Role.COUNSELOR
-        );
+                loginId, "encodedPw", name, "010-1234-5678", loginId + "@email.com", Role.COUNSELOR, null);
         ReflectionTestUtils.setField(user, "id", id);
         return user;
     }
@@ -76,8 +79,7 @@ class CounselorServiceTest {
         CounselorRequest request = new CounselorRequest(
                 "counselor1", "pass1234", "김상담", "test@email.com",
                 "010-1234-5678", "2024001", "복지팀", "02-123-4567",
-                LocalDate.now(), 1111051500L
-        );
+                LocalDate.now(), 1111051500L);
 
         given(userRepository.existsByLoginId(request.getLoginId())).willReturn(false);
         given(divisionRepository.findById(request.getAdmCode())).willReturn(Optional.of(division));
@@ -176,8 +178,7 @@ class CounselorServiceTest {
         User u2 = createDummyUser(2L, "c2", "상담2");
         given(counselorRepository.findAllWithUser()).willReturn(List.of(
                 createDummyCounselor(u1, division),
-                createDummyCounselor(u2, division)
-        ));
+                createDummyCounselor(u2, division)));
 
         // when
         List<CounselorResponse> list = counselorService.getAllCounselors();
