@@ -53,7 +53,8 @@ public class OfflineRegistrationService {
                 req.name(),
                 req.phone(),
                 req.email(),
-                Role.ELDERLY);
+                Role.ELDERLY,
+                adminId); // created_by에 관리자 ID 저장
         user.markPhoneVerified(); // 대면 인증 처리
         userRepository.save(user);
 
@@ -87,7 +88,8 @@ public class OfflineRegistrationService {
                 req.name(),
                 req.phone(),
                 req.email(),
-                Role.GUARDIAN);
+                Role.GUARDIAN,
+                adminId); // created_by에 관리자 ID 저장
         user.markPhoneVerified();
         userRepository.save(user);
 

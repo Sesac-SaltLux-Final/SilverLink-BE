@@ -90,8 +90,6 @@ public class Elderly {
         this.administrativeDivision = administrativeDivision;
         this.birthDate = birthDate;
         this.gender = gender;
-        // DB 스키마 호환성을 위해 adm_dong_code 설정 (adm_code와 동일하게)
-
     }
 
     public static Elderly create(User user, AdministrativeDivision administrativeDivision,

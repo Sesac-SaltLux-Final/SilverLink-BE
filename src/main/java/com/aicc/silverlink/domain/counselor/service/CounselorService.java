@@ -47,7 +47,8 @@ public class CounselorService {
                 request.getName(),
                 request.getPhone(),
                 request.getEmail(),
-                Role.COUNSELOR
+                Role.COUNSELOR,
+                null // 자가 등록이므로 createdBy 없음
         );
 
         userRepository.save(user);
@@ -58,8 +59,7 @@ public class CounselorService {
                 request.getDepartment(),
                 request.getOfficePhone(),
                 request.getJoinedAt(),
-                division
-        );
+                division);
         counselorRepository.save(counselor);
 
         log.info("상담사 등록 완료 - userId: {}, admCode: {}", user.getId(), request.getAdmCode());

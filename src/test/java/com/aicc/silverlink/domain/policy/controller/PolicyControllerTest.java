@@ -41,12 +41,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("ci") //
 class PolicyControllerTest {
 
-    @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
-    @Autowired private PolicyRepository policyRepository;
-    @Autowired private AdminRepository adminRepository;
-    @Autowired private UserRepository userRepository;
-    @Autowired private AdministrativeDivisionRepository divisionRepository;
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private PolicyRepository policyRepository;
+    @Autowired
+    private AdminRepository adminRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private AdministrativeDivisionRepository divisionRepository;
 
     private User adminUser;
 
@@ -72,8 +78,8 @@ class PolicyControllerTest {
                 "정책관리자",
                 "010-1111-2222",
                 "policy@test.com",
-                Role.ADMIN
-        );
+                Role.ADMIN,
+                null);
         userRepository.save(adminUser);
 
         // 3. Admin 엔티티 생성 (PolicyService.create에서 검증하므로 필수!)
@@ -92,8 +98,7 @@ class PolicyControllerTest {
         return new UsernamePasswordAuthenticationToken(
                 adminUser.getId(),
                 null,
-                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-        );
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
     }
 
     @Nested
@@ -158,9 +163,9 @@ class PolicyControllerTest {
 
             // when & then
             mockMvc.perform(post("/api/policies")
-                            .with(authentication(getAdminAuth()))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
+                    .with(authentication(getAdminAuth()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
                     .andDo(print())
                     .andExpect(status().isBadRequest());
         }
@@ -174,18 +179,18 @@ class PolicyControllerTest {
         void createPolicy_InvalidRequest() throws Exception {
             // given (version 누락)
             String json = """
-                {
-                    "policyType": "TERMS_OF_SERVICE",
-                    "content": "내용만 있음",
-                    "isMandatory": true
-                }
-                """;
+                    {
+                        "policyType": "TERMS_OF_SERVICE",
+                        "content": "내용만 있음",
+                        "isMandatory": true
+                    }
+                    """;
 
             // when & then
             mockMvc.perform(post("/api/policies")
-                            .with(authentication(getAdminAuth()))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(json))
+                    .with(authentication(getAdminAuth()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json))
                     .andExpect(status().isBadRequest());
         }
     }
