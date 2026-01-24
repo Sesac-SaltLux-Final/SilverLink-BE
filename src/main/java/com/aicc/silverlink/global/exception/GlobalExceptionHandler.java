@@ -136,6 +136,8 @@ public class GlobalExceptionHandler {
             case "PV_CODE_INVALID" -> "인증번호가 일치하지 않습니다.";
             case "VERIFICATION_FAILED" -> "인증에 실패했습니다.";
             case "VERIFICATION_EXPIRED" -> "인증 시간이 만료되었습니다.";
+            case "INVALID_PROOF_TOKEN" -> "인증 토큰이 만료되었거나 유효하지 않습니다. 다시 인증해주세요.";
+            case "PHONE_MISMATCH" -> "인증된 휴대폰 번호가 일치하지 않습니다.";
 
             // ===== 어르신 관련 =====
             case "ELDERLY_NOT_FOUND", "해당 어르신을 찾을 수 없습니다." -> "어르신 정보를 찾을 수 없습니다.";

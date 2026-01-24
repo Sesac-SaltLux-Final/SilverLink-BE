@@ -33,6 +33,16 @@ public class AuthController {
         return new AuthDtos.TokenResponse(result.accessToken(), result.ttl(), "USER");
     }
 
+    @PostMapping("/login/phone")
+    public AuthDtos.TokenResponse loginWithPhone(@RequestBody AuthDtos.PhoneLoginRequest req, HttpServletResponse res) {
+        AuthService.AuthResult result = authService.loginWithPhone(req.phone(), req.proofToken());
+
+        String cookieValue = result.sid() + "." + result.refreshToken();
+        setRefreshCookie(res, cookieValue);
+
+        return new AuthDtos.TokenResponse(result.accessToken(), result.ttl(), "ELDERLY");
+    }
+
     @PostMapping("/refresh")
     public AuthDtos.RefreshResponse refresh(HttpServletRequest req, HttpServletResponse res) {
         String cookieValue = readCookie(req, props.getRefreshCookieName());

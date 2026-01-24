@@ -47,10 +47,6 @@ public class Elderly {
     @Column(name = "zipcode", length = 10)
     private String zipcode;
 
-    // DB 스키마 호환성을 위한 동 코드 (AdministrativeDivision에서 복사)
-    @Column(name = "adm_dong_code")
-    private Long admDongCode;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -93,8 +89,6 @@ public class Elderly {
         this.administrativeDivision = administrativeDivision;
         this.birthDate = birthDate;
         this.gender = gender;
-        // DB 스키마 호환성을 위해 adm_dong_code 설정 (adm_code와 동일하게)
-        this.admDongCode = administrativeDivision.getAdmCode();
     }
 
     public static Elderly create(User user, AdministrativeDivision administrativeDivision,
