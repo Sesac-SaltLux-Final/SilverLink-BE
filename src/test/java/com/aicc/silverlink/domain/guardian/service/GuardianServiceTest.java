@@ -35,18 +35,25 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class GuardianServiceTest {
 
-    @InjectMocks private GuardianService guardianService;
-    @Mock private GuardianRepository guardianRepository;
-    @Mock private GuardianElderlyRepository guardianElderlyRepository;
-    @Mock private UserRepository userRepository;
-    @Mock private ElderlyRepository elderlyRepository;
-    @Mock private AssignmentRepository assignmentRepository;
-    @Mock private PasswordEncoder passwordEncoder;
+    @InjectMocks
+    private GuardianService guardianService;
+    @Mock
+    private GuardianRepository guardianRepository;
+    @Mock
+    private GuardianElderlyRepository guardianElderlyRepository;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private ElderlyRepository elderlyRepository;
+    @Mock
+    private AssignmentRepository assignmentRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     // --- 헬퍼 메소드: 테스트용 객체 생성 ---
 
     private User createTestUser(Long id, String name, Role role) {
-        User user = User.createLocal("testId", "hash", name, "01011112222", "test@test.com", role);
+        User user = User.createLocal("testId", "hash", name, "01011112222", "test@test.com", role, null);
         ReflectionTestUtils.setField(user, "id", id);
         return user;
     }
@@ -151,7 +158,9 @@ class GuardianServiceTest {
         @DisplayName("성공: 담당 어르신의 보호자일 경우 상세 정보 반환")
         void getGuardianForCounselor_Success() {
             // given
-            Long gId = 1L; Long cId = 100L; Long eId = 2L;
+            Long gId = 1L;
+            Long cId = 100L;
+            Long eId = 2L;
             Guardian guardian = createTestGuardian(gId, "보호자A");
 
             Elderly elderly = Elderly.builder().build();
@@ -176,7 +185,9 @@ class GuardianServiceTest {
         @DisplayName("실패: 상담사가 담당하지 않는 어르신의 보호자 조회 시 에러")
         void getGuardianForCounselor_Fail_NotAssigned() {
             // given
-            Long gId = 1L; Long cId = 100L; Long eId = 999L;
+            Long gId = 1L;
+            Long cId = 100L;
+            Long eId = 999L;
             Guardian guardian = createTestGuardian(gId, "보호자A");
 
             Elderly elderly = Elderly.builder().build();

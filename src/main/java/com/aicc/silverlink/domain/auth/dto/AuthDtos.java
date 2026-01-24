@@ -5,36 +5,30 @@ import jakarta.validation.constraints.NotBlank;
 
 public class AuthDtos {
 
-    public record LoginRequest(
-            @Schema(description = "사용자 로그인 ID", example = "silverlink111")
-            @NotBlank(message = "로그인 ID는 필수입니다.")
-            String loginId,
+        public record LoginRequest(
+                        @Schema(description = "사용자 로그인 ID", example = "silverlink111") @NotBlank(message = "로그인 ID는 필수입니다.") String loginId,
 
-            @Schema(description = "사용자 비밀번호", example = "pass1234!")
-            @NotBlank(message = "비밀번호는 필수입니다.")
-            String password) {
-    }
+                        @Schema(description = "사용자 비밀번호", example = "pass1234!") @NotBlank(message = "비밀번호는 필수입니다.") String password) {
+        }
 
-    public record TokenResponse(
-            @Schema(description = "Access Token 값")
-            String accessToken,
+        public record TokenResponse(
+                        @Schema(description = "Access Token 값") String accessToken,
 
-            @Schema(description = "토큰 만료 시간(초)")
-            long expiresInSeconds,
+                        @Schema(description = "토큰 만료 시간(초)") long expiresInSeconds,
 
-            @Schema(description = "사용자 권한 (ADMIN, GUARDIAN 등)")
-            String role
-    ) {
-    }
+                        @Schema(description = "사용자 권한 (ADMIN, GUARDIAN 등)") String role) {
+        }
 
+        public record RefreshResponse(
+                        @Schema(description = "새로 발급된 Access Token") String accessToken,
 
-    public record RefreshResponse(
-            @Schema(description = "새로 발급된 Access Token")
-            String accessToken,
+                        @Schema(description = "토큰 만료 시간(초)") long expiresInSeconds) {
+        }
 
-            @Schema(description = "토큰 만료 시간(초)")
-            long expiresInSeconds
-    ) {
-    }
+        public record PhoneLoginRequest(
+                        @Schema(description = "휴대폰 번호 (하이픈 없이)", example = "01012345678") @NotBlank(message = "휴대폰 번호는 필수입니다.") String phone,
+
+                        @Schema(description = "휴대폰 인증 성공 후 발급된 proofToken") @NotBlank(message = "인증 토큰은 필수입니다.") String proofToken) {
+        }
 
 }
