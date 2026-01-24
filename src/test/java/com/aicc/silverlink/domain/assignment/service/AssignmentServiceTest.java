@@ -112,7 +112,7 @@ class AssignmentServiceTest {
         given(assignmentRepository.save(any(Assignment.class))).willReturn(mockAssignment);
 
         // when
-        AssignmentResponse response = assignmentService.assignCounselor(request);
+        AssignmentResponse response = assignmentService.assignCounselor(request, 3L);
 
         // then
         assertThat(response).isNotNull();
@@ -131,7 +131,7 @@ class AssignmentServiceTest {
         given(counselorRepository.findById(99L)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> assignmentService.assignCounselor(request))
+        assertThatThrownBy(() -> assignmentService.assignCounselor(request, 99L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("존재하지 않은 상담사입니다.");
     }
@@ -151,7 +151,7 @@ class AssignmentServiceTest {
                 .willReturn(true);
 
         // when & then
-        assertThatThrownBy(() -> assignmentService.assignCounselor(request))
+        assertThatThrownBy(() -> assignmentService.assignCounselor(request, 3L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("해당 어르신은 이미 담당 상담사가 배정되었습니다.");
     }
