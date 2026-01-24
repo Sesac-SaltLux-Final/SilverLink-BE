@@ -38,7 +38,8 @@ public class GuardianElderly {
         this.createdAt = LocalDateTime.now();
     }
 
-    public static GuardianElderly create(Guardian guardian, Elderly elderly, RelationType relationType,LocalDateTime createdAt) {
+    public static GuardianElderly create(Guardian guardian, Elderly elderly, RelationType relationType,
+            LocalDateTime createdAt) {
 
         return GuardianElderly.builder()
                 .guardian(guardian)
