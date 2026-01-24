@@ -4,6 +4,7 @@ import com.aicc.silverlink.domain.elderly.entity.Elderly;
 import com.aicc.silverlink.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import java.time.LocalDate;
@@ -56,6 +57,21 @@ public class MedicationSchedule {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Builder
+    public MedicationSchedule(Elderly elderly, String medicationName, String dosageText,
+            LocalDate startDate, LocalDate endDate, IntakeTiming intakeTiming,
+            User createdBy, MedicationOcrLog sourceOcrLog) {
+        this.elderly = elderly;
+        this.medicationName = medicationName;
+        this.dosageText = dosageText;
+        this.startDate = startDate != null ? startDate : LocalDate.now();
+        this.endDate = endDate;
+        this.intakeTiming = intakeTiming != null ? intakeTiming : IntakeTiming.ANYTIME;
+        this.createdBy = createdBy;
+        this.sourceOcrLog = sourceOcrLog;
+        this.isActive = true;
+    }
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -63,14 +79,39 @@ public class MedicationSchedule {
         if (this.intakeTiming == null) {
             this.intakeTiming = IntakeTiming.ANYTIME;
         }
-        if (this.isActive == false) { // Default true logic handled elsewhere or assume true by default if needed
-             this.isActive = true;
+        if (!this.isActive) {
+            this.isActive = true;
         }
     }
 
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 복약 일정 비활성화 (논리적 삭제)
+     */
+    public void deactivate() {
+        this.isActive = false;
+    }
+
+    /**
+     * 알림 토글
+     */
+    public void toggleActive() {
+        this.isActive = !this.isActive;
+    }
+
+    /**
+     * 복약 정보 수정
+     */
+    public void update(String medicationName, String dosageText, LocalDate endDate) {
+        if (medicationName != null)
+            this.medicationName = medicationName;
+        if (dosageText != null)
+            this.dosageText = dosageText;
+        this.endDate = endDate;
     }
 
     public enum IntakeTiming {
