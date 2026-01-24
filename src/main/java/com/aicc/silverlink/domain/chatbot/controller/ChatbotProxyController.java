@@ -55,7 +55,7 @@ public class ChatbotProxyController {
 
         // 3. 보호자-어르신 관계 검증 (추가 보안)
         boolean isValidRelation = guardianElderlyRepository
-                .existsByGuardian_IdAndElderly_Id(
+                .existsByGuardianIdAndElderlyId(
                         request.getGuardianId(),
                         request.getElderlyId());
 

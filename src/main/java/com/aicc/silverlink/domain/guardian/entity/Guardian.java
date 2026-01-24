@@ -48,6 +48,13 @@ public class Guardian {
         this.updatedAt = LocalDateTime.now();
     }
 
+    // ✅ 주소 정보 수정을 위한 메서드 추가
+    public void updateAddress(String addressLine1, String addressLine2, String zipcode) {
+        this.addressLine1 = addressLine1;
+        this.addressLine2 = addressLine2;
+        this.zipcode = zipcode;
+    }
+
     public static Guardian create(User user, String addressLine1, String addressLine2, String zipcode, LocalDateTime createdAt) {
         return Guardian.builder()
                 .user(user)
