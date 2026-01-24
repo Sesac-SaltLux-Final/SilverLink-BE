@@ -20,15 +20,19 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong; // ✅ 추가
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -66,7 +70,8 @@ class AssignmentControllerTest {
         given(assignmentService.assignCounselor(any(AssignmentRequest.class), anyLong())).willReturn(response);
 
         mockMvc.perform(post("/api/assignments")
-                .with(user("admin").roles("ADMIN"))
+                .with(authentication(new UsernamePasswordAuthenticationToken(3L, null,
+                        List.of(new SimpleGrantedAuthority("ROLE_ADMIN")))))
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
@@ -101,7 +106,8 @@ class AssignmentControllerTest {
             given(assignmentService.getAssignmentsByCounselor(any())).willReturn(responses);
 
             mockMvc.perform(get("/api/assignments/counselor/me")
-                    .with(user("1").roles("COUNSELOR"))) // Username을 "1"로 설정
+                    .with(authentication(new UsernamePasswordAuthenticationToken(1L, null,
+                            List.of(new SimpleGrantedAuthority("ROLE_COUNSELOR"))))))
                     .andDo(print())
                     .andExpect(status().isOk())
                     // ✅ 인코딩 정보(charset)를 무시하기 위해 contentTypeCompatibleWith 사용
