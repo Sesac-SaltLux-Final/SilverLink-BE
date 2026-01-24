@@ -34,7 +34,7 @@ public class AuthService {
     }
 
     // 서비스 내부용 DTO ( Access 토큰 + Refresh 토큰 반환용)
-    public record AuthResult(String accessToken, String refreshToken, String sid, long ttl) {
+    public record AuthResult(String accessToken, String refreshToken, String sid, long ttl, Role role) {
     }
 
     @Transactional
@@ -67,7 +67,7 @@ public class AuthService {
 
         user.updateLastLogin();
 
-        return new AuthResult(access, issued.refreshToken(), issued.sid(), props.getAccessTtlSeconds());
+        return new AuthResult(access, issued.refreshToken(), issued.sid(), props.getAccessTtlSeconds(), user.getRole());
     }
 
     public AuthResult refresh(String sid, String refreshToken) {
@@ -80,7 +80,7 @@ public class AuthService {
         long ttl = props.getAccessTtlSeconds();
         String newAccessToken = jwt.createAccessToken(userId, role, sid, ttl);
 
-        return new AuthResult(newAccessToken, newRefreshToken, sid, ttl);
+        return new AuthResult(newAccessToken, newRefreshToken, sid, ttl, role);
     }
 
     @Transactional
@@ -106,7 +106,8 @@ public class AuthService {
                 accessToken,
                 issued.refreshToken(),
                 issued.sid(),
-                props.getAccessTtlSeconds());
+                props.getAccessTtlSeconds(),
+                user.getRole());
     }
 
     public void logout(String sid) {
@@ -161,7 +162,8 @@ public class AuthService {
                 accessToken,
                 issued.refreshToken(),
                 issued.sid(),
-                props.getAccessTtlSeconds());
+                props.getAccessTtlSeconds(),
+                user.getRole());
     }
 
     private String normalizePhone(String phone) {
