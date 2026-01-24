@@ -2,6 +2,7 @@ package com.aicc.silverlink.domain.auth.controller;
 
 import com.aicc.silverlink.domain.auth.dto.AuthDtos;
 import com.aicc.silverlink.domain.auth.service.AuthService;
+import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.global.config.auth.AuthPolicyProperties;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,7 +64,8 @@ class AuthControllerIT {
                                 "access-token-sample",
                                 "refresh-token-sample",
                                 "session-id-123",
-                                1800L);
+                                1800L,
+                                Role.ADMIN);
 
                 given(authService.login(any(AuthDtos.LoginRequest.class))).willReturn(authResult);
 
@@ -114,7 +116,8 @@ class AuthControllerIT {
                                 "new-access-token",
                                 "new-refresh-token",
                                 "session-id-123",
-                                1800L);
+                                1800L,
+                                Role.ADMIN);
 
                 given(authService.refresh(eq("session-id-123"), eq("old-refresh-token")))
                                 .willReturn(authResult);
