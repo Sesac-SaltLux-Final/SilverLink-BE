@@ -30,7 +30,7 @@ public class AuthController {
         String cookieValue = result.sid() + "." + result.refreshToken();
         setRefreshCookie(res, cookieValue);
 
-        return new AuthDtos.TokenResponse(result.accessToken(), result.ttl(), "USER");
+        return new AuthDtos.TokenResponse(result.accessToken(), result.ttl(), result.role().name());
     }
 
     @PostMapping("/login/phone")
@@ -40,7 +40,7 @@ public class AuthController {
         String cookieValue = result.sid() + "." + result.refreshToken();
         setRefreshCookie(res, cookieValue);
 
-        return new AuthDtos.TokenResponse(result.accessToken(), result.ttl(), "ELDERLY");
+        return new AuthDtos.TokenResponse(result.accessToken(), result.ttl(), result.role().name());
     }
 
     @PostMapping("/refresh")
