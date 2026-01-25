@@ -1,5 +1,6 @@
 package com.aicc.silverlink.domain.counselor.service;
 
+import com.aicc.silverlink.domain.assignment.repository.AssignmentRepository;
 import com.aicc.silverlink.domain.counselor.dto.CounselorRequest;
 import com.aicc.silverlink.domain.counselor.dto.CounselorResponse;
 import com.aicc.silverlink.domain.counselor.dto.CounselorUpdateRequest;
@@ -28,6 +29,7 @@ public class CounselorService {
     private final CounselorRepository counselorRepository;
     private final UserRepository userRepository;
     private final AdministrativeDivisionRepository divisionRepository;
+    private final AssignmentRepository assignmentRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
@@ -70,12 +72,16 @@ public class CounselorService {
     public CounselorResponse getCounselor(Long id) {
         Counselor counselor = counselorRepository.findByIdWithUser(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 상담사를 찾을 수 없습니다."));
-        return CounselorResponse.from(counselor);
+        int assignedCount = assignmentRepository.countActiveByCounselorId(counselor.getId());
+        return CounselorResponse.from(counselor, assignedCount);
     }
 
     public List<CounselorResponse> getAllCounselors() {
         return counselorRepository.findAllWithUser().stream()
-                .map(CounselorResponse::from)
+                .map(counselor -> {
+                    int assignedCount = assignmentRepository.countActiveByCounselorId(counselor.getId());
+                    return CounselorResponse.from(counselor, assignedCount);
+                })
                 .collect(Collectors.toList());
     }
 

@@ -104,4 +104,28 @@ public class AuthController {
 
         return null;
     }
+
+    /**
+     * 비밀번호 재설정
+     * POST /api/auth/reset-password
+     * 휴대폰 인증(proofToken) 후 새 비밀번호 설정
+     */
+    @PostMapping("/reset-password")
+    public org.springframework.http.ResponseEntity<Void> resetPassword(
+            @jakarta.validation.Valid @RequestBody AuthDtos.PasswordResetRequest req) {
+        authService.resetPassword(req.loginId(), req.proofToken(), req.newPassword());
+        return org.springframework.http.ResponseEntity.ok().build();
+    }
+
+    /**
+     * 아이디 찾기
+     * POST /api/auth/find-id
+     * 이름 + 휴대폰 인증(proofToken)으로 마스킹된 아이디 반환
+     */
+    @PostMapping("/find-id")
+    public org.springframework.http.ResponseEntity<AuthDtos.FindIdResponse> findId(
+            @jakarta.validation.Valid @RequestBody AuthDtos.FindIdRequest req) {
+        String maskedId = authService.findMaskedLoginId(req.name(), req.proofToken());
+        return org.springframework.http.ResponseEntity.ok(new AuthDtos.FindIdResponse(maskedId));
+    }
 }

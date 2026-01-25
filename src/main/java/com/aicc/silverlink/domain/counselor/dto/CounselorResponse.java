@@ -9,6 +9,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @AllArgsConstructor
 @Builder
 @Getter
@@ -16,6 +18,7 @@ import lombok.NoArgsConstructor;
 public class CounselorResponse {
 
     private Long id;
+    private Long userId;
 
     private String name;
     private String loginId;
@@ -35,12 +38,21 @@ public class CounselorResponse {
     private String dongName;
     private String fullAddress;
 
+    // 추가 필드
+    private LocalDateTime createdAt;
+    private int assignedElderlyCount;
+
     public static CounselorResponse from(Counselor counselor) {
+        return from(counselor, 0);
+    }
+
+    public static CounselorResponse from(Counselor counselor, int assignedElderlyCount) {
         User user = counselor.getUser();
         AdministrativeDivision division = counselor.getAdministrativeDivision();
 
         return CounselorResponse.builder()
-                .id(user.getId())
+                .id(counselor.getId())
+                .userId(user.getId())
                 .name(user.getName())
                 .loginId(user.getLoginId())
                 .email(user.getEmail())
@@ -54,6 +66,8 @@ public class CounselorResponse {
                 .sigunguName(division != null ? division.getSigunguName() : null)
                 .dongName(division != null ? division.getDongName() : null)
                 .fullAddress(division != null ? division.getFullAddress() : null)
+                .createdAt(user.getCreatedAt())
+                .assignedElderlyCount(assignedElderlyCount)
                 .build();
     }
 }

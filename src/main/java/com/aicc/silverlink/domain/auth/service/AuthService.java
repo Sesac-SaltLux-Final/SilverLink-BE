@@ -178,4 +178,73 @@ public class AuthService {
         return digits;
     }
 
+    /**
+     * 비밀번호 재설정
+     * proofToken으로 휴대폰 인증된 사용자의 비밀번호를 변경
+     */
+    @Transactional
+    public void resetPassword(String loginId, String proofToken, String newPassword) {
+        // proofToken 검증
+        String proofKey = "pv:proof:" + proofToken;
+        String storedPhone = redis.opsForValue().get(proofKey);
+
+        if (storedPhone == null) {
+            throw new IllegalArgumentException("INVALID_PROOF_TOKEN");
+        }
+
+        User user = userRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
+
+        // 해당 사용자의 휴대폰 번호와 proofToken의 번호가 일치하는지 확인
+        String normalizedStoredPhone = normalizePhone(storedPhone);
+        String normalizedUserPhone = normalizePhone(user.getPhone());
+
+        if (!normalizedStoredPhone.equals(normalizedUserPhone)) {
+            throw new IllegalArgumentException("PHONE_MISMATCH");
+        }
+
+        // proofToken 삭제
+        redis.delete(proofKey);
+
+        // 비밀번호 변경 (User 엔티티의 기존 changePassword 메서드 사용)
+        user.changePassword(passwordEncoder.encode(newPassword));
+
+        // 현재 사용자의 기존 세션 무효화 (user:userId:sid 키 기반)
+        String userSidKey = "user:" + user.getId() + ":sid";
+        String existingSid = redis.opsForValue().get(userSidKey);
+        if (existingSid != null) {
+            sessionService.invalidateBySid(existingSid);
+        }
+    }
+
+    /**
+     * 아이디 찾기
+     * 이름과 proofToken으로 마스킹된 로그인 ID 반환
+     */
+    public String findMaskedLoginId(String name, String proofToken) {
+        // proofToken 검증
+        String proofKey = "pv:proof:" + proofToken;
+        String storedPhone = redis.opsForValue().get(proofKey);
+
+        if (storedPhone == null) {
+            throw new IllegalArgumentException("INVALID_PROOF_TOKEN");
+        }
+
+        String normalizedPhone = normalizePhone(storedPhone);
+
+        // proofToken 삭제
+        redis.delete(proofKey);
+
+        // 이름과 휴대폰 번호로 사용자 찾기
+        User user = userRepository.findByNameAndPhone(name, normalizedPhone)
+                .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
+
+        // 로그인 ID 마스킹 (앞 4글자만 표시)
+        String loginId = user.getLoginId();
+        if (loginId.length() <= 4) {
+            return loginId.substring(0, 1) + "***";
+        }
+        return loginId.substring(0, loginId.length() - 3) + "***";
+    }
+
 }

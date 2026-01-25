@@ -31,4 +31,21 @@ public class AuthDtos {
                         @Schema(description = "휴대폰 인증 성공 후 발급된 proofToken") @NotBlank(message = "인증 토큰은 필수입니다.") String proofToken) {
         }
 
+        // 비밀번호 재설정 요청
+        public record PasswordResetRequest(
+                        @Schema(description = "로그인 ID", example = "silverlink111") @NotBlank String loginId,
+                        @Schema(description = "휴대폰 인증 proofToken") @NotBlank String proofToken,
+                        @Schema(description = "새 비밀번호", example = "newPass1234!") @NotBlank String newPassword) {
+        }
+
+        // 아이디 찾기 요청
+        public record FindIdRequest(
+                        @Schema(description = "이름") @NotBlank String name,
+                        @Schema(description = "휴대폰 인증 proofToken") @NotBlank String proofToken) {
+        }
+
+        // 아이디 찾기 응답
+        public record FindIdResponse(
+                        @Schema(description = "마스킹된 로그인 ID", example = "user***") String maskedLoginId) {
+        }
 }
