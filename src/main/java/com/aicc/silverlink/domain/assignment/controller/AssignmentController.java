@@ -25,8 +25,10 @@ public class AssignmentController {
     // 상담사-노인 배정
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<AssignmentResponse> assignCounselor(@RequestBody AssignmentRequest request) {
-        AssignmentResponse response = assignmentService.assignCounselor(request);
+    public ResponseEntity<AssignmentResponse> assignCounselor(
+            @RequestBody AssignmentRequest request,
+            @AuthenticationPrincipal Long currentUserId) {
+        AssignmentResponse response = assignmentService.assignCounselor(request, currentUserId);
         return ResponseEntity.created(URI.create("/api/assignments/elderly/" + response.getElderlyId())).body(response);
     }
 
