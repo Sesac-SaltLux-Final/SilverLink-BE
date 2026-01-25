@@ -84,3 +84,19 @@ luxia:
     connect-ms: 3000
     response-ms: 60000
 
+
+cloud:
+  aws:
+    s3:
+      enabled: false  # 로컬 모드
+
+#cloud:
+#  aws:
+#    s3:
+#      enabled: true
+#      bucket: silverlink-files
+#    credentials:
+#      access-key: ${AWS_ACCESS_KEY}
+#      secret-key: ${AWS_SECRET_KEY}
+#    region:
+#      static: ap-northeast-2

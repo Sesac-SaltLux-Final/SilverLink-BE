@@ -21,5 +21,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByPhone(String phone);
 
+    Optional<User> findByNameAndPhone(String name, String phone);
+
     Page<User> findByRoleAndStatus(Role role, UserStatus status, Pageable pageable);
 }

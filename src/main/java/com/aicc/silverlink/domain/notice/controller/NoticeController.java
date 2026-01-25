@@ -54,4 +54,13 @@ public class NoticeController {
         noticeService.readNotice(id, user);
         return ResponseEntity.ok().build();
     }
+
+    // 프론트엔드 호환용 - /confirm 별칭 (동일 동작)
+    @PostMapping("/{id}/confirm")
+    public ResponseEntity<Void> confirmNotice(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User user) {
+        noticeService.readNotice(id, user);
+        return ResponseEntity.ok().build();
+    }
 }

@@ -113,7 +113,10 @@ public class GuardianService {
 
     public List<GuardianResponse> getAllGuardian() {
         return guardianRepository.findAllWithUser().stream()
-                .map(GuardianResponse::from)
+                .map(guardian -> {
+                    int elderlyCount = guardianElderlyRepository.countByGuardianId(guardian.getId());
+                    return GuardianResponse.from(guardian, elderlyCount);
+                })
                 .collect(Collectors.toList());
     }
 
