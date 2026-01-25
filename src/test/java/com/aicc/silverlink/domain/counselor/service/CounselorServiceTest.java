@@ -45,6 +45,8 @@ class CounselorServiceTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private AdministrativeDivisionRepository divisionRepository;
+    @Mock
+    private com.aicc.silverlink.domain.assignment.repository.AssignmentRepository assignmentRepository;
 
     private AdministrativeDivision division;
 
@@ -67,7 +69,9 @@ class CounselorServiceTest {
     }
 
     private Counselor createDummyCounselor(User user, AdministrativeDivision division) {
-        return Counselor.create(user, "2024001", "복지팀", "02-123-4567", LocalDate.now(), division);
+        Counselor counselor = Counselor.create(user, "2024001", "복지팀", "02-123-4567", LocalDate.now(), division);
+        ReflectionTestUtils.setField(counselor, "id", user.getId());
+        return counselor;
     }
 
     // --- [테스트 케이스 1: 등록] ---
@@ -148,6 +152,7 @@ class CounselorServiceTest {
         Counselor counselor = createDummyCounselor(user, division);
 
         given(counselorRepository.findByIdWithUser(counselorId)).willReturn(Optional.of(counselor));
+        given(assignmentRepository.countActiveByCounselorId(any())).willReturn(5);
 
         // when
         CounselorResponse response = counselorService.getCounselor(counselorId);
@@ -179,6 +184,7 @@ class CounselorServiceTest {
         given(counselorRepository.findAllWithUser()).willReturn(List.of(
                 createDummyCounselor(u1, division),
                 createDummyCounselor(u2, division)));
+        given(assignmentRepository.countActiveByCounselorId(any())).willReturn(0);
 
         // when
         List<CounselorResponse> list = counselorService.getAllCounselors();
