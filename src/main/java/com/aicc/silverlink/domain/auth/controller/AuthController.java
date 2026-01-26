@@ -2,7 +2,10 @@ package com.aicc.silverlink.domain.auth.controller;
 
 import com.aicc.silverlink.domain.auth.dto.AuthDtos;
 import com.aicc.silverlink.domain.auth.service.AuthService;
+import com.aicc.silverlink.domain.session.service.SessionService;
 import com.aicc.silverlink.global.config.auth.AuthPolicyProperties;
+import com.aicc.silverlink.global.security.jwt.JwtTokenProvider;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -13,6 +16,9 @@ import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import java.time.Instant;
+import java.util.Map;
+
 @Tag(name = "인증", description = "로그인/로그아웃/토큰 갱신 API")
 @RestController
 @RequestMapping("/api/auth")
@@ -20,6 +26,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class AuthController {
 
     private final AuthService authService;
+    private final SessionService sessionService;
+    private final JwtTokenProvider jwtTokenProvider;
     private final AuthPolicyProperties props;
 
     @PostMapping("/login")
@@ -127,5 +135,98 @@ public class AuthController {
             @jakarta.validation.Valid @RequestBody AuthDtos.FindIdRequest req) {
         String maskedId = authService.findMaskedLoginId(req.name(), req.proofToken());
         return org.springframework.http.ResponseEntity.ok(new AuthDtos.FindIdResponse(maskedId));
+    }
+
+    /**
+     * 로그인 확인 (기존 세션 체크)
+     * POST /api/auth/login/check
+     * 기존 세션이 있으면 확인 필요, 없으면 바로 로그인
+     */
+    @PostMapping("/login/check")
+    public AuthDtos.LoginCheckResponse checkLogin(
+            @RequestBody AuthDtos.LoginRequest req,
+            HttpServletResponse res) {
+        
+        AuthService.LoginCheckResult result = authService.checkLogin(req);
+        
+        if (result.needsConfirmation()) {
+            // 기존 세션 있음 - 확인 필요
+            return new AuthDtos.LoginCheckResponse(true, result.loginToken(), null);
+        } else {
+            // 기존 세션 없음 - 바로 로그인
+            AuthService.AuthResult authResult = result.authResult();
+            String cookieValue = authResult.sid() + "." + authResult.refreshToken();
+            setRefreshCookie(res, cookieValue);
+            
+            AuthDtos.TokenResponse tokenResponse = new AuthDtos.TokenResponse(
+                authResult.accessToken(), 
+                authResult.ttl(), 
+                authResult.role().name()
+            );
+            return new AuthDtos.LoginCheckResponse(false, null, tokenResponse);
+        }
+    }
+
+    /**
+     * 강제 로그인 (기존 세션 종료 후 로그인)
+     * POST /api/auth/login/force
+     * 사용자 확인 후 기존 세션을 종료하고 새 세션 생성
+     */
+    @PostMapping("/login/force")
+    public AuthDtos.TokenResponse forceLogin(
+            @jakarta.validation.Valid @RequestBody AuthDtos.ForceLoginRequest req,
+            HttpServletResponse res) {
+        
+        AuthService.AuthResult result = authService.forceLogin(req.loginToken());
+        
+        String cookieValue = result.sid() + "." + result.refreshToken();
+        setRefreshCookie(res, cookieValue);
+        
+        return new AuthDtos.TokenResponse(result.accessToken(), result.ttl(), result.role().name());
+    }
+
+    /**
+     * 세션 정보 조회
+     * GET /api/auth/session/info
+     * 현재 세션의 남은 시간 등 정보 반환
+     */
+    @GetMapping("/session/info")
+    public AuthDtos.SessionInfoResponse getSessionInfo(HttpServletRequest req) {
+        // JWT 토큰에서 sid 추출
+        String token = resolveBearer(req);
+        if (token == null) {
+            throw new IllegalArgumentException("NO_TOKEN");
+        }
+
+        Claims claims = jwtTokenProvider.parseAndValidate(token).getPayload();
+        String sid = jwtTokenProvider.getSid(claims);
+        Long userId = jwtTokenProvider.getUserId(claims);
+
+        // 세션 메타데이터 조회
+        Map<String, String> sessionMeta = sessionService.getSessionMeta(sid);
+        String lastSeenStr = sessionMeta.get("lastSeen");
+        long lastSeen = Long.parseLong(lastSeenStr);
+
+        // 만료 시간 계산
+        long idleTtl = props.getIdleTtlSeconds();
+        long expiresAt = lastSeen + idleTtl;
+        long now = Instant.now().getEpochSecond();
+        long remainingSeconds = Math.max(0, expiresAt - now);
+
+        return new AuthDtos.SessionInfoResponse(
+            sid,
+            lastSeen,
+            expiresAt,
+            remainingSeconds,
+            idleTtl
+        );
+    }
+
+    private String resolveBearer(HttpServletRequest req) {
+        String h = req.getHeader("Authorization");
+        if (h == null || h.isBlank()) return null;
+        if (!h.startsWith("Bearer ")) return null;
+        String token = h.substring(7).trim();
+        return token.isEmpty() ? null : token;
     }
 }
