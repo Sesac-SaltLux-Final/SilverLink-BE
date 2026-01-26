@@ -48,4 +48,25 @@ public class AuthDtos {
         public record FindIdResponse(
                         @Schema(description = "마스킹된 로그인 ID", example = "user***") String maskedLoginId) {
         }
+
+        // 로그인 확인 응답 (기존 세션 체크)
+        public record LoginCheckResponse(
+                        @Schema(description = "기존 세션 존재 여부 (true면 확인 필요)") boolean needsConfirmation,
+                        @Schema(description = "임시 로그인 토큰 (needsConfirmation=true일 때만)") String loginToken,
+                        @Schema(description = "토큰 정보 (needsConfirmation=false일 때만)") TokenResponse tokenResponse) {
+        }
+
+        // 강제 로그인 요청
+        public record ForceLoginRequest(
+                        @Schema(description = "로그인 확인 시 받은 임시 토큰") @NotBlank String loginToken) {
+        }
+
+        // 세션 정보 응답
+        public record SessionInfoResponse(
+                        @Schema(description = "세션 ID") String sid,
+                        @Schema(description = "마지막 활동 시간 (Unix timestamp, 초)") long lastSeen,
+                        @Schema(description = "만료 시간 (Unix timestamp, 초)") long expiresAt,
+                        @Schema(description = "남은 시간 (초)") long remainingSeconds,
+                        @Schema(description = "Idle TTL (초)") long idleTtl) {
+        }
 }
