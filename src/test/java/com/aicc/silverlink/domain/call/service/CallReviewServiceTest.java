@@ -64,59 +64,62 @@ class CallReviewServiceTest {
 
     private User createMockCounselorUser() {
         User user = mock(User.class);
-        doReturn("김상담").when(user).getName();
-        doReturn("010-1234-5678").when(user).getPhone();
+        lenient().doReturn("김상담").when(user).getName();
+        lenient().doReturn("010-1234-5678").when(user).getPhone();
         return user;
     }
 
     private User createMockElderlyUser() {
         User user = mock(User.class);
-        doReturn("박어르신").when(user).getName();
-        doReturn("010-8765-4321").when(user).getPhone();
+        lenient().doReturn("박어르신").when(user).getName();
+        lenient().doReturn("010-8765-4321").when(user).getPhone();
         return user;
     }
 
     private Counselor createMockCounselor(Long id) {
         Counselor counselor = mock(Counselor.class);
-        doReturn(id).when(counselor).getId();
-        doReturn(createMockCounselorUser()).when(counselor).getUser();
+        lenient().doReturn(id).when(counselor).getId();
+        lenient().doReturn(createMockCounselorUser()).when(counselor).getUser();
         return counselor;
     }
 
     private Elderly createMockElderly(Long id) {
         Elderly elderly = mock(Elderly.class);
-        doReturn(id).when(elderly).getId();
-        doReturn(createMockElderlyUser()).when(elderly).getUser();
-        doReturn(75).when(elderly).age();
-        doReturn(Elderly.Gender.F).when(elderly).getGender();
+        lenient().doReturn(id).when(elderly).getId();
+        lenient().doReturn(createMockElderlyUser()).when(elderly).getUser();
+        lenient().doReturn(75).when(elderly).age();
+        lenient().doReturn(Elderly.Gender.F).when(elderly).getGender();
         return elderly;
     }
 
     private CallRecord createMockCallRecord(Long id, Elderly elderly) {
         CallRecord callRecord = mock(CallRecord.class);
-        doReturn(id).when(callRecord).getId();
-        doReturn(elderly).when(callRecord).getElderly();
-        doReturn(LocalDateTime.now().minusHours(1)).when(callRecord).getCallAt();
-        doReturn(180).when(callRecord).getCallTimeSec();
-        doReturn(CallState.COMPLETED).when(callRecord).getState();
-        doReturn("3:00").when(callRecord).getFormattedDuration();
-        doReturn(new ArrayList<>()).when(callRecord).getElderlyResponses();
-        doReturn(new ArrayList<>()).when(callRecord).getSummaries();
-        doReturn(new ArrayList<>()).when(callRecord).getEmotions();
-        doReturn(false).when(callRecord).hasDangerResponse();
+        lenient().doReturn(id).when(callRecord).getId();
+        lenient().doReturn(elderly).when(callRecord).getElderly();
+        lenient().doReturn(LocalDateTime.now().minusHours(1)).when(callRecord).getCallAt();
+        lenient().doReturn(180).when(callRecord).getCallTimeSec();
+        lenient().doReturn(CallState.COMPLETED).when(callRecord).getState();
+        lenient().doReturn("3분 0초").when(callRecord).getFormattedDuration();
+        lenient().doReturn(new ArrayList<LlmModel>()).when(callRecord).getLlmModels();
+        lenient().doReturn(new ArrayList<ElderlyResponse>()).when(callRecord).getElderlyResponses();
+        lenient().doReturn(new ArrayList<CallSummary>()).when(callRecord).getSummaries();
+        lenient().doReturn(new ArrayList<CallEmotion>()).when(callRecord).getEmotions();
+        lenient().doReturn(false).when(callRecord).hasDangerResponse();
+        lenient().doReturn("https://s3.amazonaws.com/bucket/recordings/1001.mp3").when(callRecord).getRecordingUrl();
+        lenient().doReturn(null).when(callRecord).getDailyStatus();
         return callRecord;
     }
 
     private CounselorCallReview createMockReview(Long id, CallRecord callRecord, Counselor counselor) {
         CounselorCallReview review = mock(CounselorCallReview.class);
-        doReturn(id).when(review).getId();
-        doReturn(callRecord).when(review).getCallRecord();
-        doReturn(counselor).when(review).getCounselor();
-        doReturn(LocalDateTime.now()).when(review).getReviewedAt();
-        doReturn("어르신 상태 양호합니다.").when(review).getComment();
-        doReturn(false).when(review).isUrgent();
-        doReturn(LocalDateTime.now()).when(review).getCreatedAt();
-        doReturn(LocalDateTime.now()).when(review).getUpdatedAt();
+        lenient().doReturn(id).when(review).getId();
+        lenient().doReturn(callRecord).when(review).getCallRecord();
+        lenient().doReturn(counselor).when(review).getCounselor();
+        lenient().doReturn(LocalDateTime.now()).when(review).getReviewedAt();
+        lenient().doReturn("어르신 상태 양호합니다.").when(review).getComment();
+        lenient().doReturn(false).when(review).isUrgent();
+        lenient().doReturn(LocalDateTime.now()).when(review).getCreatedAt();
+        lenient().doReturn(LocalDateTime.now()).when(review).getUpdatedAt();
         return review;
     }
 
