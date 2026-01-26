@@ -13,9 +13,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseCookie;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 @Tag(name = "Passkey 인증", description = "WebAuthn 기반 Passkey 등록/로그인 API")
 @RestController
@@ -27,20 +31,39 @@ public class PasskeyController {
     private final AuthService authService;
     private final AuthPolicyProperties props;
 
-    public record StartRegReq(@NotNull Long userId) {
+    // ✅ 보안 강화: userId를 요청에서 받지 않고 인증 정보에서 추출
+    public record StartRegReq() {
     }
 
-    public record FinishRegReq(@NotNull Long userId, @NotBlank String requestId, @NotBlank String credentialJson) {
+    public record FinishRegReq(@NotBlank String requestId, @NotBlank String credentialJson) {
     }
 
     @PostMapping("/register/options")
-    public WebAuthnService.StartRegResponse startReg(@RequestBody StartRegReq req) throws JsonProcessingException {
-        return webAuthnService.startRegistration(req.userId());
+    @PreAuthorize("isAuthenticated()")  // ✅ 인증 필수
+    @Operation(
+        summary = "Passkey 등록 시작 (인증 필요)",
+        description = "로그인한 사용자만 자신의 계정에 Passkey를 등록할 수 있습니다.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public WebAuthnService.StartRegResponse startReg(
+            @AuthenticationPrincipal Long userId  // ✅ 인증된 사용자 ID 자동 추출
+    ) throws JsonProcessingException {
+        return webAuthnService.startRegistration(userId);
     }
 
     @PostMapping("/register/verify")
-    public void finishReg(@RequestBody FinishRegReq req) {
-        webAuthnService.finishRegistration(req.userId(), req.requestId(), req.credentialJson(), req.userId());
+    @PreAuthorize("isAuthenticated()")  // ✅ 인증 필수
+    @Operation(
+        summary = "Passkey 등록 완료 (인증 필요)",
+        description = "Passkey 등록을 완료합니다. 로그인한 사용자만 자신의 계정에 등록할 수 있습니다.",
+        security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public void finishReg(
+            @AuthenticationPrincipal Long userId,  // ✅ 인증된 사용자 ID 자동 추출
+            @RequestBody FinishRegReq req
+    ) {
+        // ✅ 인증된 사용자 ID로만 등록 가능 (타인 계정 등록 불가)
+        webAuthnService.finishRegistration(userId, req.requestId(), req.credentialJson(), userId);
     }
 
     public record StartLoginReq(String loginId) {
