@@ -2,8 +2,12 @@ package com.aicc.silverlink.domain.auth.controller;
 
 import com.aicc.silverlink.domain.auth.dto.AuthDtos;
 import com.aicc.silverlink.domain.auth.service.AuthService;
+import com.aicc.silverlink.domain.session.service.SessionService;
 import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.global.config.auth.AuthPolicyProperties;
+import com.aicc.silverlink.global.security.jwt.JwtTokenProvider;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,18 +19,25 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-class AuthControllerIT {
+class AuthControllerTest {
 
         @Autowired
         private MockMvc mockMvc;
@@ -42,6 +53,12 @@ class AuthControllerIT {
         private AuthService authService;
 
         @MockitoBean
+        private SessionService sessionService;
+
+        @MockitoBean
+        private JwtTokenProvider jwtTokenProvider;
+
+        @MockitoBean
         private AuthPolicyProperties props;
 
         @BeforeEach
@@ -52,6 +69,7 @@ class AuthControllerIT {
                 given(props.getRefreshCookieSameSite()).willReturn("Strict");
                 given(props.getRefreshTtlSeconds()).willReturn(3600L);
                 given(props.getAccessTtlSeconds()).willReturn(1800L);
+                given(props.getIdleTtlSeconds()).willReturn(3600L);
         }
 
         @Test
@@ -148,5 +166,84 @@ class AuthControllerIT {
                                 .andExpect(cookie().maxAge("refresh_token", 0));
 
                 verify(authService).logout("session-id-123");
+        }
+
+        @Test
+        @DisplayName("세션 정보 조회 성공 - 남은 시간 반환")
+        void getSessionInfo_Success() throws Exception {
+                // given
+                String token = "valid-jwt-token";
+                String sid = "session-id-123";
+                Long userId = 1L;
+                long now = Instant.now().getEpochSecond();
+                long lastSeen = now - 600; // 10분 전
+                long idleTtl = 3600L; // 60분
+                long expiresAt = lastSeen + idleTtl;
+
+                // JWT 파싱 Mock - Jws와 Claims를 mock으로 생성
+                @SuppressWarnings("unchecked")
+                Jws<Claims> jws = mock(Jws.class);
+                Claims claims = mock(Claims.class);
+                
+                given(jwtTokenProvider.parseAndValidate(token)).willReturn(jws);
+                given(jws.getPayload()).willReturn(claims);
+                given(jwtTokenProvider.getSid(any(Claims.class))).willReturn(sid);
+                given(jwtTokenProvider.getUserId(any(Claims.class))).willReturn(userId);
+
+                // 세션 메타데이터 Mock
+                Map<String, String> sessionMeta = new HashMap<>();
+                sessionMeta.put("userId", String.valueOf(userId));
+                sessionMeta.put("role", "ADMIN");
+                sessionMeta.put("lastSeen", String.valueOf(lastSeen));
+                given(sessionService.getSessionMeta(sid)).willReturn(sessionMeta);
+
+                // when & then
+                mockMvc.perform(get("/api/auth/session/info")
+                                .header("Authorization", "Bearer " + token))
+                                .andDo(print())
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.sid").value(sid))
+                                .andExpect(jsonPath("$.lastSeen").value(lastSeen))
+                                .andExpect(jsonPath("$.expiresAt").value(expiresAt))
+                                .andExpect(jsonPath("$.remainingSeconds").exists())
+                                .andExpect(jsonPath("$.idleTtl").value(idleTtl));
+        }
+
+        @Test
+        @DisplayName("세션 정보 조회 실패 - 토큰 없음")
+        void getSessionInfo_Fail_NoToken() throws Exception {
+                // when & then
+                mockMvc.perform(get("/api/auth/session/info"))
+                                .andDo(print())
+                                .andExpect(status().isBadRequest()); // 400
+        }
+
+        @Test
+        @DisplayName("세션 정보 조회 실패 - 세션 만료")
+        void getSessionInfo_Fail_SessionExpired() throws Exception {
+                // given
+                String token = "valid-jwt-token";
+                String sid = "session-id-123";
+                Long userId = 1L;
+
+                // JWT 파싱 Mock
+                @SuppressWarnings("unchecked")
+                Jws<Claims> jws = mock(Jws.class);
+                Claims claims = mock(Claims.class);
+                
+                given(jwtTokenProvider.parseAndValidate(token)).willReturn(jws);
+                given(jws.getPayload()).willReturn(claims);
+                given(jwtTokenProvider.getSid(any(Claims.class))).willReturn(sid);
+                given(jwtTokenProvider.getUserId(any(Claims.class))).willReturn(userId);
+
+                // 세션 만료 Mock
+                given(sessionService.getSessionMeta(sid))
+                                .willThrow(new IllegalStateException("SESSION_EXPIRED"));
+
+                // when & then
+                mockMvc.perform(get("/api/auth/session/info")
+                                .header("Authorization", "Bearer " + token))
+                                .andDo(print())
+                                .andExpect(status().isUnauthorized()); // 401
         }
 }

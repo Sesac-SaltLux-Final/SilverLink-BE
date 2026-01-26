@@ -247,4 +247,82 @@ public class AuthService {
         return loginId.substring(0, loginId.length() - 3) + "***";
     }
 
+    /**
+     * 로그인 확인 (기존 세션 체크)
+     * 기존 세션이 있으면 임시 토큰 반환, 없으면 바로 로그인
+     */
+    @Transactional
+    public LoginCheckResult checkLogin(AuthDtos.LoginRequest req) {
+        // Brute-force 방어
+        String fk = failKey(req.loginId());
+        String failCntStr = redis.opsForValue().get(fk);
+        int failCnt = failCntStr == null ? 0 : Integer.parseInt(failCntStr);
+        if (failCnt >= 10)
+            throw new IllegalStateException("TOO_MANY_ATTEMPS");
+
+        User user = userRepository.findByLoginId(req.loginId())
+                .orElseThrow(() -> new IllegalStateException("LOGIN_FAIL"));
+
+        if (!user.isActive())
+            throw new IllegalStateException("USER_INACTIVE");
+
+        if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
+            redis.opsForValue().increment(fk);
+            redis.expire(fk, 15, TimeUnit.MINUTES);
+            throw new IllegalArgumentException("LOGIN_FAIL");
+        }
+
+        redis.delete(fk);
+
+        // 기존 세션 확인
+        String existingSid = sessionService.hasExistingSession(user.getId());
+        
+        if (existingSid != null) {
+            // 기존 세션 있음 - 임시 토큰 발급
+            String loginToken = sessionService.createLoginToken(user.getId());
+            return new LoginCheckResult(true, loginToken, null);
+        }
+
+        // 기존 세션 없음 - 바로 로그인
+        var issued = sessionService.issueSession(user.getId(), user.getRole());
+        String access = jwt.createAccessToken(user.getId(), user.getRole(), issued.sid(), props.getAccessTtlSeconds());
+        user.updateLastLogin();
+
+        AuthResult authResult = new AuthResult(access, issued.refreshToken(), issued.sid(), props.getAccessTtlSeconds(), user.getRole());
+        return new LoginCheckResult(false, null, authResult);
+    }
+
+    /**
+     * 강제 로그인 (기존 세션 종료 후 로그인)
+     */
+    @Transactional
+    public AuthResult forceLogin(String loginToken) {
+        Long userId = sessionService.validateLoginToken(loginToken);
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
+
+        if (!user.isActive())
+            throw new IllegalStateException("USER_INACTIVE");
+
+        // 기존 세션 강제 종료
+        sessionService.forceKickExistingSession(userId);
+
+        // 새 세션 발급
+        var issued = sessionService.issueSession(user.getId(), user.getRole());
+        String access = jwt.createAccessToken(user.getId(), user.getRole(), issued.sid(), props.getAccessTtlSeconds());
+        user.updateLastLogin();
+
+        return new AuthResult(access, issued.refreshToken(), issued.sid(), props.getAccessTtlSeconds(), user.getRole());
+    }
+
+    /**
+     * 로그인 확인 결과
+     */
+    public record LoginCheckResult(
+        boolean needsConfirmation,
+        String loginToken,
+        AuthResult authResult
+    ) {}
+
 }
