@@ -53,7 +53,9 @@ public class Elderly {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public enum Gender { M, F }
+    public enum Gender {
+        M, F
+    }
 
     @PrePersist
     protected void onCreate() {
@@ -74,10 +76,14 @@ public class Elderly {
     }
 
     private Elderly(User user, AdministrativeDivision administrativeDivision, LocalDate birthDate, Gender gender) {
-        if (user == null) throw new IllegalArgumentException("USER_REQUIRED");
-        if (administrativeDivision == null) throw new IllegalArgumentException("ADM_DIVISION_REQUIRED");
-        if (birthDate == null) throw new IllegalArgumentException("BIRTH_REQUIRED");
-        if (gender == null) throw new IllegalArgumentException("GENDER_REQUIRED");
+        if (user == null)
+            throw new IllegalArgumentException("USER_REQUIRED");
+        if (administrativeDivision == null)
+            throw new IllegalArgumentException("ADM_DIVISION_REQUIRED");
+        if (birthDate == null)
+            throw new IllegalArgumentException("BIRTH_REQUIRED");
+        if (gender == null)
+            throw new IllegalArgumentException("GENDER_REQUIRED");
 
         this.user = user;
         this.administrativeDivision = administrativeDivision;
@@ -86,7 +92,7 @@ public class Elderly {
     }
 
     public static Elderly create(User user, AdministrativeDivision administrativeDivision,
-                                 LocalDate birthDate, Gender gender) {
+            LocalDate birthDate, Gender gender) {
         return new Elderly(user, administrativeDivision, birthDate, gender);
     }
 
@@ -97,7 +103,8 @@ public class Elderly {
     }
 
     public void changeAdministrativeDivision(AdministrativeDivision administrativeDivision) {
-        if (administrativeDivision == null) throw new IllegalArgumentException("ADM_DIVISION_REQUIRED");
+        if (administrativeDivision == null)
+            throw new IllegalArgumentException("ADM_DIVISION_REQUIRED");
         this.administrativeDivision = administrativeDivision;
     }
 
@@ -106,10 +113,13 @@ public class Elderly {
     }
 
     private String normalize(String v, int max) {
-        if (v == null) return null;
+        if (v == null)
+            return null;
         String t = v.trim();
-        if (t.isEmpty()) return null;
-        if (t.length() > max) throw new IllegalArgumentException("FIELD_TOO_LONG");
+        if (t.isEmpty())
+            return null;
+        if (t.length() > max)
+            throw new IllegalArgumentException("FIELD_TOO_LONG");
         return t;
     }
 }

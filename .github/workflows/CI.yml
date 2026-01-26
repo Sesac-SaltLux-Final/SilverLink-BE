@@ -51,6 +51,12 @@ jobs:
       - name: Test (unit only)
         env:
           SPRING_PROFILES_ACTIVE: ci
+          SPRING_JPA_SHOW_SQL: false
+          # 2. Hibernate 로깅 레벨을 INFO로 올려서 DEBUG 로그 숨기기
+          LOGGING_LEVEL_ORG_HIBERNATE_SQL: info
+          LOGGING_LEVEL_ORG_HIBERNATE_TYPE_DESCRIPTOR_SQL_BASICBINDER: info
+          # 3. (혹시 켜져있다면) SQL 포맷팅 끄기 (줄바꿈 방지)
+          SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: false
           # (안전용) 더미 env 주입
           JWT_SECRET: ci_dummy_jwt_secret_please_change
           API_SERVICE_KEY: ci_dummy_api_key

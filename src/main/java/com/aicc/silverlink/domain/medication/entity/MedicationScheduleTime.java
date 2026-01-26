@@ -2,6 +2,7 @@ package com.aicc.silverlink.domain.medication.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import java.time.LocalTime;
@@ -29,6 +30,13 @@ public class MedicationScheduleTime {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Builder
+    public MedicationScheduleTime(MedicationSchedule schedule, Short doseSeq, LocalTime intakeTime) {
+        this.schedule = schedule;
+        this.doseSeq = doseSeq != null ? doseSeq : 1;
+        this.intakeTime = intakeTime;
+    }
 
     @PrePersist
     protected void onCreate() {

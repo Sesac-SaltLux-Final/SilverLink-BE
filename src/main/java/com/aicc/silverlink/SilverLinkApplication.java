@@ -14,6 +14,7 @@ public class SilverLinkApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(SilverLinkApplication.class, args);
+
     }
 
 }

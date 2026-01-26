@@ -4,6 +4,7 @@ import com.aicc.silverlink.domain.admin.entity.Admin;
 import com.aicc.silverlink.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
@@ -48,6 +49,14 @@ public class Complaint {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Builder
+    public Complaint(User writer, String title, String content) {
+        this.writer = writer;
+        this.title = title;
+        this.content = content;
+        this.status = ComplaintStatus.WAITING;
+    }
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -60,6 +69,23 @@ public class Complaint {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 민원 답변 작성
+     */
+    public void reply(String replyContent, Admin admin) {
+        this.replyContent = replyContent;
+        this.repliedBy = admin;
+        this.repliedAt = LocalDateTime.now();
+        this.status = ComplaintStatus.RESOLVED;
+    }
+
+    /**
+     * 민원 상태 변경
+     */
+    public void updateStatus(ComplaintStatus newStatus) {
+        this.status = newStatus;
     }
 
     public enum ComplaintStatus {

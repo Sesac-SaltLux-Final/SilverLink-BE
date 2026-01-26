@@ -40,7 +40,7 @@ public class GuardianService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public GuardianResponse register(GuardianRequest request){
+    public GuardianResponse register(GuardianRequest request) {
         if (userRepository.existsByLoginId(request.getLoginId())) {
             throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
         }
@@ -51,7 +51,8 @@ public class GuardianService {
                 request.getName(),
                 request.getPhone(),
                 request.getEmail(),
-                Role.GUARDIAN
+                Role.GUARDIAN,
+                null // 자가 등록이므로 createdBy 없음
         );
         userRepository.save(user);
 
@@ -60,13 +61,12 @@ public class GuardianService {
                 request.getAddressLine1(),
                 request.getAddressLine2(),
                 request.getZipcode(),
-                LocalDateTime.now()
-        );
+                LocalDateTime.now());
         guardianRepository.save(guardian);
         return GuardianResponse.from(guardian);
     }
 
-    public GuardianResponse getGuardian(Long id){
+    public GuardianResponse getGuardian(Long id) {
         Guardian guardian = guardianRepository.findByIdWithUser(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 보호자를 찾을 수 없습니다."));
         return GuardianResponse.from(guardian);
@@ -92,13 +92,13 @@ public class GuardianService {
     }
 
     @Transactional
-    public void connectElderly(Long guardianId, Long elderlyId, RelationType relationType){
+    public void connectElderly(Long guardianId, Long elderlyId, RelationType relationType) {
         // 어르신 기준으로 이미 보호자가 있는지 체크 (1:1 규칙)
-        if(guardianElderlyRepository.existsByElderly_Id(elderlyId)){
+        if (guardianElderlyRepository.existsByElderly_Id(elderlyId)) {
             throw new IllegalArgumentException("이미 다른 보호자가 등록한 어르신입니다.");
         }
         // 보호자 기준으로 이미 어르신이 있는지 체크 (추가된 1:1 규칙)
-        if(guardianElderlyRepository.existsByGuardian_Id(guardianId)){
+        if (guardianElderlyRepository.existsByGuardian_Id(guardianId)) {
             throw new IllegalArgumentException("이 보호자는 이미 다른 어르신을 담당하고 있습니다.");
         }
 
@@ -111,13 +111,16 @@ public class GuardianService {
         guardianElderlyRepository.save(relation);
     }
 
-    public List<GuardianResponse> getAllGuardian(){
+    public List<GuardianResponse> getAllGuardian() {
         return guardianRepository.findAllWithUser().stream()
-                .map(GuardianResponse::from)
+                .map(guardian -> {
+                    int elderlyCount = guardianElderlyRepository.countByGuardianId(guardian.getId());
+                    return GuardianResponse.from(guardian, elderlyCount);
+                })
                 .collect(Collectors.toList());
     }
 
-    public GuardianElderlyResponse getElderlyByGuardian(Long guardianId){
+    public GuardianElderlyResponse getElderlyByGuardian(Long guardianId) {
         GuardianElderly guardianElderly = guardianElderlyRepository.findByGuardianId(guardianId)
                 .orElseThrow(() -> new IllegalArgumentException("보호할 어르신이 없습니다."));
         return GuardianElderlyResponse.from(guardianElderly);
@@ -140,6 +143,7 @@ public class GuardianService {
             throw new IllegalArgumentException("본인이 담당하는 어르신의 보호자 정보만 조회할 수 있습니다.");
         }
     }
+
     @Transactional
     public void withdrawGuardian(Long guardianId) {
         Guardian guardian = guardianRepository.findById(guardianId)

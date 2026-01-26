@@ -1,9 +1,7 @@
 server:
   port: 8080
-  # 여기에 있던 servlet 설정은 삭제!
 
 spring:
-  # [수정] servlet 아래에 encoding과 multipart를 같이 둡니다.
   servlet:
     encoding:
       charset: UTF-8
@@ -21,6 +19,11 @@ spring:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:silverlink}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:password}
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
 
   jpa:
 #    database-platform: org.hibernate.dialect.MySQLDialect
@@ -84,3 +87,19 @@ luxia:
     connect-ms: 3000
     response-ms: 60000
 
+
+cloud:
+  aws:
+    s3:
+      enabled: false  # 로컬 모드
+
+#cloud:
+#  aws:
+#    s3:
+#      enabled: true
+#      bucket: silverlink-files
+#    credentials:
+#      access-key: ${AWS_ACCESS_KEY}
+#      secret-key: ${AWS_SECRET_KEY}
+#    region:
+#      static: ap-northeast-2

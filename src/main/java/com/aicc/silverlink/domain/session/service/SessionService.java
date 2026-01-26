@@ -139,6 +139,52 @@ public class SessionService {
         }
     }
 
+    /**
+     * 사용자의 기존 세션 존재 여부 확인
+     */
+    public String hasExistingSession(Long userId) {
+        String userKey = userSidKey(userId);
+        String existingSid = redis.opsForValue().get(userKey);
+        
+        if (existingSid != null && Boolean.TRUE.equals(redis.hasKey(sessKey(existingSid)))) {
+            return existingSid;
+        }
+        return null;
+    }
+
+    /**
+     * 기존 세션 강제 종료
+     */
+    public void forceKickExistingSession(Long userId) {
+        String existingSid = hasExistingSession(userId);
+        if (existingSid != null) {
+            invalidateBySid(existingSid);
+        }
+    }
+
+    /**
+     * 로그인 확인용 임시 토큰 생성 (5분 유효)
+     */
+    public String createLoginToken(Long userId) {
+        String token = UUID.randomUUID().toString();
+        String key = "login:pending:" + token;
+        redis.opsForValue().set(key, String.valueOf(userId), 5, TimeUnit.MINUTES);
+        return token;
+    }
+
+    /**
+     * 로그인 토큰 검증 및 사용자 ID 반환 (일회용)
+     */
+    public Long validateLoginToken(String token) {
+        String key = "login:pending:" + token;
+        String userId = redis.opsForValue().get(key);
+        if (userId == null) {
+            throw new IllegalStateException("INVALID_LOGIN_TOKEN");
+        }
+        redis.delete(key); // 일회용이므로 즉시 삭제
+        return Long.valueOf(userId);
+    }
+
 
     private static String sha256(String raw) {
         try {
