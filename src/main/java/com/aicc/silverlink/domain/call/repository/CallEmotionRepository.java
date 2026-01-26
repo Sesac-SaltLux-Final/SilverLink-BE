@@ -5,38 +5,53 @@ import com.aicc.silverlink.domain.call.entity.EmotionLevel;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-@Repository
 public interface CallEmotionRepository extends JpaRepository<CallEmotion, Long> {
 
     /**
-     * 통화 ID로 감정 분석 결과 조회 (최신 1건)
+     * 특정 통화의 최신 감정 분석 결과
      */
-    Optional<CallEmotion> findTopByCallRecordIdOrderByCreatedAtDesc(Long callRecordId);
+    @Query("SELECT e FROM CallEmotion e WHERE e.callRecord.id = :callId ORDER BY e.createdAt DESC LIMIT 1")
+    Optional<CallEmotion> findLatestByCallId(@Param("callId") Long callId);
 
     /**
-     * 통화 ID로 모든 감정 분석 결과 조회
+     * 특정 통화의 감정 분석 목록
      */
-    List<CallEmotion> findByCallRecordIdOrderByCreatedAtAsc(Long callRecordId);
+    List<CallEmotion> findByCallRecordIdOrderByCreatedAtDesc(Long callId);
 
     /**
-     * 어르신의 최근 감정 상태 통계
+     * 특정 어르신의 최근 감정 분석 결과들
      */
-    @Query("SELECT ce.emotionLevel, COUNT(ce) FROM CallEmotion ce " +
-            "JOIN ce.callRecord cr " +
+    @Query("SELECT e FROM CallEmotion e " +
+            "JOIN e.callRecord cr " +
             "WHERE cr.elderly.id = :elderlyId " +
-            "AND ce.createdAt >= :startDate " +
-            "GROUP BY ce.emotionLevel")
-    List<Object[]> getEmotionStatsByElderly(@Param("elderlyId") Long elderlyId,
-                                            @Param("startDate") LocalDateTime startDate);
+            "ORDER BY e.createdAt DESC")
+    List<CallEmotion> findRecentByElderlyId(@Param("elderlyId") Long elderlyId);
 
     /**
-     * 특정 감정 레벨의 통화 건수
+     * 특정 어르신의 기간별 감정 통계
      */
-    long countByEmotionLevel(EmotionLevel emotionLevel);
+    @Query("SELECT e.emotionLevel, COUNT(e) FROM CallEmotion e " +
+            "JOIN e.callRecord cr " +
+            "WHERE cr.elderly.id = :elderlyId " +
+            "AND e.createdAt BETWEEN :startDate AND :endDate " +
+            "GROUP BY e.emotionLevel")
+    List<Object[]> countByElderlyIdAndDateRange(
+            @Param("elderlyId") Long elderlyId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * 특정 감정 레벨의 통화 수
+     */
+    @Query("SELECT COUNT(e) FROM CallEmotion e " +
+            "JOIN e.callRecord cr " +
+            "WHERE cr.elderly.id = :elderlyId AND e.emotionLevel = :level")
+    long countByElderlyIdAndEmotionLevel(
+            @Param("elderlyId") Long elderlyId,
+            @Param("level") EmotionLevel level);
 }

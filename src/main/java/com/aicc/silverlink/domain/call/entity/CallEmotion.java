@@ -1,19 +1,23 @@
 package com.aicc.silverlink.domain.call.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 /**
- * 통화 중 감정 분석 결과
+ * 감정 분석 결과 엔티티
  */
 @Entity
-@Table(name = "call_emotions")
+@Table(name = "call_emotions",
+        indexes = {
+                @Index(name = "idx_emotion_call_time", columnList = "call_id, created_at")
+        })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Builder
 public class CallEmotion {
 
     @Id
@@ -25,27 +29,31 @@ public class CallEmotion {
     @JoinColumn(name = "call_id", nullable = false)
     private CallRecord callRecord;
 
+    /**
+     * 감정 레벨
+     */
     @Enumerated(EnumType.STRING)
     @Column(name = "emotion_level", nullable = false)
     private EmotionLevel emotionLevel;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
-        if (this.createdAt == null) {
-            this.createdAt = LocalDateTime.now();
-        }
-        if (this.emotionLevel == null) {
-            this.emotionLevel = EmotionLevel.NORMAL;
-        }
+        this.createdAt = LocalDateTime.now();
+    }
+
+    @Builder
+    public CallEmotion(CallRecord callRecord, EmotionLevel emotionLevel) {
+        this.callRecord = callRecord;
+        this.emotionLevel = emotionLevel;
     }
 
     /**
-     * 감정 레벨을 한글로 반환
+     * 감정 레벨 한글명 반환
      */
     public String getEmotionLevelKorean() {
-        return emotionLevel.getKorean();
+        return emotionLevel != null ? emotionLevel.getKorean() : "미확인";
     }
 }
