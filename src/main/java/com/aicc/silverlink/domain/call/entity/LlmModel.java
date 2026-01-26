@@ -1,22 +1,24 @@
 package com.aicc.silverlink.domain.call.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
- * LLM 모델 실행 단위 (프롬프트)
- * DDL: llm_models 테이블
+ * LLM 모델 실행 기록 (CallBot 발화)
+ * - CallBot이 어르신에게 한 질문/말을 저장
  */
 @Entity
-@Table(name = "llm_models")
+@Table(name = "llm_models",
+        indexes = {
+                @Index(name = "idx_models_call", columnList = "call_id, created_at")
+        })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Builder
 public class LlmModel {
 
     @Id
@@ -28,20 +30,23 @@ public class LlmModel {
     @JoinColumn(name = "call_id", nullable = false)
     private CallRecord callRecord;
 
-    @Column(name = "prompt", columnDefinition = "TEXT", nullable = false)
+    /**
+     * CallBot이 어르신에게 한 말 (프롬프트/발화)
+     */
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String prompt;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    @OneToMany(mappedBy = "llmModel", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<ElderlyResponse> responses = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
-        if (this.createdAt == null) {
-            this.createdAt = LocalDateTime.now();
-        }
+        this.createdAt = LocalDateTime.now();
+    }
+
+    @Builder
+    public LlmModel(CallRecord callRecord, String prompt) {
+        this.callRecord = callRecord;
+        this.prompt = prompt;
     }
 }

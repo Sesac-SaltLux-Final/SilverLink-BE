@@ -2,21 +2,26 @@ package com.aicc.silverlink.domain.call.entity;
 
 import com.aicc.silverlink.domain.elderly.entity.Elderly;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * AI CallBot과 어르신 간의 통화 기록
+ * 통화 기록 엔티티
  */
 @Entity
-@Table(name = "call_records")
+@Table(name = "call_records",
+        indexes = {
+                @Index(name = "idx_call_records_elderly_time", columnList = "elderly_user_id, call_at"),
+                @Index(name = "idx_call_records_state_time", columnList = "state, call_at")
+        })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Builder
 public class CallRecord {
 
     @Id
@@ -35,51 +40,109 @@ public class CallRecord {
     private Integer callTimeSec;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "state", nullable = false)
+    @Column(nullable = false)
     private CallState state;
 
+    /**
+     * 통화 녹음 파일 URL (S3)
+     */
+    @Column(name = "recording_url", length = 500)
+    private String recordingUrl;
+
+    // ===== 연관 관계 =====
+
     @OneToMany(mappedBy = "callRecord", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
+    @OrderBy("createdAt ASC")
+    private List<LlmModel> llmModels = new ArrayList<>();
+
+    @OneToMany(mappedBy = "callRecord", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("respondedAt ASC")
     private List<ElderlyResponse> elderlyResponses = new ArrayList<>();
 
     @OneToMany(mappedBy = "callRecord", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
+    @OrderBy("createdAt DESC")
     private List<CallSummary> summaries = new ArrayList<>();
 
     @OneToMany(mappedBy = "callRecord", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
+    @OrderBy("createdAt DESC")
     private List<CallEmotion> emotions = new ArrayList<>();
 
-    @OneToMany(mappedBy = "callRecord", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<CounselorCallReview> reviews = new ArrayList<>();
+    /**
+     * 일일 상태 (1:1 관계)
+     */
+    @OneToOne(mappedBy = "callRecord", cascade = CascadeType.ALL, orphanRemoval = true)
+    private CallDailyStatus dailyStatus;
 
-    @PrePersist
-    protected void onCreate() {
-        if (this.callAt == null) {
-            this.callAt = LocalDateTime.now();
-        }
-        if (this.state == null) {
-            this.state = CallState.REQUESTED;
-        }
+    @Builder
+    public CallRecord(Elderly elderly, LocalDateTime callAt, Integer callTimeSec,
+                      CallState state, String recordingUrl) {
+        this.elderly = elderly;
+        this.callAt = callAt;
+        this.callTimeSec = callTimeSec;
+        this.state = state;
+        this.recordingUrl = recordingUrl;
     }
 
+    // ===== 비즈니스 메서드 =====
+
     /**
-     * 통화 시간(초)을 "분:초" 형식으로 반환
+     * 통화 시간을 "MM분 SS초" 형식으로 반환
      */
     public String getFormattedDuration() {
-        if (callTimeSec == null || callTimeSec == 0) {
-            return "0:00";
+        if (callTimeSec == null || callTimeSec <= 0) {
+            return "0분 0초";
         }
         int minutes = callTimeSec / 60;
         int seconds = callTimeSec % 60;
-        return String.format("%d:%02d", minutes, seconds);
+
+        if (minutes == 0) {
+            return seconds + "초";
+        } else if (seconds == 0) {
+            return minutes + "분";
+        }
+        return minutes + "분 " + seconds + "초";
     }
 
     /**
      * 위험 응답이 있는지 확인
      */
     public boolean hasDangerResponse() {
-        return elderlyResponses.stream().anyMatch(ElderlyResponse::isDanger);
+        return elderlyResponses.stream()
+                .anyMatch(ElderlyResponse::isDanger);
+    }
+
+    /**
+     * 최신 감정 분석 결과
+     */
+    public CallEmotion getLatestEmotion() {
+        return emotions.isEmpty() ? null : emotions.get(0);
+    }
+
+    /**
+     * 최신 통화 요약
+     */
+    public CallSummary getLatestSummary() {
+        return summaries.isEmpty() ? null : summaries.get(0);
+    }
+
+    /**
+     * 통화 완료 여부
+     */
+    public boolean isCompleted() {
+        return this.state == CallState.COMPLETED;
+    }
+
+    /**
+     * 녹음 파일 URL 설정
+     */
+    public void setRecordingUrl(String recordingUrl) {
+        this.recordingUrl = recordingUrl;
+    }
+
+    /**
+     * 일일 상태 설정
+     */
+    public void setDailyStatus(CallDailyStatus dailyStatus) {
+        this.dailyStatus = dailyStatus;
     }
 }
