@@ -47,6 +47,7 @@ public class Elderly {
     @Column(name = "zipcode", length = 10)
     private String zipcode;
 
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -37,8 +37,9 @@ public class AssignmentController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> unassignCounselor(
             @RequestParam Long counselorId,
-            @RequestParam Long elderlyId) {
-        assignmentService.unassignCounselor(counselorId, elderlyId);
+            @RequestParam Long elderlyId,
+            @AuthenticationPrincipal Long currentUserId) {
+        assignmentService.unassignCounselor(counselorId, elderlyId, currentUserId);
         return ResponseEntity.ok().build();
     }
 

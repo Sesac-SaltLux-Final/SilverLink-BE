@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import java.util.List;
+
 @Tag(name = "약관/정책", description = "이용약관 조회/등록 API")
 @Slf4j
 @RestController
@@ -33,6 +35,18 @@ public class PolicyController {
     public ResponseEntity<PolicyResponse> getLatestPolicy(@PathVariable PolicyType type) {
         log.info("GET /api/policies/latest/{} - 최신 약관 조회 요청", type);
         PolicyResponse response = policyService.getLatest(type);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * [관리자] 전체 정책 목록 조회
+     * GET /api/policies
+     */
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<PolicyResponse>> getAllPolicies() {
+        log.info("GET /api/policies - 전체 정책 목록 조회 요청");
+        List<PolicyResponse> response = policyService.getAll();
         return ResponseEntity.ok(response);
     }
 
