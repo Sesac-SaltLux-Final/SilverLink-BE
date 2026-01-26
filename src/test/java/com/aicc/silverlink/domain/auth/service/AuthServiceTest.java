@@ -285,4 +285,190 @@ class AuthServiceTest {
                 // then
                 verify(sessionService).invalidateBySid(sid);
         }
+
+        // ========== 중복 로그인 확인 기능 테스트 ==========
+
+        @Test
+        @DisplayName("로그인 확인 성공 - 기존 세션 없음 (바로 로그인)")
+        void checkLogin_Success_NoExistingSession() {
+                // given
+                AuthDtos.LoginRequest request = new AuthDtos.LoginRequest("testUser", "password123!");
+                SessionService.SessionIssue sessionIssued = new SessionService.SessionIssue("sid-123",
+                                "refresh-token-abc");
+
+                given(valueOps.get("loginfail: testUser")).willReturn(null);
+                given(userRepository.findByLoginId("testUser")).willReturn(Optional.of(testUser));
+                given(passwordEncoder.matches("password123!", testUser.getPasswordHash())).willReturn(true);
+                given(sessionService.hasExistingSession(testUser.getId())).willReturn(null); // 기존 세션 없음
+                given(sessionService.issueSession(testUser.getId(), testUser.getRole())).willReturn(sessionIssued);
+                given(jwt.createAccessToken(testUser.getId(), testUser.getRole(), "sid-123", 1800L))
+                                .willReturn("access-token-xyz");
+
+                // when
+                AuthService.LoginCheckResult result = authService.checkLogin(request);
+
+                // then
+                assertThat(result).isNotNull();
+                assertThat(result.needsConfirmation()).isFalse();
+                assertThat(result.loginToken()).isNull();
+                assertThat(result.authResult()).isNotNull();
+                assertThat(result.authResult().accessToken()).isEqualTo("access-token-xyz");
+
+                verify(sessionService).hasExistingSession(testUser.getId());
+                verify(sessionService).issueSession(testUser.getId(), testUser.getRole());
+                verify(sessionService, never()).createLoginToken(anyLong());
+        }
+
+        @Test
+        @DisplayName("로그인 확인 성공 - 기존 세션 있음 (확인 필요)")
+        void checkLogin_Success_ExistingSessionFound() {
+                // given
+                AuthDtos.LoginRequest request = new AuthDtos.LoginRequest("testUser", "password123!");
+                String existingSid = "existing-sid-456";
+                String loginToken = "login-token-789";
+
+                given(valueOps.get("loginfail: testUser")).willReturn(null);
+                given(userRepository.findByLoginId("testUser")).willReturn(Optional.of(testUser));
+                given(passwordEncoder.matches("password123!", testUser.getPasswordHash())).willReturn(true);
+                given(sessionService.hasExistingSession(testUser.getId())).willReturn(existingSid); // 기존 세션 있음
+                given(sessionService.createLoginToken(testUser.getId())).willReturn(loginToken);
+
+                // when
+                AuthService.LoginCheckResult result = authService.checkLogin(request);
+
+                // then
+                assertThat(result).isNotNull();
+                assertThat(result.needsConfirmation()).isTrue();
+                assertThat(result.loginToken()).isEqualTo(loginToken);
+                assertThat(result.authResult()).isNull();
+
+                verify(sessionService).hasExistingSession(testUser.getId());
+                verify(sessionService).createLoginToken(testUser.getId());
+                verify(sessionService, never()).issueSession(anyLong(), any());
+        }
+
+        @Test
+        @DisplayName("로그인 확인 실패 - 비밀번호 불일치")
+        void checkLogin_Fail_WrongPassword() {
+                // given
+                AuthDtos.LoginRequest request = new AuthDtos.LoginRequest("testUser", "wrongPassword");
+
+                given(valueOps.get("loginfail: testUser")).willReturn(null);
+                given(userRepository.findByLoginId("testUser")).willReturn(Optional.of(testUser));
+                given(passwordEncoder.matches("wrongPassword", testUser.getPasswordHash())).willReturn(false);
+
+                // when & then
+                assertThatThrownBy(() -> authService.checkLogin(request))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessage("LOGIN_FAIL");
+
+                verify(sessionService, never()).hasExistingSession(anyLong());
+        }
+
+        @Test
+        @DisplayName("로그인 확인 실패 - 브루트포스 방어")
+        void checkLogin_Fail_TooManyAttempts() {
+                // given
+                AuthDtos.LoginRequest request = new AuthDtos.LoginRequest("testUser", "password123!");
+
+                given(valueOps.get("loginfail: testUser")).willReturn("10");
+
+                // when & then
+                assertThatThrownBy(() -> authService.checkLogin(request))
+                                .isInstanceOf(IllegalStateException.class)
+                                .hasMessage("TOO_MANY_ATTEMPS");
+
+                verify(sessionService, never()).hasExistingSession(anyLong());
+        }
+
+        @Test
+        @DisplayName("강제 로그인 성공 - 기존 세션 종료 후 새 세션 생성")
+        void forceLogin_Success() {
+                // given
+                String loginToken = "login-token-789";
+                Long userId = 1L;
+                SessionService.SessionIssue sessionIssued = new SessionService.SessionIssue("new-sid-999",
+                                "new-refresh-token");
+
+                given(sessionService.validateLoginToken(loginToken)).willReturn(userId);
+                given(userRepository.findById(userId)).willReturn(Optional.of(testUser));
+                given(sessionService.issueSession(userId, testUser.getRole())).willReturn(sessionIssued);
+                given(jwt.createAccessToken(userId, testUser.getRole(), "new-sid-999", 1800L))
+                                .willReturn("new-access-token");
+
+                // when
+                AuthService.AuthResult result = authService.forceLogin(loginToken);
+
+                // then
+                assertThat(result).isNotNull();
+                assertThat(result.accessToken()).isEqualTo("new-access-token");
+                assertThat(result.refreshToken()).isEqualTo("new-refresh-token");
+                assertThat(result.sid()).isEqualTo("new-sid-999");
+                assertThat(result.ttl()).isEqualTo(1800L);
+
+                verify(sessionService).validateLoginToken(loginToken);
+                verify(sessionService).forceKickExistingSession(userId);
+                verify(sessionService).issueSession(userId, testUser.getRole());
+        }
+
+        @Test
+        @DisplayName("강제 로그인 실패 - 유효하지 않은 로그인 토큰")
+        void forceLogin_Fail_InvalidToken() {
+                // given
+                String invalidToken = "invalid-token";
+
+                given(sessionService.validateLoginToken(invalidToken))
+                                .willThrow(new IllegalStateException("INVALID_LOGIN_TOKEN"));
+
+                // when & then
+                assertThatThrownBy(() -> authService.forceLogin(invalidToken))
+                                .isInstanceOf(IllegalStateException.class)
+                                .hasMessage("INVALID_LOGIN_TOKEN");
+
+                verify(userRepository, never()).findById(anyLong());
+                verify(sessionService, never()).issueSession(anyLong(), any());
+        }
+
+        @Test
+        @DisplayName("강제 로그인 실패 - 사용자 없음")
+        void forceLogin_Fail_UserNotFound() {
+                // given
+                String loginToken = "login-token-789";
+                Long userId = 999L;
+
+                given(sessionService.validateLoginToken(loginToken)).willReturn(userId);
+                given(userRepository.findById(userId)).willReturn(Optional.empty());
+
+                // when & then
+                assertThatThrownBy(() -> authService.forceLogin(loginToken))
+                                .isInstanceOf(IllegalArgumentException.class)
+                                .hasMessage("USER_NOT_FOUND");
+
+                verify(sessionService, never()).issueSession(anyLong(), any());
+        }
+
+        @Test
+        @DisplayName("강제 로그인 실패 - 비활성 사용자")
+        void forceLogin_Fail_InactiveUser() {
+                // given
+                String loginToken = "login-token-789";
+                Long userId = 1L;
+                User inactiveUser = User.builder()
+                                .id(1L)
+                                .loginId("testUser")
+                                .passwordHash("$2a$10$encodedPassword")
+                                .role(Role.GUARDIAN)
+                                .status(com.aicc.silverlink.domain.user.entity.UserStatus.LOCKED)
+                                .build();
+
+                given(sessionService.validateLoginToken(loginToken)).willReturn(userId);
+                given(userRepository.findById(userId)).willReturn(Optional.of(inactiveUser));
+
+                // when & then
+                assertThatThrownBy(() -> authService.forceLogin(loginToken))
+                                .isInstanceOf(IllegalStateException.class)
+                                .hasMessage("USER_INACTIVE");
+
+                verify(sessionService, never()).issueSession(anyLong(), any());
+        }
 }

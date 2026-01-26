@@ -1,11 +1,13 @@
 package com.aicc.silverlink.global.exception;
 
 import com.aicc.silverlink.global.common.response.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -93,6 +95,27 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", code, "message", message));
     }
 
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<String> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException e,
+            HttpServletRequest req
+    ) {
+        log.warn("MethodNotSupported: {} {} | supported={}",
+                req.getMethod(), req.getRequestURI(), e.getSupportedHttpMethods());
+
+        String message = String.format(
+                "HTTP 메서드가 잘못되었습니다. 사용 불가: %s\n허용된 메서드: %s",
+                req.getMethod(),
+                e.getSupportedHttpMethods()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.METHOD_NOT_ALLOWED)  // 405
+                .body(message);
+    }
+
+
     /**
      * 오류 코드를 사용자 친화적인 메시지로 변환
      */
@@ -122,6 +145,7 @@ public class GlobalExceptionHandler {
             case "INVALID_TOKEN" -> "유효하지 않은 토큰입니다.";
             case "TOKEN_EXPIRED" -> "토큰이 만료되었습니다. 다시 로그인해주세요.";
             case "ALREADY_LOGGED_IN" -> "이미 다른 기기에서 로그인되어 있습니다.";
+            case "INVALID_LOGIN_TOKEN" -> "유효하지 않은 로그인 토큰입니다. 다시 시도해주세요.";
             case "SESSION_EXPIRED" -> "세션이 만료되었습니다. 다시 로그인해주세요.";
             case "REFRESH_REUSED" -> "비정상적인 세션 사용이 감지되었습니다. 다시 로그인해주세요.";
 
