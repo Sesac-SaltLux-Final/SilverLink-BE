@@ -9,8 +9,10 @@ import com.aicc.silverlink.domain.notice.repository.NoticeReadLogRepository;
 import com.aicc.silverlink.domain.notice.repository.NoticeRepository;
 import com.aicc.silverlink.domain.notice.repository.NoticeTargetRoleRepository; // 가정
 import com.aicc.silverlink.domain.notice.repository.NoticeAttachmentRepository; // 가정
+import com.aicc.silverlink.domain.notification.service.NotificationService;
 import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.domain.user.entity.User; // User 엔티티 가정
+import com.aicc.silverlink.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +33,8 @@ public class NoticeService {
     // 아래 레포지토리들은 파일에는 없었으나 Service 구현을 위해 필요하다고 가정하고 주입
     private final NoticeTargetRoleRepository noticeTargetRoleRepository;
     private final NoticeAttachmentRepository noticeAttachmentRepository;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     // --- 관리자(Admin) 기능 ---
 
@@ -57,13 +61,15 @@ public class NoticeService {
 
         // *실제 구현 시 엔티티에 Builder나 생성 메서드 추가 필요*
         // 여기서는 로직의 흐름을 기술합니다.
-        /* notice.setTitle(request.getTitle());
-        notice.setContent(request.getContent());
-        notice.setCreatedBy(admin);
-        notice.setTargetMode(request.getTargetMode());
-        notice.setStatus(request.getStatus() != null ? request.getStatus() : NoticeStatus.DRAFT);
-        ... 필드 매핑 ...
-        */
+        /*
+         * notice.setTitle(request.getTitle());
+         * notice.setContent(request.getContent());
+         * notice.setCreatedBy(admin);
+         * notice.setTargetMode(request.getTargetMode());
+         * notice.setStatus(request.getStatus() != null ? request.getStatus() :
+         * NoticeStatus.DRAFT);
+         * ... 필드 매핑 ...
+         */
         Notice savedNotice = noticeRepository.save(notice);
 
         // 2. 타겟 권한 저장
@@ -91,6 +97,17 @@ public class NoticeService {
             noticeAttachmentRepository.saveAll(attachments);
         }
 
+        // 4. 대상 사용자들에게 알림 발송
+        if (request.getTargetRoles() != null && !request.getTargetRoles().isEmpty()) {
+            List<Long> targetUserIds = userRepository.findByRoleIn(request.getTargetRoles()).stream()
+                    .map(User::getId)
+                    .collect(Collectors.toList());
+            notificationService.createNoticeNotifications(
+                    savedNotice.getId(),
+                    savedNotice.getTitle(),
+                    targetUserIds);
+        }
+
         return savedNotice.getId();
     }
 
@@ -110,7 +127,6 @@ public class NoticeService {
                 .map(notice -> convertToResponse(notice, false));
     }
 
-
     // --- 사용자(User) 기능 ---
 
     // Req 64, 65: 사용자 권한별 목록 조회 + 중요공지 우선 (검색 기능 추가)
@@ -118,7 +134,8 @@ public class NoticeService {
         Page<Notice> notices = noticeRepository.findAllForUser(user.getRole(), keyword, pageable);
 
         return notices.map(notice -> {
-            boolean isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(notice.getId(), String.valueOf(user.getId()));
+            boolean isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(notice.getId(),
+                    String.valueOf(user.getId()));
             return convertToResponse(notice, isRead);
         });
     }
@@ -133,7 +150,8 @@ public class NoticeService {
         // 여기서는 읽음 여부만 같이 내려줌.
         return notices.stream()
                 .map(notice -> {
-                    boolean isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(notice.getId(), String.valueOf(user.getId()));
+                    boolean isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(notice.getId(),
+                            String.valueOf(user.getId()));
                     return convertToResponse(notice, isRead);
                 })
                 .collect(Collectors.toList());
@@ -158,7 +176,7 @@ public class NoticeService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 공지사항입니다."));
 
         boolean isRead = false;
-        if(user != null) {
+        if (user != null) {
             isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(noticeId, String.valueOf(user.getId()));
         }
 
@@ -184,4 +202,5 @@ public class NoticeService {
 
         return NoticeResponse.from(notice, roles, attachments, isRead);
     }
+
 }
