@@ -60,6 +60,19 @@ class WelfareFacilityServiceTest {
     }
 
     @Test
+    @DisplayName("반경 내 사회복지시설 조회 실패 테스트 - 잘못된 좌표")
+    void getFacilitiesWithinRadius_InvalidCoordinates() {
+        // given
+        Double invalidLat = 100.0; // 위도 범위 초과
+        Double userLon = 126.9780;
+        Double radius = 1.0;
+
+        // when & then
+        assertThrows(IllegalArgumentException.class, () ->
+                welfareFacilityService.getFacilitiesWithinRadius(invalidLat, userLon, radius));
+    }
+
+    @Test
     @DisplayName("사회복지시설 등록 테스트")
     void createFacility() {
         // given
@@ -95,6 +108,9 @@ class WelfareFacilityServiceTest {
         WelfareFacilityRequest request = WelfareFacilityRequest.builder()
                 .name("수정된 복지관")
                 .address("서울시 다른곳")
+                .latitude(37.5678)
+                .longitude(127.5678)
+                .type(WelfareFacilityType.ELDERLY_WELFARE_CENTER)
                 .build();
 
         WelfareFacility existingFacility = WelfareFacility.builder()

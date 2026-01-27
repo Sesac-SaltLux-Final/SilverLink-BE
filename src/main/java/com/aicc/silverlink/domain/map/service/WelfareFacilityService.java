@@ -23,6 +23,12 @@ public class WelfareFacilityService {
     // 반경 내 사회복지시설 조회
     public List<WelfareFacilityResponse> getFacilitiesWithinRadius(
             Double userLatitude, Double userLongitude, Double radiusKm) {
+        
+        // 좌표 유효성 검사
+        if (userLatitude < -90 || userLatitude > 90 || userLongitude < -180 || userLongitude > 180) {
+            throw new IllegalArgumentException("유효하지 않은 좌표입니다.");
+        }
+
         List<WelfareFacility> facilities = welfareFacilityRepository.findFacilitiesWithinRadius(
                 userLatitude, userLongitude, radiusKm);
         return facilities.stream()
