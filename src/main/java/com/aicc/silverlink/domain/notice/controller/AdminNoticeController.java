@@ -4,6 +4,7 @@ import com.aicc.silverlink.domain.admin.entity.Admin;
 import com.aicc.silverlink.domain.notice.dto.NoticeRequest;
 import com.aicc.silverlink.domain.notice.dto.NoticeResponse;
 import com.aicc.silverlink.domain.notice.service.NoticeService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,7 +24,6 @@ public class AdminNoticeController {
 
     private final NoticeService noticeService;
 
-    //
     // 공지사항 목록 조회
     @GetMapping
     public ResponseEntity<Page<NoticeResponse>> getAllNotices(
@@ -34,7 +34,7 @@ public class AdminNoticeController {
     // 공지사항 등록
     @PostMapping
     public ResponseEntity<Long> createNotice(
-            @RequestBody NoticeRequest request,
+            @RequestBody @Valid NoticeRequest request, // @Valid 추가
             @AuthenticationPrincipal Admin admin) { // Spring Security 사용 가정
         Long noticeId = noticeService.createNotice(request, admin);
         return ResponseEntity.ok(noticeId);
@@ -48,8 +48,10 @@ public class AdminNoticeController {
 
     // Req 68: 공지사항 삭제 (Soft Delete)
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteNotice(@PathVariable Long id) {
-        noticeService.deleteNotice(id);
+    public ResponseEntity<Void> deleteNotice(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Admin admin) { // Admin 파라미터 추가
+        noticeService.deleteNotice(id, admin);
         return ResponseEntity.ok().build();
     }
 

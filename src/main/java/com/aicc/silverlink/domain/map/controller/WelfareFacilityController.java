@@ -3,6 +3,7 @@ package com.aicc.silverlink.domain.map.controller;
 import com.aicc.silverlink.domain.map.dto.WelfareFacilityRequest;
 import com.aicc.silverlink.domain.map.dto.WelfareFacilityResponse;
 import com.aicc.silverlink.domain.map.service.WelfareFacilityService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -52,7 +53,7 @@ public class WelfareFacilityController {
 
     // 시설 등록
     @PostMapping
-    public ResponseEntity<Long> createFacility(@RequestBody WelfareFacilityRequest request) {
+    public ResponseEntity<Long> createFacility(@RequestBody @Valid WelfareFacilityRequest request) { // @Valid 추가
         return ResponseEntity.ok(welfareFacilityService.createFacility(request));
     }
 
@@ -60,7 +61,7 @@ public class WelfareFacilityController {
     @PutMapping("/{id}")
     public ResponseEntity<WelfareFacilityResponse> updateFacility(
             @PathVariable Long id,
-            @RequestBody WelfareFacilityRequest request) {
+            @RequestBody @Valid WelfareFacilityRequest request) { // @Valid 추가
         return ResponseEntity.ok(welfareFacilityService.updateFacility(id, request));
     }
 

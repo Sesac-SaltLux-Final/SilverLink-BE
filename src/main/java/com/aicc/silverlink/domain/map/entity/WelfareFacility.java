@@ -41,6 +41,10 @@ public class WelfareFacility {
 
     // 기타 필요한 필드 추가 가능 (예: 웹사이트, 상세 설명 등)
 
+    public Long getId() {
+        return id;
+    }
+
     public void update(WelfareFacilityRequest request) {
         this.name = request.getName();
         this.address = request.getAddress();
