@@ -60,7 +60,9 @@ public class SecurityConfig {
                                 "/api/policies/latest/**",
                                 "/", // 주의: requestMatchers("/")는 “정확히 루트만” 열어주는 거고, /**는 아님.
                                 "/health",
-                                "/error")
+                                "/error",
+                                "/api/data/faqs/all"
+                                    )
                         .permitAll()
 
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
