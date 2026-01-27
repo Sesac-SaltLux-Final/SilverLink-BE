@@ -114,4 +114,42 @@ public interface AdminRepository extends JpaRepository<Admin, Long> {
             @Param("sidoCode") String sidoCode,
             @Param("sigunguCode") String sigunguCode
     );
+
+// AdminRepository.java에 추가해야 할 메서드들
+// 위치: com.aicc.silverlink.domain.admin.repository.AdminRepository
+
+    /**
+     * 행정구역 코드로 관리자 목록 조회 (administrativeDivision 관계 사용)
+     * EmergencyAlertService에서 사용
+     */
+    @Query("SELECT a FROM Admin a " +
+            "JOIN FETCH a.user " +
+            "JOIN FETCH a.administrativeDivision ad " +
+            "WHERE ad.admCode = :admCode")
+    List<Admin> findByAdministrativeDivision_AdmCode(@Param("admCode") Long admCode);
+
+    /**
+     * 특정 행정구역 및 상위 행정구역의 관리자 목록 조회
+     * 예: 역삼동(1168010100) 어르신 → 역삼동, 강남구, 서울시 관리자 모두 조회
+     */
+    @Query(value = """
+    SELECT a.* FROM admin a
+    JOIN users u ON a.user_id = u.user_id
+    JOIN administrative_division ad ON a.adm_code = ad.adm_code
+    WHERE (
+        -- 정확히 일치하는 행정구역
+        ad.adm_code = :admCode
+        OR
+        -- 상위 시/군/구 레벨 (같은 시/군/구)
+        (ad.sido_code = SUBSTRING(LPAD(:admCode, 10, '0'), 1, 2)
+         AND ad.sigungu_code = SUBSTRING(LPAD(:admCode, 10, '0'), 3, 3)
+         AND ad.dong_code IS NULL)
+        OR
+        -- 상위 시/도 레벨 (같은 시/도)
+        (ad.sido_code = SUBSTRING(LPAD(:admCode, 10, '0'), 1, 2)
+         AND ad.sigungu_code IS NULL)
+    )
+    """, nativeQuery = true)
+    List<Admin> findByAdmCodeWithSupervisors(@Param("admCode") Long admCode);
+
 }

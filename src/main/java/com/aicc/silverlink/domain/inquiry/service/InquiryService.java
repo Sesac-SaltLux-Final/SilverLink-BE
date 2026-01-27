@@ -13,6 +13,7 @@ import com.aicc.silverlink.domain.inquiry.entity.Inquiry.InquiryStatus;
 import com.aicc.silverlink.domain.inquiry.entity.InquiryAnswer;
 import com.aicc.silverlink.domain.inquiry.repository.InquiryAnswerRepository;
 import com.aicc.silverlink.domain.inquiry.repository.InquiryRepository;
+import com.aicc.silverlink.domain.notification.service.NotificationService;
 import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.entity.Role;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class InquiryService {
     private final InquiryAnswerRepository inquiryAnswerRepository;
     private final GuardianElderlyRepository guardianElderlyRepository;
     private final AssignmentRepository assignmentRepository;
+    private final NotificationService notificationService;
 
     // 문의 목록 조회
     public List<InquiryResponse> getInquiries(User user) {
@@ -125,6 +127,12 @@ public class InquiryService {
         inquiryAnswerRepository.save(answer);
 
         inquiry.updateStatus(InquiryStatus.ANSWERED);
+
+        // 문의 작성자에게 답변 알림 발송
+        notificationService.createInquiryReplyNotification(
+                inquiry.getCreatedBy().getId(),
+                inquiryId,
+                inquiry.getTitle());
     }
 
     // Helper to convert Entity to DTO
@@ -156,4 +164,5 @@ public class InquiryService {
              */
         }
     }
+
 }
