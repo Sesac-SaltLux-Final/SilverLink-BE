@@ -12,6 +12,7 @@ import com.aicc.silverlink.domain.counselor.repository.CounselorRepository;
 import com.aicc.silverlink.domain.elderly.entity.Elderly;
 import com.aicc.silverlink.domain.elderly.repository.ElderlyRepository;
 import com.aicc.silverlink.domain.audit.service.AuditLogService;
+import com.aicc.silverlink.domain.notification.service.NotificationService;
 import com.aicc.silverlink.domain.user.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,6 +52,9 @@ class AssignmentServiceTest {
 
     @Mock
     private AuditLogService auditLogService;
+
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private AssignmentService assignmentService;

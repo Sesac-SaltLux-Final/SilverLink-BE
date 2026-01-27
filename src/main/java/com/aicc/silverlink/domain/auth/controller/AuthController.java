@@ -82,7 +82,7 @@ public class AuthController {
 
             ResponseCookie clear = ResponseCookie.from(props.getRefreshCookieName(), "")
                     .httpOnly(true)
-                    .secure(true)
+                    .secure(Boolean.TRUE.equals(props.getRefreshCookieSecure()))
                     .path(props.getRefreshCookiePath())
                     .maxAge(0)
                     .sameSite(props.getRefreshCookieSameSite())
@@ -95,7 +95,7 @@ public class AuthController {
     private void setRefreshCookie(HttpServletResponse res, String value) {
         ResponseCookie cookie = ResponseCookie.from(props.getRefreshCookieName(), value)
                 .httpOnly(true)
-                .secure(true)
+                .secure(Boolean.TRUE.equals(props.getRefreshCookieSecure()))
                 .path(props.getRefreshCookiePath())
                 .maxAge(props.getRefreshTtlSeconds())
                 .sameSite(props.getRefreshCookieSameSite())

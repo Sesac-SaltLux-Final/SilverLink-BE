@@ -19,9 +19,6 @@ public class AuthPolicyProperties {
     private String refreshCookieName;
     private String refreshCookiePath;
     private String refreshCookieSameSite;
-
-
+    private Boolean refreshCookieSecure;
 
 }
-
-

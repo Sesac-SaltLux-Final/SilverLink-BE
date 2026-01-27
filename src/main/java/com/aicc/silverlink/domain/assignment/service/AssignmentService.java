@@ -12,7 +12,8 @@ import com.aicc.silverlink.domain.counselor.entity.Counselor;
 import com.aicc.silverlink.domain.counselor.repository.CounselorRepository;
 import com.aicc.silverlink.domain.elderly.entity.Elderly;
 import com.aicc.silverlink.domain.elderly.repository.ElderlyRepository;
-import com.aicc.silverlink.domain.audit.service.AuditLogService;
+import com.aicc.silverlink.domain.audit.service.AuditLogService; // Upstream(로그) 유지
+import com.aicc.silverlink.domain.notification.service.NotificationService; // Stash(알림) 유지
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,10 @@ public class AssignmentService {
     private final CounselorRepository counselorRepository;
     private final ElderlyRepository elderlyRepository;
     private final AdminRepository adminRepository;
+
+    // 두 서비스 모두 주입받도록 수정
     private final AuditLogService auditLogService;
+    private final NotificationService notificationService;
 
     @Transactional
     public AssignmentResponse assignCounselor(AssignmentRequest request, Long adminUserId) {
@@ -45,13 +49,15 @@ public class AssignmentService {
         if (assignmentRepository.existsByElderly_IdAndStatus(elderly.getId(), AssignmentStatus.ACTIVE)) {
             throw new IllegalArgumentException("해당 어르신은 이미 담당 상담사가 배정되었습니다.");
         }
+
+        // 1. 배정 실행 및 저장
         Assignment assignment = Assignment.create(counselor, elderly, admin);
         Assignment savedAssignment = assignmentRepository.save(assignment);
 
         log.info("배정 완료 : 상답사({}) -> 어르신({}) by 관리자({})",
                 counselor.getId(), elderly.getId(), admin.getUserId());
 
-        // 감사 로그 기록
+        // 2. 감사 로그 기록 (Upstream 기능)
         auditLogService.recordLog(
                 admin.getUser().getId(),
                 "ASSIGN_ELDERLY",
@@ -60,6 +66,12 @@ public class AssignmentService {
                 "API",
                 "Counselor: " + counselor.getUser().getName() + ", Elderly: "
                         + elderly.getUser().getName());
+
+        // 3. 상담사에게 배정 알림 발송 (Stash 기능)
+        notificationService.createAssignmentNotification(
+                counselor.getUser().getId(),
+                savedAssignment.getId(),
+                elderly.getUser().getName());
 
         return AssignmentResponse.from(savedAssignment);
     }
@@ -94,5 +106,4 @@ public class AssignmentService {
                 .orElseThrow(() -> new IllegalArgumentException("현재 담당 상담사가 없습니다."));
         return AssignmentResponse.from(assignment);
     }
-
 }

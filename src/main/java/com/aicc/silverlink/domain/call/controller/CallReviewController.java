@@ -39,11 +39,11 @@ public class CallReviewController {
     @GetMapping("/counselor/calls")
     @PreAuthorize("hasRole('COUNSELOR')")
     public ResponseEntity<ApiResponse<PageResponse<CallRecordSummaryResponse>>> getCallRecordsForCounselor(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @AuthenticationPrincipal Long userId,
             @PageableDefault(size = 20, sort = "callAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
         Page<CallRecordSummaryResponse> page = callReviewService.getCallRecordsForCounselor(
-                userPrincipal.getUserId(), pageable);
+                userId, pageable);
 
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(page)));
     }
@@ -52,11 +52,11 @@ public class CallReviewController {
     @GetMapping("/counselor/calls/{callId}")
     @PreAuthorize("hasRole('COUNSELOR')")
     public ResponseEntity<ApiResponse<CallRecordDetailResponse>> getCallRecordDetail(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @AuthenticationPrincipal Long userId,
             @Parameter(description = "통화 기록 ID") @PathVariable Long callId) {
 
         CallRecordDetailResponse response = callReviewService.getCallRecordDetail(
-                callId, userPrincipal.getUserId());
+                callId, userId);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -65,10 +65,10 @@ public class CallReviewController {
     @PostMapping("/counselor/reviews")
     @PreAuthorize("hasRole('COUNSELOR')")
     public ResponseEntity<ApiResponse<ReviewResponse>> createReview(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @AuthenticationPrincipal Long userId,
             @Valid @RequestBody ReviewRequest request) {
 
-        ReviewResponse response = callReviewService.createReview(userPrincipal.getUserId(), request);
+        ReviewResponse response = callReviewService.createReview(userId, request);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
@@ -77,12 +77,12 @@ public class CallReviewController {
     @PutMapping("/counselor/reviews/{reviewId}")
     @PreAuthorize("hasRole('COUNSELOR')")
     public ResponseEntity<ApiResponse<ReviewResponse>> updateReview(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @AuthenticationPrincipal Long userId,
             @Parameter(description = "리뷰 ID") @PathVariable Long reviewId,
             @Valid @RequestBody ReviewRequest request) {
 
         ReviewResponse response = callReviewService.updateReview(
-                userPrincipal.getUserId(), reviewId, request);
+                userId, reviewId, request);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -91,9 +91,9 @@ public class CallReviewController {
     @GetMapping("/counselor/unreview-count")
     @PreAuthorize("hasRole('COUNSELOR')")
     public ResponseEntity<ApiResponse<UnreviewedCountResponse>> getUnreviewedCount(
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+            @AuthenticationPrincipal Long userId) {
 
-        UnreviewedCountResponse response = callReviewService.getUnreviewedCount(userPrincipal.getUserId());
+        UnreviewedCountResponse response = callReviewService.getUnreviewedCount(userId);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -104,12 +104,12 @@ public class CallReviewController {
     @GetMapping("/guardian/elderly/{elderlyId}")
     @PreAuthorize("hasRole('GUARDIAN')")
     public ResponseEntity<ApiResponse<PageResponse<GuardianCallReviewResponse>>> getCallReviewsForGuardian(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @AuthenticationPrincipal Long userId,
             @Parameter(description = "어르신 ID") @PathVariable Long elderlyId,
-            @PageableDefault(size = 20, sort = "callAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 20, sort = "reviewedAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
         Page<GuardianCallReviewResponse> page = callReviewService.getCallReviewsForGuardian(
-                userPrincipal.getUserId(), elderlyId, pageable);
+                userId, elderlyId, pageable);
 
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(page)));
     }
@@ -118,11 +118,11 @@ public class CallReviewController {
     @GetMapping("/guardian/calls/{callId}")
     @PreAuthorize("hasRole('GUARDIAN')")
     public ResponseEntity<ApiResponse<GuardianCallReviewResponse>> getCallDetailForGuardian(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @AuthenticationPrincipal Long userId,
             @Parameter(description = "통화 기록 ID") @PathVariable Long callId) {
 
         GuardianCallReviewResponse response = callReviewService.getCallDetailForGuardian(
-                userPrincipal.getUserId(), callId);
+                userId, callId);
 
         return ResponseEntity.ok(ApiResponse.success(response));
     }
