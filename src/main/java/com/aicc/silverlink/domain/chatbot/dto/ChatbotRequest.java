@@ -1,35 +1,25 @@
 package com.aicc.silverlink.domain.chatbot.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty; // 이 임포트가 필요합니다.
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * Python 챗봇 서비스로 전달되는 요청 DTO
- */
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatbotRequest {
-    /**
-     * 사용자 질문
-     */
+
     private String message;
 
-    /**
-     * Thread ID (대화 세션 식별자)
-     */
+    @JsonProperty("thread_id") // JSON으로 바뀔 때 thread_id가 됩니다. ⭐
     private String threadId;
 
-    /**
-     * 보호자 ID (권한 필터링용)
-     */
+    @JsonProperty("guardian_id") // JSON으로 바뀔 때 guardian_id가 됩니다. ⭐
     private Long guardianId;
 
-    /**
-     * 어르신 ID (권한 필터링용)
-     */
+    @JsonProperty("elderly_id") // JSON으로 바뀔 때 elderly_id가 됩니다. ⭐
     private Long elderlyId;
 }
