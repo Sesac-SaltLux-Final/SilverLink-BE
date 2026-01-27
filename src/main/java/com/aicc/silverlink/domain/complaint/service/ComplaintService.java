@@ -6,6 +6,7 @@ import com.aicc.silverlink.domain.complaint.dto.ComplaintResponse;
 import com.aicc.silverlink.domain.complaint.entity.Complaint;
 import com.aicc.silverlink.domain.complaint.entity.Complaint.ComplaintStatus;
 import com.aicc.silverlink.domain.complaint.repository.ComplaintRepository;
+import com.aicc.silverlink.domain.notification.service.NotificationService;
 import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class ComplaintService {
 
     private final ComplaintRepository complaintRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     /**
      * 민원 등록 (보호자)
@@ -110,6 +112,13 @@ public class ComplaintService {
                 .orElseThrow(() -> new IllegalArgumentException("민원을 찾을 수 없습니다."));
 
         complaint.reply(replyContent, admin);
+
+        // 민원 작성자에게 답변 알림 발송
+        notificationService.createComplaintReplyNotification(
+                complaint.getWriter().getId(),
+                complaintId,
+                complaint.getTitle());
+
         return ComplaintResponse.from(complaint);
     }
 
@@ -124,4 +133,5 @@ public class ComplaintService {
         complaint.updateStatus(newStatus);
         return ComplaintResponse.from(complaint);
     }
+
 }

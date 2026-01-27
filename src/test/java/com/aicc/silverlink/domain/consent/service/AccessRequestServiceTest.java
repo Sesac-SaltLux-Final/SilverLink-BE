@@ -13,6 +13,7 @@ import com.aicc.silverlink.domain.guardian.entity.Guardian;
 import com.aicc.silverlink.domain.guardian.entity.GuardianElderly;
 import com.aicc.silverlink.domain.guardian.entity.RelationType;
 import com.aicc.silverlink.domain.guardian.repository.GuardianElderlyRepository;
+import com.aicc.silverlink.domain.notification.service.NotificationService;
 import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
 import com.aicc.silverlink.domain.system.entity.AdministrativeDivision.DivisionLevel;
 import com.aicc.silverlink.domain.user.entity.Role;
@@ -57,6 +58,9 @@ class AccessRequestServiceTest {
 
     @Mock
     private GuardianElderlyRepository guardianElderlyRepository;
+
+    @Mock
+    private NotificationService notificationService;
 
     // 테스트 픽스처
     private User guardianUser;
@@ -121,7 +125,8 @@ class AccessRequestServiceTest {
         // 만약 Elderly가 String 코드를 쓴다면 원복해야 하지만, Admin과의 일관성을 위해 객체로 가정합니다.
         // 여기서는 에러 방지를 위해 리플렉션이나 모킹 대신, 일반적인 빌더 패턴을 사용하되
         // 실제 Elderly 엔티티 정의에 맞게 필드명을 확인해야 합니다.
-        // (AccessRequestDto.ElderlyInfo.from 메서드를 보면 elderly.getAdministrativeDivision() 호출함)
+        // (AccessRequestDto.ElderlyInfo.from 메서드를 보면
+        // elderly.getAdministrativeDivision() 호출함)
         elderly = Elderly.builder()
                 .user(elderlyUser)
                 .administrativeDivision(yeoksamDong) // [수정] String -> Object
@@ -379,7 +384,8 @@ class AccessRequestServiceTest {
         @DisplayName("성공 - 승인된 권한 확인")
         void hasAccess_True() {
             // given
-            given(accessRequestRepository.hasValidAccess(eq(1L), eq(2L), eq(AccessScope.HEALTH_INFO), any(LocalDateTime.class)))
+            given(accessRequestRepository.hasValidAccess(eq(1L), eq(2L), eq(AccessScope.HEALTH_INFO),
+                    any(LocalDateTime.class)))
                     .willReturn(true);
 
             // when
@@ -393,7 +399,8 @@ class AccessRequestServiceTest {
         @DisplayName("실패 - 권한 없음")
         void hasAccess_False() {
             // given
-            given(accessRequestRepository.hasValidAccess(eq(1L), eq(2L), eq(AccessScope.HEALTH_INFO), any(LocalDateTime.class)))
+            given(accessRequestRepository.hasValidAccess(eq(1L), eq(2L), eq(AccessScope.HEALTH_INFO),
+                    any(LocalDateTime.class)))
                     .willReturn(false);
 
             // when
@@ -407,7 +414,8 @@ class AccessRequestServiceTest {
         @DisplayName("상세 결과 - 권한 있음")
         void checkAccess_Granted() {
             // given
-            given(accessRequestRepository.findValidAccess(eq(1L), eq(2L), eq(AccessScope.HEALTH_INFO), any(LocalDateTime.class)))
+            given(accessRequestRepository.findValidAccess(eq(1L), eq(2L), eq(AccessScope.HEALTH_INFO),
+                    any(LocalDateTime.class)))
                     .willReturn(Optional.of(approvedRequest));
 
             // when
@@ -422,7 +430,8 @@ class AccessRequestServiceTest {
         @DisplayName("상세 결과 - 권한 없음")
         void checkAccess_Denied() {
             // given
-            given(accessRequestRepository.findValidAccess(eq(1L), eq(2L), eq(AccessScope.HEALTH_INFO), any(LocalDateTime.class)))
+            given(accessRequestRepository.findValidAccess(eq(1L), eq(2L), eq(AccessScope.HEALTH_INFO),
+                    any(LocalDateTime.class)))
                     .willReturn(Optional.empty());
 
             // when
