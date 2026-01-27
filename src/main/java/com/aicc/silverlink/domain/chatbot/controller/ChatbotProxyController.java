@@ -39,12 +39,9 @@ public class ChatbotProxyController {
     @Operation(summary = "챗봇 질문", description = "보호자가 어르신 돌봄 관련 질문을 하면 AI 챗봇이 FAQ 및 과거 문의 기록을 기반으로 답변합니다.")
     public ResponseEntity<ChatResponse> chat(
             @RequestBody ChatRequest request,
-            @AuthenticationPrincipal UserDetails user) {
+            @AuthenticationPrincipal Long authenticatedGuardianId) {
         log.info("Chatbot request received: guardianId={}, elderlyId={}, message={}",
                 request.getGuardianId(), request.getElderlyId(), request.getMessage());
-
-        // 1. 인증된 사용자 ID 추출
-        Long authenticatedGuardianId = extractGuardianId(user);
 
         // 2. 권한 검증: 요청한 guardianId와 인증된 guardianId 일치 확인
         if (!authenticatedGuardianId.equals(request.getGuardianId())) {
@@ -65,8 +62,11 @@ public class ChatbotProxyController {
             throw new SecurityException("잘못된 어르신 정보입니다");
         }
 
-        // 4. Thread ID 생성 (보호자 ID 기반)
-        String threadId = "guardian_" + request.getGuardianId();
+        // 4. Thread ID 생성 (클라이언트 제공 값 우선, 없으면 보호자 ID 기반)
+        String threadId = request.getThreadId();
+        if (threadId == null || threadId.isEmpty()) {
+            threadId = "guardian_" + request.getGuardianId();
+        }
 
         // 5. Python 챗봇 서비스 요청 생성
         ChatbotRequest chatbotRequest = ChatbotRequest.builder()
@@ -82,7 +82,7 @@ public class ChatbotProxyController {
 
         try {
             ChatResponse response = restTemplate.postForObject(
-                    pythonChatbotUrl + "/chat",
+                    pythonChatbotUrl + "/api/chatbot/chat",
                     chatbotRequest,
                     ChatResponse.class);
 
@@ -95,17 +95,5 @@ public class ChatbotProxyController {
             log.error("Error calling Python chatbot service", e);
             throw new RuntimeException("챗봇 서비스 호출 중 오류가 발생했습니다", e);
         }
-    }
-
-    /**
-     * 인증된 사용자로부터 보호자 ID 추출
-     */
-    private Long extractGuardianId(UserDetails user) {
-        // TODO: 실제 구현 시 UserDetails에서 guardianId 추출 로직 구현
-        // 예: CustomUserDetails에서 guardianId 가져오기
-        // return ((CustomUserDetails) user).getGuardianId();
-
-        // 임시 구현 (실제로는 위 로직 사용)
-        return 1L;
     }
 }

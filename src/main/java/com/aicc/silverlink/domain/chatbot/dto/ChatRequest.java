@@ -27,4 +27,9 @@ public class ChatRequest {
      * 어르신 ID (프론트엔드에서 전달, 성능 최적화)
      */
     private Long elderlyId;
+
+    /**
+     * 대화 스레드 ID (선택사항, 없으면 자동 생성)
+     */
+    private String threadId;
 }
