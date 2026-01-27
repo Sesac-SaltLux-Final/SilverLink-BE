@@ -2,6 +2,7 @@ package com.aicc.silverlink.domain.policy.service;
 
 import com.aicc.silverlink.domain.admin.entity.Admin;
 import com.aicc.silverlink.domain.admin.repository.AdminRepository;
+import com.aicc.silverlink.domain.audit.service.AuditLogService;
 import com.aicc.silverlink.domain.policy.dto.PolicyRequest;
 import com.aicc.silverlink.domain.policy.dto.PolicyResponse;
 import com.aicc.silverlink.domain.policy.entity.Policy;
@@ -12,6 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -20,6 +24,18 @@ public class PolicyService {
 
     private final PolicyRepository policyRepository;
     private final AdminRepository adminRepository;
+    private final AuditLogService auditLogService;
+
+    /**
+     * [관리자용] 전체 정책 목록 조회
+     */
+    public List<PolicyResponse> getAll() {
+        log.info("전체 정책 목록 조회");
+        return policyRepository.findAllByOrderByCreatedAtDesc()
+                .stream()
+                .map(PolicyResponse::from)
+                .collect(Collectors.toList());
+    }
 
     /**
      * [관리자용] 새로운 약관 버전 등록
@@ -39,12 +55,21 @@ public class PolicyService {
         Admin admin = adminRepository.findByIdWithUser(adminUserId)
                 .orElseThrow(() -> new IllegalArgumentException("관리자 권한이 없습니다. (등록된 관리자가 아님)"));
 
-
-
         // 3. 저장
         Policy savedPolicy = policyRepository.save(req.toEntity(admin.getUser()));
 
         log.info("약관 생성 완료 - ID: {}", savedPolicy.getId());
+        log.info("약관 생성 완료 - ID: {}", savedPolicy.getId());
+
+        // 감사 로그 기록
+        auditLogService.recordLog(
+                admin.getUser().getId(),
+                "CREATE_POLICY",
+                "Policy",
+                savedPolicy.getId(),
+                "API",
+                "Type: " + savedPolicy.getPolicyType());
+
         return PolicyResponse.from(savedPolicy);
     }
 

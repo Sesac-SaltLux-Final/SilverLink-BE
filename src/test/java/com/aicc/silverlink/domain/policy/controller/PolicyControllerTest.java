@@ -12,6 +12,7 @@ import com.aicc.silverlink.domain.system.repository.AdministrativeDivisionReposi
 import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.repository.UserRepository;
+import com.aicc.silverlink.domain.audit.service.AuditLogService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -53,6 +55,9 @@ class PolicyControllerTest {
     private UserRepository userRepository;
     @Autowired
     private AdministrativeDivisionRepository divisionRepository;
+
+    @MockitoBean
+    private AuditLogService auditLogService;
 
     private User adminUser;
 
@@ -163,9 +168,9 @@ class PolicyControllerTest {
 
             // when & then
             mockMvc.perform(post("/api/policies")
-                    .with(authentication(getAdminAuth()))
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
+                            .with(authentication(getAdminAuth()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
                     .andDo(print())
                     .andExpect(status().isBadRequest());
         }
@@ -188,9 +193,9 @@ class PolicyControllerTest {
 
             // when & then
             mockMvc.perform(post("/api/policies")
-                    .with(authentication(getAdminAuth()))
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(json))
+                            .with(authentication(getAdminAuth()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
                     .andExpect(status().isBadRequest());
         }
     }

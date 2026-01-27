@@ -34,7 +34,7 @@ public class AuthService {
     }
 
     // 서비스 내부용 DTO ( Access 토큰 + Refresh 토큰 반환용)
-    public record AuthResult(String accessToken, String refreshToken, String sid, long ttl, Role role) {
+    public record AuthResult(String accessToken, String refreshToken, String sid, long ttl, Role role, Long userId) {
     }
 
     @Transactional
@@ -67,7 +67,8 @@ public class AuthService {
 
         user.updateLastLogin();
 
-        return new AuthResult(access, issued.refreshToken(), issued.sid(), props.getAccessTtlSeconds(), user.getRole());
+        return new AuthResult(access, issued.refreshToken(), issued.sid(), props.getAccessTtlSeconds(), user.getRole(),
+                user.getId());
     }
 
     public AuthResult refresh(String sid, String refreshToken) {
@@ -80,7 +81,7 @@ public class AuthService {
         long ttl = props.getAccessTtlSeconds();
         String newAccessToken = jwt.createAccessToken(userId, role, sid, ttl);
 
-        return new AuthResult(newAccessToken, newRefreshToken, sid, ttl, role);
+        return new AuthResult(newAccessToken, newRefreshToken, sid, ttl, role, userId);
     }
 
     @Transactional
@@ -107,7 +108,8 @@ public class AuthService {
                 issued.refreshToken(),
                 issued.sid(),
                 props.getAccessTtlSeconds(),
-                user.getRole());
+                user.getRole(),
+                user.getId());
     }
 
     public void logout(String sid) {
@@ -163,7 +165,8 @@ public class AuthService {
                 issued.refreshToken(),
                 issued.sid(),
                 props.getAccessTtlSeconds(),
-                user.getRole());
+                user.getRole(),
+                user.getId());
     }
 
     private String normalizePhone(String phone) {
@@ -276,7 +279,7 @@ public class AuthService {
 
         // 기존 세션 확인
         String existingSid = sessionService.hasExistingSession(user.getId());
-        
+
         if (existingSid != null) {
             // 기존 세션 있음 - 임시 토큰 발급
             String loginToken = sessionService.createLoginToken(user.getId());
@@ -288,7 +291,8 @@ public class AuthService {
         String access = jwt.createAccessToken(user.getId(), user.getRole(), issued.sid(), props.getAccessTtlSeconds());
         user.updateLastLogin();
 
-        AuthResult authResult = new AuthResult(access, issued.refreshToken(), issued.sid(), props.getAccessTtlSeconds(), user.getRole());
+        AuthResult authResult = new AuthResult(access, issued.refreshToken(), issued.sid(), props.getAccessTtlSeconds(),
+                user.getRole(), user.getId());
         return new LoginCheckResult(false, null, authResult);
     }
 
@@ -298,7 +302,7 @@ public class AuthService {
     @Transactional
     public AuthResult forceLogin(String loginToken) {
         Long userId = sessionService.validateLoginToken(loginToken);
-        
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
 
@@ -313,16 +317,17 @@ public class AuthService {
         String access = jwt.createAccessToken(user.getId(), user.getRole(), issued.sid(), props.getAccessTtlSeconds());
         user.updateLastLogin();
 
-        return new AuthResult(access, issued.refreshToken(), issued.sid(), props.getAccessTtlSeconds(), user.getRole());
+        return new AuthResult(access, issued.refreshToken(), issued.sid(), props.getAccessTtlSeconds(), user.getRole(),
+                user.getId());
     }
 
     /**
      * 로그인 확인 결과
      */
     public record LoginCheckResult(
-        boolean needsConfirmation,
-        String loginToken,
-        AuthResult authResult
-    ) {}
+            boolean needsConfirmation,
+            String loginToken,
+            AuthResult authResult) {
+    }
 
 }

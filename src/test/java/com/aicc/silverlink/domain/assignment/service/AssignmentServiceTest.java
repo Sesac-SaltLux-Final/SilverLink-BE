@@ -11,6 +11,8 @@ import com.aicc.silverlink.domain.counselor.entity.Counselor;
 import com.aicc.silverlink.domain.counselor.repository.CounselorRepository;
 import com.aicc.silverlink.domain.elderly.entity.Elderly;
 import com.aicc.silverlink.domain.elderly.repository.ElderlyRepository;
+import com.aicc.silverlink.domain.audit.service.AuditLogService;
+import com.aicc.silverlink.domain.notification.service.NotificationService;
 import com.aicc.silverlink.domain.user.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +49,12 @@ class AssignmentServiceTest {
 
     @Mock
     private AdminRepository adminRepository;
+
+    @Mock
+    private AuditLogService auditLogService;
+
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private AssignmentService assignmentService;
@@ -164,7 +172,7 @@ class AssignmentServiceTest {
                 .willReturn(Optional.of(mockAssignment));
 
         // when
-        assignmentService.unassignCounselor(1L, 2L);
+        assignmentService.unassignCounselor(1L, 2L, 3L);
 
         // then
         verify(mockAssignment).endAssignment(); // Mock 객체의 메서드 호출 검증
@@ -178,7 +186,7 @@ class AssignmentServiceTest {
                 .willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> assignmentService.unassignCounselor(1L, 2L))
+        assertThatThrownBy(() -> assignmentService.unassignCounselor(1L, 2L, 3L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("현재 활성화된 배정 정보가 없습니다.");
     }

@@ -2,6 +2,7 @@ package com.aicc.silverlink.domain.policy.service;
 
 import com.aicc.silverlink.domain.admin.entity.Admin;
 import com.aicc.silverlink.domain.admin.repository.AdminRepository;
+import com.aicc.silverlink.domain.audit.service.AuditLogService;
 import com.aicc.silverlink.domain.policy.dto.PolicyRequest;
 import com.aicc.silverlink.domain.policy.dto.PolicyResponse;
 import com.aicc.silverlink.domain.policy.entity.Policy;
@@ -41,6 +42,9 @@ class PolicyServiceTest {
 
     @Mock
     private AdminRepository adminRepository;
+
+    @Mock
+    private AuditLogService auditLogService;
 
     // --- 테스트용 픽스처 생성 헬퍼 ---
     private User createMockUser() {
