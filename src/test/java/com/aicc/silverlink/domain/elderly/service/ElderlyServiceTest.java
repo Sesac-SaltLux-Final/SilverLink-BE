@@ -84,7 +84,7 @@ class ElderlyServiceTest {
     void createElderly() {
         // given
         ElderlyCreateRequest req = new ElderlyCreateRequest(10L, 11110L, LocalDate.of(1950, 1, 1), Elderly.Gender.M,
-                "주소1", "주소2", "123");
+                "주소1", "주소2", "123", null, null, null);
         given(userRepo.findById(10L)).willReturn(Optional.of(elderlyUser));
         given(divisionRepository.findById(11110L)).willReturn(Optional.of(division));
 
@@ -202,7 +202,8 @@ class ElderlyServiceTest {
     void updateElderlyProfile() {
         // given
         Elderly elderly = Elderly.create(elderlyUser, division, LocalDate.of(1950, 1, 1), Elderly.Gender.M);
-        ElderlyUpdateRequest req = new ElderlyUpdateRequest("이름수정", "01099998888", "새주소", "상세", "555");
+        ElderlyUpdateRequest req = new ElderlyUpdateRequest("이름수정", "01099998888", "새주소", "상세", "555", null, null, null,
+                null);
         given(elderlyRepo.findWithUserById(10L)).willReturn(Optional.of(elderly));
 
         // when

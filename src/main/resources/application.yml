@@ -77,6 +77,8 @@ twilio:
   account-sid: ${TWILIO_ACCOUNT_SID}
   auth-token: ${TWILIO_AUTH_TOKEN}
   verify-service-sid: ${TWILIO_VERIFY_SERVICE_SID}
+  messaging-service-sid: ${TWILIO_MESSAGING_SERVICE_SID}
+  sms-enabled: true
 
 luxia:
   base-url: "https://bridge.luxiacloud.com"
