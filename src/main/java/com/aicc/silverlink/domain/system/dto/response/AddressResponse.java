@@ -11,6 +11,8 @@ import lombok.Getter;
 public class AddressResponse {
 
     private Long admCode;
+    private String sidoCode; // Added for frontend filtering
+    private String sigunguCode; // Added for frontend filtering
     private String sidoName;
     private String sigunguName;
     private String dongName;
@@ -20,6 +22,8 @@ public class AddressResponse {
     public static AddressResponse from(AdministrativeDivision division) {
         return AddressResponse.builder()
                 .admCode(division.getAdmCode())
+                .sidoCode(division.getSidoCode())
+                .sigunguCode(division.getSigunguCode())
                 .sidoName(division.getSidoName())
                 .sigunguName(division.getSigunguName())
                 .dongName(division.getDongName())
