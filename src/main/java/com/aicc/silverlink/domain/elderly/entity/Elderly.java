@@ -47,6 +47,17 @@ public class Elderly {
     @Column(name = "zipcode", length = 10)
     private String zipcode;
 
+    // ===== 통화 스케줄 =====
+
+    @Column(name = "preferred_call_time", length = 5)
+    private String preferredCallTime; // "HH:mm" 형식 (예: "09:00")
+
+    @Column(name = "preferred_call_days", length = 30)
+    private String preferredCallDays; // 콤마 구분 (예: "MON,WED,FRI")
+
+    @Column(name = "call_schedule_enabled", nullable = false)
+    @Builder.Default
+    private Boolean callScheduleEnabled = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -111,6 +122,15 @@ public class Elderly {
 
     public int age() {
         return Period.between(this.birthDate, LocalDate.now()).getYears();
+    }
+
+    /**
+     * 통화 스케줄 설정
+     */
+    public void updateCallSchedule(String time, String days, Boolean enabled) {
+        this.preferredCallTime = time;
+        this.preferredCallDays = days;
+        this.callScheduleEnabled = enabled != null ? enabled : false;
     }
 
     private String normalize(String v, int max) {
