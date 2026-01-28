@@ -44,7 +44,8 @@ security:
     idle-ttl-seconds: ${AUTH_IDLE_TTL:3600}
     concurrent-policy: KICK_OLD
     refresh-cookie-name: REFRESH_TOKEN
-    refresh-cookie-path: /auth
+    refresh-cookie-path: /api/auth
+    refresh-cookie-secure: false
     refresh-cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
     webauthn:
       rp:

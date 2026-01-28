@@ -31,7 +31,8 @@ public class AuthController {
     private final AuthPolicyProperties props;
 
     @PostMapping("/login")
-    public AuthDtos.TokenResponse login(@RequestBody AuthDtos.LoginRequest req, HttpServletResponse res) {
+    public AuthDtos.TokenResponse login(@RequestBody AuthDtos.LoginRequest req, HttpServletResponse res,
+            HttpServletRequest request) {
 
         AuthService.AuthResult result = authService.login(req);
 
@@ -42,7 +43,8 @@ public class AuthController {
     }
 
     @PostMapping("/login/phone")
-    public AuthDtos.TokenResponse loginWithPhone(@RequestBody AuthDtos.PhoneLoginRequest req, HttpServletResponse res) {
+    public AuthDtos.TokenResponse loginWithPhone(@RequestBody AuthDtos.PhoneLoginRequest req, HttpServletResponse res,
+            HttpServletRequest request) {
         AuthService.AuthResult result = authService.loginWithPhone(req.phone(), req.proofToken());
 
         String cookieValue = result.sid() + "." + result.refreshToken();
@@ -80,7 +82,7 @@ public class AuthController {
 
             ResponseCookie clear = ResponseCookie.from(props.getRefreshCookieName(), "")
                     .httpOnly(true)
-                    .secure(true)
+                    .secure(Boolean.TRUE.equals(props.getRefreshCookieSecure()))
                     .path(props.getRefreshCookiePath())
                     .maxAge(0)
                     .sameSite(props.getRefreshCookieSameSite())
@@ -93,7 +95,7 @@ public class AuthController {
     private void setRefreshCookie(HttpServletResponse res, String value) {
         ResponseCookie cookie = ResponseCookie.from(props.getRefreshCookieName(), value)
                 .httpOnly(true)
-                .secure(true)
+                .secure(Boolean.TRUE.equals(props.getRefreshCookieSecure()))
                 .path(props.getRefreshCookiePath())
                 .maxAge(props.getRefreshTtlSeconds())
                 .sameSite(props.getRefreshCookieSameSite())
@@ -146,9 +148,9 @@ public class AuthController {
     public AuthDtos.LoginCheckResponse checkLogin(
             @RequestBody AuthDtos.LoginRequest req,
             HttpServletResponse res) {
-        
+
         AuthService.LoginCheckResult result = authService.checkLogin(req);
-        
+
         if (result.needsConfirmation()) {
             // 기존 세션 있음 - 확인 필요
             return new AuthDtos.LoginCheckResponse(true, result.loginToken(), null);
@@ -157,12 +159,11 @@ public class AuthController {
             AuthService.AuthResult authResult = result.authResult();
             String cookieValue = authResult.sid() + "." + authResult.refreshToken();
             setRefreshCookie(res, cookieValue);
-            
+
             AuthDtos.TokenResponse tokenResponse = new AuthDtos.TokenResponse(
-                authResult.accessToken(), 
-                authResult.ttl(), 
-                authResult.role().name()
-            );
+                    authResult.accessToken(),
+                    authResult.ttl(),
+                    authResult.role().name());
             return new AuthDtos.LoginCheckResponse(false, null, tokenResponse);
         }
     }
@@ -176,12 +177,12 @@ public class AuthController {
     public AuthDtos.TokenResponse forceLogin(
             @jakarta.validation.Valid @RequestBody AuthDtos.ForceLoginRequest req,
             HttpServletResponse res) {
-        
+
         AuthService.AuthResult result = authService.forceLogin(req.loginToken());
-        
+
         String cookieValue = result.sid() + "." + result.refreshToken();
         setRefreshCookie(res, cookieValue);
-        
+
         return new AuthDtos.TokenResponse(result.accessToken(), result.ttl(), result.role().name());
     }
 
@@ -214,18 +215,19 @@ public class AuthController {
         long remainingSeconds = Math.max(0, expiresAt - now);
 
         return new AuthDtos.SessionInfoResponse(
-            sid,
-            lastSeen,
-            expiresAt,
-            remainingSeconds,
-            idleTtl
-        );
+                sid,
+                lastSeen,
+                expiresAt,
+                remainingSeconds,
+                idleTtl);
     }
 
     private String resolveBearer(HttpServletRequest req) {
         String h = req.getHeader("Authorization");
-        if (h == null || h.isBlank()) return null;
-        if (!h.startsWith("Bearer ")) return null;
+        if (h == null || h.isBlank())
+            return null;
+        if (!h.startsWith("Bearer "))
+            return null;
         String token = h.substring(7).trim();
         return token.isEmpty() ? null : token;
     }

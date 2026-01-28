@@ -12,6 +12,7 @@ import com.aicc.silverlink.domain.counselor.entity.Counselor;
 import com.aicc.silverlink.domain.counselor.repository.CounselorRepository;
 import com.aicc.silverlink.domain.elderly.entity.Elderly;
 import com.aicc.silverlink.domain.elderly.repository.ElderlyRepository;
+import com.aicc.silverlink.domain.audit.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class AssignmentService {
         private final CounselorRepository counselorRepository;
         private final ElderlyRepository elderlyRepository;
         private final AdminRepository adminRepository;
+        private final AuditLogService auditLogService;
 
         @Transactional
         public AssignmentResponse assignCounselor(AssignmentRequest request, Long adminUserId) {
@@ -49,17 +51,36 @@ public class AssignmentService {
                 log.info("배정 완료 : 상답사({}) -> 어르신({}) by 관리자({})",
                                 counselor.getId(), elderly.getId(), admin.getUserId());
 
+                // 감사 로그 기록
+                auditLogService.recordLog(
+                                admin.getUser().getId(),
+                                "ASSIGN_ELDERLY",
+                                "Assignment",
+                                savedAssignment.getId(),
+                                "API",
+                                "Counselor: " + counselor.getUser().getName() + ", Elderly: "
+                                                + elderly.getUser().getName());
+
                 return AssignmentResponse.from(savedAssignment);
         }
 
         @Transactional
-        public void unassignCounselor(Long counselorId, Long elderlyId) {
+        public void unassignCounselor(Long counselorId, Long elderlyId, Long adminUserId) {
                 Assignment assignment = assignmentRepository.findByCounselorAndElderlyAndStatus(
                                 counselorId, elderlyId, AssignmentStatus.ACTIVE)
                                 .orElseThrow(() -> new IllegalArgumentException("현재 활성화된 배정 정보가 없습니다."));
 
                 assignment.endAssignment();
                 log.info("배정 해제: 상담사({}) - 어르신({})", counselorId, elderlyId);
+
+                // 감사 로그 기록
+                auditLogService.recordLog(
+                                adminUserId,
+                                "UNASSIGN_ELDERLY",
+                                "Assignment",
+                                assignment.getId(),
+                                "API",
+                                "Unassigned Counselor: " + counselorId + ", from Elderly: " + elderlyId);
         }
 
         public List<AssignmentResponse> getAssignmentsByCounselor(Long counselorId) {

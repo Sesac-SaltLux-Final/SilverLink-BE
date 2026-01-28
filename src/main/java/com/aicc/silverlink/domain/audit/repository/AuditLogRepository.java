@@ -3,6 +3,7 @@ package com.aicc.silverlink.domain.audit.repository;
 import com.aicc.silverlink.domain.audit.entity.AuditLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -17,5 +18,10 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     Page<AuditLog> findByActor_Id(Long actorId, Pageable pageable);
 
     // 3. 특정 대상의 이력 조회 (예: "15번 약관이 언제 수정되고 언제 삭제됐지?")
+    // 3. 특정 대상의 이력 조회 (예: "15번 약관이 언제 수정되고 언제 삭제됐지?")
     Page<AuditLog> findByTargetEntityAndTargetId(String targetEntity, Long targetId, Pageable pageable);
+
+    @Override
+    @EntityGraph(attributePaths = { "actor" })
+    Page<AuditLog> findAll(Pageable pageable);
 }

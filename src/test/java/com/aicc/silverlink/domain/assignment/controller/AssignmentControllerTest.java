@@ -83,13 +83,14 @@ class AssignmentControllerTest {
     @DisplayName("배정 해제 성공 - 관리자 권한으로 요청 시 200 OK")
     void unassignCounselor_Success() throws Exception {
         mockMvc.perform(post("/api/assignments/unassign")
-                .with(user("admin").roles("ADMIN"))
+                .with(authentication(new UsernamePasswordAuthenticationToken(3L, null,
+                        List.of(new SimpleGrantedAuthority("ROLE_ADMIN")))))
                 .with(csrf())
                 .param("counselorId", "1")
                 .param("elderlyId", "2"))
                 .andExpect(status().isOk());
 
-        verify(assignmentService).unassignCounselor(anyLong(), anyLong());
+        verify(assignmentService).unassignCounselor(anyLong(), anyLong(), anyLong());
     }
 
     @Nested

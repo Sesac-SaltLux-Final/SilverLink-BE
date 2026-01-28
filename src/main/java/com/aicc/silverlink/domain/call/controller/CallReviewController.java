@@ -31,99 +31,99 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/call-reviews")
 public class CallReviewController {
 
-    private final CallReviewService callReviewService;
+        private final CallReviewService callReviewService;
 
-    // ===== 상담사용 API =====
+        // ===== 상담사용 API =====
 
-    @Operation(summary = "담당 어르신 통화 목록 조회", description = "상담사가 담당하는 어르신들의 CallBot 통화 기록 목록을 조회합니다.")
-    @GetMapping("/counselor/calls")
-    @PreAuthorize("hasRole('COUNSELOR')")
-    public ResponseEntity<ApiResponse<PageResponse<CallRecordSummaryResponse>>> getCallRecordsForCounselor(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @PageableDefault(size = 20, sort = "callAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        @Operation(summary = "담당 어르신 통화 목록 조회", description = "상담사가 담당하는 어르신들의 CallBot 통화 기록 목록을 조회합니다.")
+        @GetMapping("/counselor/calls")
+        @PreAuthorize("hasRole('COUNSELOR')")
+        public ResponseEntity<ApiResponse<PageResponse<CallRecordSummaryResponse>>> getCallRecordsForCounselor(
+                        @AuthenticationPrincipal Long userId,
+                        @PageableDefault(size = 20, sort = "callAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        Page<CallRecordSummaryResponse> page = callReviewService.getCallRecordsForCounselor(
-                userPrincipal.getUserId(), pageable);
+                Page<CallRecordSummaryResponse> page = callReviewService.getCallRecordsForCounselor(
+                                userId, pageable);
 
-        return ResponseEntity.ok(ApiResponse.success(PageResponse.from(page)));
-    }
+                return ResponseEntity.ok(ApiResponse.success(PageResponse.from(page)));
+        }
 
-    @Operation(summary = "통화 상세 조회", description = "특정 통화 기록의 상세 내용을 조회합니다. (대화 내용, 요약, 감정 분석, 리뷰 포함)")
-    @GetMapping("/counselor/calls/{callId}")
-    @PreAuthorize("hasRole('COUNSELOR')")
-    public ResponseEntity<ApiResponse<CallRecordDetailResponse>> getCallRecordDetail(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @Parameter(description = "통화 기록 ID") @PathVariable Long callId) {
+        @Operation(summary = "통화 상세 조회", description = "특정 통화 기록의 상세 내용을 조회합니다. (대화 내용, 요약, 감정 분석, 리뷰 포함)")
+        @GetMapping("/counselor/calls/{callId}")
+        @PreAuthorize("hasRole('COUNSELOR')")
+        public ResponseEntity<ApiResponse<CallRecordDetailResponse>> getCallRecordDetail(
+                        @AuthenticationPrincipal Long userId,
+                        @Parameter(description = "통화 기록 ID") @PathVariable Long callId) {
 
-        CallRecordDetailResponse response = callReviewService.getCallRecordDetail(
-                callId, userPrincipal.getUserId());
+                CallRecordDetailResponse response = callReviewService.getCallRecordDetail(
+                                callId, userId);
 
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
+                return ResponseEntity.ok(ApiResponse.success(response));
+        }
 
-    @Operation(summary = "통화 리뷰 작성", description = "상담사가 통화를 확인했음을 체크하고 보호자에게 전달할 코멘트를 작성합니다.")
-    @PostMapping("/counselor/reviews")
-    @PreAuthorize("hasRole('COUNSELOR')")
-    public ResponseEntity<ApiResponse<ReviewResponse>> createReview(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @Valid @RequestBody ReviewRequest request) {
+        @Operation(summary = "통화 리뷰 작성", description = "상담사가 통화를 확인했음을 체크하고 보호자에게 전달할 코멘트를 작성합니다.")
+        @PostMapping("/counselor/reviews")
+        @PreAuthorize("hasRole('COUNSELOR')")
+        public ResponseEntity<ApiResponse<ReviewResponse>> createReview(
+                        @AuthenticationPrincipal Long userId,
+                        @Valid @RequestBody ReviewRequest request) {
 
-        ReviewResponse response = callReviewService.createReview(userPrincipal.getUserId(), request);
+                ReviewResponse response = callReviewService.createReview(userId, request);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
-    }
+                return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
+        }
 
-    @Operation(summary = "통화 리뷰 수정", description = "기존에 작성한 통화 리뷰의 코멘트를 수정합니다.")
-    @PutMapping("/counselor/reviews/{reviewId}")
-    @PreAuthorize("hasRole('COUNSELOR')")
-    public ResponseEntity<ApiResponse<ReviewResponse>> updateReview(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @Parameter(description = "리뷰 ID") @PathVariable Long reviewId,
-            @Valid @RequestBody ReviewRequest request) {
+        @Operation(summary = "통화 리뷰 수정", description = "기존에 작성한 통화 리뷰의 코멘트를 수정합니다.")
+        @PutMapping("/counselor/reviews/{reviewId}")
+        @PreAuthorize("hasRole('COUNSELOR')")
+        public ResponseEntity<ApiResponse<ReviewResponse>> updateReview(
+                        @AuthenticationPrincipal Long userId,
+                        @Parameter(description = "리뷰 ID") @PathVariable Long reviewId,
+                        @Valid @RequestBody ReviewRequest request) {
 
-        ReviewResponse response = callReviewService.updateReview(
-                userPrincipal.getUserId(), reviewId, request);
+                ReviewResponse response = callReviewService.updateReview(
+                                userId, reviewId, request);
 
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
+                return ResponseEntity.ok(ApiResponse.success(response));
+        }
 
-    @Operation(summary = "미확인 통화 건수 조회", description = "상담사가 아직 확인하지 않은 통화 건수를 조회합니다.")
-    @GetMapping("/counselor/unreview-count")
-    @PreAuthorize("hasRole('COUNSELOR')")
-    public ResponseEntity<ApiResponse<UnreviewedCountResponse>> getUnreviewedCount(
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        @Operation(summary = "미확인 통화 건수 조회", description = "상담사가 아직 확인하지 않은 통화 건수를 조회합니다.")
+        @GetMapping("/counselor/unreview-count")
+        @PreAuthorize("hasRole('COUNSELOR')")
+        public ResponseEntity<ApiResponse<UnreviewedCountResponse>> getUnreviewedCount(
+                        @AuthenticationPrincipal Long userId) {
 
-        UnreviewedCountResponse response = callReviewService.getUnreviewedCount(userPrincipal.getUserId());
+                UnreviewedCountResponse response = callReviewService.getUnreviewedCount(userId);
 
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
+                return ResponseEntity.ok(ApiResponse.success(response));
+        }
 
-    // ===== 보호자용 API =====
+        // ===== 보호자용 API =====
 
-    @Operation(summary = "어르신 통화 리뷰 목록 조회 (보호자)", description = "보호자가 연결된 어르신의 통화 기록 및 상담사 코멘트를 조회합니다.")
-    @GetMapping("/guardian/elderly/{elderlyId}")
-    @PreAuthorize("hasRole('GUARDIAN')")
-    public ResponseEntity<ApiResponse<PageResponse<GuardianCallReviewResponse>>> getCallReviewsForGuardian(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @Parameter(description = "어르신 ID") @PathVariable Long elderlyId,
-            @PageableDefault(size = 20, sort = "callAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        @Operation(summary = "어르신 통화 리뷰 목록 조회 (보호자)", description = "보호자가 연결된 어르신의 통화 기록 및 상담사 코멘트를 조회합니다.")
+        @GetMapping("/guardian/elderly/{elderlyId}")
+        @PreAuthorize("hasRole('GUARDIAN')")
+        public ResponseEntity<ApiResponse<PageResponse<GuardianCallReviewResponse>>> getCallReviewsForGuardian(
+                        @AuthenticationPrincipal Long userId,
+                        @Parameter(description = "어르신 ID") @PathVariable Long elderlyId,
+                        @PageableDefault(size = 20, sort = "reviewedAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        Page<GuardianCallReviewResponse> page = callReviewService.getCallReviewsForGuardian(
-                userPrincipal.getUserId(), elderlyId, pageable);
+                Page<GuardianCallReviewResponse> page = callReviewService.getCallReviewsForGuardian(
+                                userId, elderlyId, pageable);
 
-        return ResponseEntity.ok(ApiResponse.success(PageResponse.from(page)));
-    }
+                return ResponseEntity.ok(ApiResponse.success(PageResponse.from(page)));
+        }
 
-    @Operation(summary = "통화 상세 조회 (보호자)", description = "보호자가 어르신의 특정 통화 상세 내용과 상담사 코멘트를 조회합니다.")
-    @GetMapping("/guardian/calls/{callId}")
-    @PreAuthorize("hasRole('GUARDIAN')")
-    public ResponseEntity<ApiResponse<GuardianCallReviewResponse>> getCallDetailForGuardian(
-            @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @Parameter(description = "통화 기록 ID") @PathVariable Long callId) {
+        @Operation(summary = "통화 상세 조회 (보호자)", description = "보호자가 어르신의 특정 통화 상세 내용과 상담사 코멘트를 조회합니다.")
+        @GetMapping("/guardian/calls/{callId}")
+        @PreAuthorize("hasRole('GUARDIAN')")
+        public ResponseEntity<ApiResponse<GuardianCallReviewResponse>> getCallDetailForGuardian(
+                        @AuthenticationPrincipal Long userId,
+                        @Parameter(description = "통화 기록 ID") @PathVariable Long callId) {
 
-        GuardianCallReviewResponse response = callReviewService.getCallDetailForGuardian(
-                userPrincipal.getUserId(), callId);
+                GuardianCallReviewResponse response = callReviewService.getCallDetailForGuardian(
+                                userId, callId);
 
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
+                return ResponseEntity.ok(ApiResponse.success(response));
+        }
 }

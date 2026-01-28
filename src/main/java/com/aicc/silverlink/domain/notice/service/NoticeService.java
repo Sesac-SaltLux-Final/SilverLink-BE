@@ -57,13 +57,15 @@ public class NoticeService {
 
         // *실제 구현 시 엔티티에 Builder나 생성 메서드 추가 필요*
         // 여기서는 로직의 흐름을 기술합니다.
-        /* notice.setTitle(request.getTitle());
-        notice.setContent(request.getContent());
-        notice.setCreatedBy(admin);
-        notice.setTargetMode(request.getTargetMode());
-        notice.setStatus(request.getStatus() != null ? request.getStatus() : NoticeStatus.DRAFT);
-        ... 필드 매핑 ...
-        */
+        /*
+         * notice.setTitle(request.getTitle());
+         * notice.setContent(request.getContent());
+         * notice.setCreatedBy(admin);
+         * notice.setTargetMode(request.getTargetMode());
+         * notice.setStatus(request.getStatus() != null ? request.getStatus() :
+         * NoticeStatus.DRAFT);
+         * ... 필드 매핑 ...
+         */
         Notice savedNotice = noticeRepository.save(notice);
 
         // 2. 타겟 권한 저장
@@ -110,15 +112,19 @@ public class NoticeService {
                 .map(notice -> convertToResponse(notice, false));
     }
 
-
     // --- 사용자(User) 기능 ---
 
     // Req 64, 65: 사용자 권한별 목록 조회 + 중요공지 우선 (검색 기능 추가)
     public Page<NoticeResponse> getNoticesForUser(User user, String keyword, Pageable pageable) {
-        Page<Notice> notices = noticeRepository.findAllForUser(user.getRole(), keyword, pageable);
+        Role role = (user != null) ? user.getRole() : null;
+        Page<Notice> notices = noticeRepository.findAllForUser(role, keyword, pageable);
 
         return notices.map(notice -> {
-            boolean isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(notice.getId(), String.valueOf(user.getId()));
+            boolean isRead = false;
+            if (user != null) {
+                isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(notice.getId(),
+                        String.valueOf(user.getId()));
+            }
             return convertToResponse(notice, isRead);
         });
     }
@@ -126,14 +132,19 @@ public class NoticeService {
     // Req 67: 팝업 공지 조회
     public List<NoticeResponse> getActivePopupsForUser(User user) {
         LocalDateTime now = LocalDateTime.now();
-        List<Notice> notices = noticeRepository.findActivePopups(user.getRole(), now);
+        Role role = (user != null) ? user.getRole() : null;
+        List<Notice> notices = noticeRepository.findActivePopups(role, now);
 
         // 이미 읽은(확인한) 팝업은 제외할지, 프론트에서 처리할지는 기획에 따름.
         // 보통 "오늘 하루 보지 않기"는 쿠키로, "다시 보지 않기"는 DB로 처리.
         // 여기서는 읽음 여부만 같이 내려줌.
         return notices.stream()
                 .map(notice -> {
-                    boolean isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(notice.getId(), String.valueOf(user.getId()));
+                    boolean isRead = false;
+                    if (user != null) {
+                        isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(notice.getId(),
+                                String.valueOf(user.getId()));
+                    }
                     return convertToResponse(notice, isRead);
                 })
                 .collect(Collectors.toList());
@@ -158,7 +169,7 @@ public class NoticeService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 공지사항입니다."));
 
         boolean isRead = false;
-        if(user != null) {
+        if (user != null) {
             isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(noticeId, String.valueOf(user.getId()));
         }
 

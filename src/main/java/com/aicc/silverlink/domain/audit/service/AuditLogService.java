@@ -10,8 +10,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collections;
 
 @Slf4j
 @Service
@@ -20,6 +23,7 @@ public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
     private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
 
     /**
      * [비동기] 감사 로그 기록
@@ -28,11 +32,26 @@ public class AuditLogService {
      */
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void recordLog(Long actorId, String action, String targetEntity, Long targetId, String clientIp, String meta) {
+    public void recordLog(Long actorId, String action, String targetEntity, Long targetId, String clientIp,
+            String meta) {
         try {
             // actorId가 null이면 시스템(System) 또는 비회원
             // getReferenceById: DB 조회를 하지 않고 프록시 객체만 가져옴 (성능 최적화)
             User actor = (actorId != null) ? userRepository.getReferenceById(actorId) : null;
+
+            String validJsonMeta = meta;
+            if (meta != null && !meta.isBlank()) {
+                try {
+                    // 이미 JSON 형식이면 통과
+                    objectMapper.readTree(meta);
+                } catch (Exception e) {
+                    // JSON이 아니면 객체로 감싸기
+                    validJsonMeta = objectMapper.writeValueAsString(Collections.singletonMap("description", meta));
+                }
+            } else {
+                // null이나 빈 문자열이면 빈 JSON 객체로
+                validJsonMeta = "{}";
+            }
 
             AuditLog auditLog = AuditLog.builder()
                     .actor(actor)
@@ -40,7 +59,7 @@ public class AuditLogService {
                     .targetEntity(targetEntity)
                     .targetId(targetId)
                     .ipAddress(clientIp)
-                    .meta(meta)
+                    .meta(validJsonMeta)
                     .build();
 
             auditLogRepository.save(auditLog);

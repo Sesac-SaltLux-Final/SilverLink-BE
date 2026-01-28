@@ -29,83 +29,71 @@ import org.springframework.web.client.RestTemplate;
 @Tag(name = "Chatbot", description = "AI 챗봇 API")
 public class ChatbotProxyController {
 
-    private final RestTemplate restTemplate;
-    private final GuardianElderlyRepository guardianElderlyRepository;
+        private final RestTemplate restTemplate;
+        private final GuardianElderlyRepository guardianElderlyRepository;
 
-    @Value("${chatbot.python.url:http://localhost:8000}")
-    private String pythonChatbotUrl;
+        @Value("${chatbot.python.url:http://localhost:8000}")
+        private String pythonChatbotUrl;
 
-    @PostMapping("/chat")
-    @Operation(summary = "챗봇 질문", description = "보호자가 어르신 돌봄 관련 질문을 하면 AI 챗봇이 FAQ 및 과거 문의 기록을 기반으로 답변합니다.")
-    public ResponseEntity<ChatResponse> chat(
-            @RequestBody ChatRequest request,
-            @AuthenticationPrincipal UserDetails user) {
-        log.info("Chatbot request received: guardianId={}, elderlyId={}, message={}",
-                request.getGuardianId(), request.getElderlyId(), request.getMessage());
+        @PostMapping("/chat")
+        @Operation(summary = "챗봇 질문", description = "보호자가 어르신 돌봄 관련 질문을 하면 AI 챗봇이 FAQ 및 과거 문의 기록을 기반으로 답변합니다.")
+        public ResponseEntity<ChatResponse> chat(
+                        @RequestBody ChatRequest request,
+                        @AuthenticationPrincipal Long authenticatedGuardianId) {
+                log.info("Chatbot request received: guardianId={}, elderlyId={}, message={}",
+                                request.getGuardianId(), request.getElderlyId(), request.getMessage());
 
-        // 1. 인증된 사용자 ID 추출
-        Long authenticatedGuardianId = extractGuardianId(user);
+                // 2. 권한 검증: 요청한 guardianId와 인증된 guardianId 일치 확인
+                if (!authenticatedGuardianId.equals(request.getGuardianId())) {
+                        log.warn("Unauthorized access attempt: authenticated={}, requested={}",
+                                        authenticatedGuardianId, request.getGuardianId());
+                        throw new SecurityException("권한이 없습니다");
+                }
 
-        // 2. 권한 검증: 요청한 guardianId와 인증된 guardianId 일치 확인
-        if (!authenticatedGuardianId.equals(request.getGuardianId())) {
-            log.warn("Unauthorized access attempt: authenticated={}, requested={}",
-                    authenticatedGuardianId, request.getGuardianId());
-            throw new SecurityException("권한이 없습니다");
+                // 3. 보호자-어르신 관계 검증 (추가 보안)
+                boolean isValidRelation = guardianElderlyRepository
+                                .existsByGuardianIdAndElderlyId(
+                                                request.getGuardianId(),
+                                                request.getElderlyId());
+
+                if (!isValidRelation) {
+                        log.warn("Invalid guardian-elderly relation: guardianId={}, elderlyId={}",
+                                        request.getGuardianId(), request.getElderlyId());
+                        throw new SecurityException("잘못된 어르신 정보입니다");
+                }
+
+                // 4. Thread ID 생성 (클라이언트 제공 값 우선, 없으면 보호자 ID 기반)
+                String threadId = request.getThreadId();
+                if (threadId == null || threadId.isEmpty()) {
+                        threadId = "guardian_" + request.getGuardianId();
+                }
+
+                // 5. Python 챗봇 서비스 요청 생성
+                ChatbotRequest chatbotRequest = ChatbotRequest.builder()
+                                .message(request.getMessage())
+                                .threadId(threadId)
+                                .guardianId(request.getGuardianId())
+                                .elderlyId(request.getElderlyId())
+                                .build();
+
+                // 6. Python 챗봇 서비스 호출
+                log.info("Calling Python chatbot service: url={}, threadId={}",
+                                pythonChatbotUrl, threadId);
+
+                try {
+                        ChatResponse response = restTemplate.postForObject(
+                                        pythonChatbotUrl + "/api/chatbot/chat",
+                                        chatbotRequest,
+                                        ChatResponse.class);
+
+                        log.info("Chatbot response received: threadId={}, confidence={}",
+                                        threadId, response != null ? response.getConfidence() : null);
+
+                        return ResponseEntity.ok(response);
+
+                } catch (Exception e) {
+                        log.error("Error calling Python chatbot service", e);
+                        throw new RuntimeException("챗봇 서비스 호출 중 오류가 발생했습니다", e);
+                }
         }
-
-        // 3. 보호자-어르신 관계 검증 (추가 보안)
-        boolean isValidRelation = guardianElderlyRepository
-                .existsByGuardianIdAndElderlyId(
-                        request.getGuardianId(),
-                        request.getElderlyId());
-
-        if (!isValidRelation) {
-            log.warn("Invalid guardian-elderly relation: guardianId={}, elderlyId={}",
-                    request.getGuardianId(), request.getElderlyId());
-            throw new SecurityException("잘못된 어르신 정보입니다");
-        }
-
-        // 4. Thread ID 생성 (보호자 ID 기반)
-        String threadId = "guardian_" + request.getGuardianId();
-
-        // 5. Python 챗봇 서비스 요청 생성
-        ChatbotRequest chatbotRequest = ChatbotRequest.builder()
-                .message(request.getMessage())
-                .threadId(threadId)
-                .guardianId(request.getGuardianId())
-                .elderlyId(request.getElderlyId())
-                .build();
-
-        // 6. Python 챗봇 서비스 호출
-        log.info("Calling Python chatbot service: url={}, threadId={}",
-                pythonChatbotUrl, threadId);
-
-        try {
-            ChatResponse response = restTemplate.postForObject(
-                    pythonChatbotUrl + "/chat",
-                    chatbotRequest,
-                    ChatResponse.class);
-
-            log.info("Chatbot response received: threadId={}, confidence={}",
-                    threadId, response != null ? response.getConfidence() : null);
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            log.error("Error calling Python chatbot service", e);
-            throw new RuntimeException("챗봇 서비스 호출 중 오류가 발생했습니다", e);
-        }
-    }
-
-    /**
-     * 인증된 사용자로부터 보호자 ID 추출
-     */
-    private Long extractGuardianId(UserDetails user) {
-        // TODO: 실제 구현 시 UserDetails에서 guardianId 추출 로직 구현
-        // 예: CustomUserDetails에서 guardianId 가져오기
-        // return ((CustomUserDetails) user).getGuardianId();
-
-        // 임시 구현 (실제로는 위 로직 사용)
-        return 1L;
-    }
 }

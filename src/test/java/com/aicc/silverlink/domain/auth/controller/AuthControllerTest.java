@@ -37,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-class AuthControllerIT {
+class AuthControllerTest {
 
         @Autowired
         private MockMvc mockMvc;
@@ -83,7 +83,8 @@ class AuthControllerIT {
                                 "refresh-token-sample",
                                 "session-id-123",
                                 1800L,
-                                Role.ADMIN);
+                                Role.ADMIN,
+                                1L);
 
                 given(authService.login(any(AuthDtos.LoginRequest.class))).willReturn(authResult);
 
@@ -119,8 +120,8 @@ class AuthControllerIT {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
                                 .andDo(print())
-                                // ⚠️ 네 GlobalExceptionHandler 정책에 맞게 조정 (400/401/500 등)
-                                .andExpect(status().isInternalServerError());
+                                // 401 Unauthorized Expectation
+                                .andExpect(status().isUnauthorized());
         }
 
         @Test
@@ -135,7 +136,8 @@ class AuthControllerIT {
                                 "new-refresh-token",
                                 "session-id-123",
                                 1800L,
-                                Role.ADMIN);
+                                Role.ADMIN,
+                                1L);
 
                 given(authService.refresh(eq("session-id-123"), eq("old-refresh-token")))
                                 .willReturn(authResult);
@@ -184,7 +186,7 @@ class AuthControllerIT {
                 @SuppressWarnings("unchecked")
                 Jws<Claims> jws = mock(Jws.class);
                 Claims claims = mock(Claims.class);
-                
+
                 given(jwtTokenProvider.parseAndValidate(token)).willReturn(jws);
                 given(jws.getPayload()).willReturn(claims);
                 given(jwtTokenProvider.getSid(any(Claims.class))).willReturn(sid);
@@ -230,7 +232,7 @@ class AuthControllerIT {
                 @SuppressWarnings("unchecked")
                 Jws<Claims> jws = mock(Jws.class);
                 Claims claims = mock(Claims.class);
-                
+
                 given(jwtTokenProvider.parseAndValidate(token)).willReturn(jws);
                 given(jws.getPayload()).willReturn(claims);
                 given(jwtTokenProvider.getSid(any(Claims.class))).willReturn(sid);
