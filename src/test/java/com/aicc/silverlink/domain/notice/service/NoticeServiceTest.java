@@ -94,12 +94,23 @@ class NoticeServiceTest {
     void deleteNotice() {
         // given
         Long noticeId = 1L;
+
+        Long adminId = 100L;
+        
+        // Admin Mocking
+        Admin admin = mock(Admin.class);
+        given(admin.getUserId()).willReturn(adminId); // getUserId() 사용
+
+        // Notice Mocking (작성자가 admin과 동일해야 함)
         Notice notice = mock(Notice.class);
+        Admin createdBy = mock(Admin.class);
+        given(createdBy.getUserId()).willReturn(adminId); // 작성자 ID도 동일하게 설정
+        given(notice.getCreatedBy()).willReturn(createdBy);
 
         given(noticeRepository.findById(noticeId)).willReturn(Optional.of(notice));
 
         // when
-        noticeService.deleteNotice(noticeId);
+        noticeService.deleteNotice(noticeId, admin); // admin 파라미터 추가
 
         // then
         verify(noticeRepository, times(1)).findById(noticeId);

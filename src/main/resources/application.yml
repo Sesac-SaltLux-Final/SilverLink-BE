@@ -26,7 +26,7 @@ spring:
       port: ${SPRING_DATA_REDIS_PORT:6379}
 
   jpa:
-#    database-platform: org.hibernate.dialect.MySQLDialect
+    #    database-platform: org.hibernate.dialect.MySQLDialect
     open-in-view: false
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:update}

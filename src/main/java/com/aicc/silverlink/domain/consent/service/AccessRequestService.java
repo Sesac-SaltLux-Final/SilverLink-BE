@@ -12,6 +12,7 @@ import com.aicc.silverlink.domain.elderly.entity.Elderly;
 import com.aicc.silverlink.domain.elderly.repository.ElderlyRepository;
 import com.aicc.silverlink.domain.guardian.entity.GuardianElderly;
 import com.aicc.silverlink.domain.guardian.repository.GuardianElderlyRepository;
+import com.aicc.silverlink.domain.notification.service.NotificationService;
 import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.repository.UserRepository;
@@ -49,6 +50,7 @@ public class AccessRequestService {
     private final ElderlyRepository elderlyRepository;
     private final AdminRepository adminRepository;
     private final GuardianElderlyRepository guardianElderlyRepository;
+    private final NotificationService notificationService;
 
     // ========== 보호자용 메서드 ==========
 
@@ -57,7 +59,7 @@ public class AccessRequestService {
      * 보호자가 어르신의 민감정보 열람을 요청합니다.
      *
      * @param guardianUserId 보호자 사용자 ID
-     * @param request 요청 DTO
+     * @param request        요청 DTO
      * @return 생성된 요청 정보
      */
     @Transactional
@@ -99,6 +101,17 @@ public class AccessRequestService {
         // 5. 요청 생성
         AccessRequest accessRequest = AccessRequest.create(guardian, elderly, request.scope());
         AccessRequest saved = accessRequestRepository.save(accessRequest);
+
+        // 6. 관리자에게 새 요청 알림 발송
+        List<Admin> admins = adminRepository
+                .findByAdministrativeDivision_AdmCode(elderly.getAdministrativeDivision().getAdmCode());
+        for (Admin admin : admins) {
+            notificationService.createAccessRequestNotification(
+                    admin.getUser().getId(),
+                    saved.getId(),
+                    guardian.getName(),
+                    elderly.getUser().getName());
+        }
 
         log.info("접근 권한 요청 생성 완료 - requestId: {}", saved.getId());
         return AccessRequestResponse.from(saved);
@@ -157,7 +170,7 @@ public class AccessRequestService {
      * 관리자가 동의서와 가족관계증명서를 확인했음을 표시합니다.
      *
      * @param adminUserId 관리자 사용자 ID
-     * @param request 요청 DTO
+     * @param request     요청 DTO
      */
     @Transactional
     public AccessRequestResponse verifyDocuments(Long adminUserId, VerifyDocumentsRequest request) {
@@ -184,7 +197,7 @@ public class AccessRequestService {
      * 서류 확인이 완료된 요청만 승인 가능합니다.
      *
      * @param adminUserId 관리자 사용자 ID
-     * @param request 승인 요청 DTO
+     * @param request     승인 요청 DTO
      */
     @Transactional
     public AccessRequestResponse approveRequest(Long adminUserId, ApproveRequest request) {
@@ -203,6 +216,12 @@ public class AccessRequestService {
 
         accessRequest.approve(admin, expiresAt, request.note());
 
+        // 요청자에게 승인 알림 발송
+        notificationService.createAccessApprovedNotification(
+                accessRequest.getRequester().getId(),
+                request.accessRequestId(),
+                accessRequest.getElderly().getUser().getName());
+
         log.info("접근 권한 요청 승인 완료 - requestId: {}, expiresAt: {}", request.accessRequestId(), expiresAt);
         return AccessRequestResponse.from(accessRequest);
     }
@@ -211,7 +230,7 @@ public class AccessRequestService {
      * 접근 권한 요청 거절
      *
      * @param adminUserId 관리자 사용자 ID
-     * @param request 거절 요청 DTO
+     * @param request     거절 요청 DTO
      */
     @Transactional
     public AccessRequestResponse rejectRequest(Long adminUserId, RejectRequest request) {
@@ -223,6 +242,13 @@ public class AccessRequestService {
                 .orElseThrow(() -> new IllegalArgumentException("REQUEST_NOT_FOUND"));
 
         accessRequest.reject(admin, request.reason());
+
+        // 요청자에게 거절 알림 발송
+        notificationService.createAccessRejectedNotification(
+                accessRequest.getRequester().getId(),
+                request.accessRequestId(),
+                accessRequest.getElderly().getUser().getName(),
+                request.reason());
 
         log.info("접근 권한 요청 거절 완료 - requestId: {}, reason: {}", request.accessRequestId(), request.reason());
         return AccessRequestResponse.from(accessRequest);
@@ -305,9 +331,9 @@ public class AccessRequestService {
     /**
      * 특정 사용자가 특정 어르신의 특정 범위 민감정보에 접근 가능한지 확인
      *
-     * @param requesterId 접근 시도자 ID
+     * @param requesterId   접근 시도자 ID
      * @param elderlyUserId 어르신 ID
-     * @param scope 접근 범위
+     * @param scope         접근 범위
      * @return 접근 가능 여부
      */
     public boolean hasAccess(Long requesterId, Long elderlyUserId, AccessScope scope) {
@@ -315,8 +341,7 @@ public class AccessRequestService {
                 requesterId,
                 elderlyUserId,
                 scope,
-                LocalDateTime.now()
-        );
+                LocalDateTime.now());
     }
 
     /**
@@ -324,11 +349,10 @@ public class AccessRequestService {
      */
     public AccessCheckResult checkAccess(Long requesterId, Long elderlyUserId, AccessScope scope) {
         return accessRequestRepository.findValidAccess(
-                        requesterId,
-                        elderlyUserId,
-                        scope,
-                        LocalDateTime.now()
-                )
+                requesterId,
+                elderlyUserId,
+                scope,
+                LocalDateTime.now())
                 .map(AccessCheckResult::granted)
                 .orElse(AccessCheckResult.denied("접근 권한이 없습니다. 관리자에게 권한을 요청하세요."));
     }
@@ -362,4 +386,5 @@ public class AccessRequestService {
         return adminRepository.findByIdWithUser(userId)
                 .orElseThrow(() -> new IllegalArgumentException("ADMIN_NOT_FOUND"));
     }
+
 }

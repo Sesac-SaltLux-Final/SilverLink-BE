@@ -98,9 +98,14 @@ public class NoticeService {
 
     // Req 68: 삭제 정책 (Soft Delete)
     @Transactional
-    public void deleteNotice(Long noticeId) {
+    public void deleteNotice(Long noticeId, Admin admin) { // Admin 파라미터 추가
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 공지사항입니다."));
+
+        // 작성자 본인 확인 (슈퍼 관리자 권한이 있다면 이 로직을 건너뛸 수 있음)
+        if (!notice.getCreatedBy().getUserId().equals(admin.getUserId())) { // getId() -> getUserId() 수정
+            throw new IllegalArgumentException("본인이 작성한 공지사항만 삭제할 수 있습니다.");
+        }
 
         // 엔티티 내에 삭제 메서드를 호출하여 상태 변경
         // notice.markAsDeleted(); (status = DELETED, deletedAt = now)

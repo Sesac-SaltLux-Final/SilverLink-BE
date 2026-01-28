@@ -70,6 +70,9 @@ class AuthControllerTest {
                 given(props.getRefreshTtlSeconds()).willReturn(3600L);
                 given(props.getAccessTtlSeconds()).willReturn(1800L);
                 given(props.getIdleTtlSeconds()).willReturn(3600L);
+
+                // ⭐ 추가: 이 부분이 누락되어 105번 줄에서 에러가 났던 것입니다.
+                given(props.getRefreshCookieSecure()).willReturn(true);
         }
 
         @Test
@@ -90,19 +93,19 @@ class AuthControllerTest {
 
                 // when & then
                 mockMvc.perform(post("/api/auth/login")
-                                .with(csrf()) // ✅ Spring Security 켜져 있으면 POST는 기본적으로 CSRF 필요할 때 많음
+                                .with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
                                 .andDo(print())
                                 .andExpect(status().isOk())
+                                // ⚠️ 주의: DTO 필드명이 만약 snake_case로 바뀌었다면 $.access_token으로 수정해야 함
                                 .andExpect(jsonPath("$.accessToken").value("access-token-sample"))
                                 .andExpect(jsonPath("$.expiresInSeconds").value(1800L))
-                                // ⚠️ 실제 응답 role 값에 맞게 수정 필요 (너 프로젝트 role이 ADMIN/COUNSELOR/... 일 수 있음)
-                                .andExpect(jsonPath("$.role").exists())
+                                .andExpect(jsonPath("$.role").value("ADMIN")) // exists()보다 구체적으로 검증
                                 .andExpect(cookie().exists("refresh_token"))
                                 .andExpect(cookie().value("refresh_token", "session-id-123.refresh-token-sample"))
                                 .andExpect(cookie().httpOnly("refresh_token", true))
-                                .andExpect(cookie().secure("refresh_token", true));
+                                .andExpect(cookie().secure("refresh_token", true)); // 이제 true가 정상 반환됩니다!
         }
 
         @Test

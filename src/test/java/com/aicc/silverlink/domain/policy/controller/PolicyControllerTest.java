@@ -168,9 +168,9 @@ class PolicyControllerTest {
 
             // when & then
             mockMvc.perform(post("/api/policies")
-                    .with(authentication(getAdminAuth()))
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
+                            .with(authentication(getAdminAuth()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
                     .andDo(print())
                     .andExpect(status().isBadRequest());
         }
@@ -193,9 +193,9 @@ class PolicyControllerTest {
 
             // when & then
             mockMvc.perform(post("/api/policies")
-                    .with(authentication(getAdminAuth()))
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(json))
+                            .with(authentication(getAdminAuth()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
                     .andExpect(status().isBadRequest());
         }
     }

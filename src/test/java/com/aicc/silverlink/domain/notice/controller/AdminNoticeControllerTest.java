@@ -3,6 +3,8 @@ package com.aicc.silverlink.domain.notice.controller;
 import com.aicc.silverlink.domain.admin.entity.Admin;
 import com.aicc.silverlink.domain.notice.dto.NoticeRequest;
 import com.aicc.silverlink.domain.notice.dto.NoticeResponse;
+import com.aicc.silverlink.domain.notice.entity.Notice.TargetMode;
+import com.aicc.silverlink.domain.notice.entity.NoticeCategory;
 import com.aicc.silverlink.domain.notice.service.NoticeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -85,7 +87,6 @@ class AdminNoticeControllerTest {
                 .content("Content")
                 .build();
 
-        // PageRequest.of(0, 10)을 사용하여 실제 PageRequest 객체를 포함한 Page 생성
         List<NoticeResponse> content = Collections.singletonList(response);
         Page<NoticeResponse> pageResponse = new PageImpl<>(content, org.springframework.data.domain.PageRequest.of(0, 10), content.size());
 
@@ -97,7 +98,7 @@ class AdminNoticeControllerTest {
                         .param("size", "10")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
-                .andExpect(status().isOk()) // 이제 500이 아닌 200이 뜰 것입니다.
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(1))
                 .andExpect(jsonPath("$.content[0].title").value("Admin Notice"));
     }
@@ -109,8 +110,10 @@ class AdminNoticeControllerTest {
         NoticeRequest request = new NoticeRequest();
         request.setTitle("New Notice");
         request.setContent("New Content");
+        request.setCategory(NoticeCategory.NOTICE); // 필수 값 추가
+        request.setTargetMode(TargetMode.ALL); // 필수 값 추가
 
-        given(noticeService.createNotice(any(NoticeRequest.class), any())).willReturn(1L);
+        given(noticeService.createNotice(any(NoticeRequest.class), any(Admin.class))).willReturn(1L);
 
         // when & then
         mockMvc.perform(post("/api/admin/notices")
@@ -155,6 +158,6 @@ class AdminNoticeControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk());
 
-        verify(noticeService).deleteNotice(noticeId);
+        verify(noticeService).deleteNotice(eq(noticeId), any(Admin.class));
     }
 }
