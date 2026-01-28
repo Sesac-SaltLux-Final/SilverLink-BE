@@ -65,8 +65,10 @@ public class ElderlyService {
         User user = userRepo.findById(req.userId())
                 .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
 
-        if (user.getStatus() == UserStatus.DELETED) throw new IllegalStateException("USER_DELETED");
-        if (user.getRole() != Role.ELDERLY) throw new IllegalStateException("ROLE_NOT_ELDERLY");
+        if (user.getStatus() == UserStatus.DELETED)
+            throw new IllegalStateException("USER_DELETED");
+        if (user.getRole() != Role.ELDERLY)
+            throw new IllegalStateException("ROLE_NOT_ELDERLY");
 
         if (elderlyRepo.existsById(user.getId())) {
             throw new IllegalStateException("ELDERLY_ALREADY_EXISTS");
@@ -77,6 +79,12 @@ public class ElderlyService {
 
         Elderly elderly = Elderly.create(user, division, req.birthDate(), req.gender());
         elderly.updateAddress(req.addressLine1(), req.addressLine2(), req.zipcode());
+
+        // 통화 스케줄 설정
+        elderly.updateCallSchedule(
+                req.preferredCallTime(),
+                req.getPreferredCallDaysAsString(),
+                req.callScheduleEnabled() != null ? req.callScheduleEnabled() : false);
 
         Elderly saved = elderlyRepo.save(elderly);
 
@@ -175,7 +183,6 @@ public class ElderlyService {
         return HealthInfoResponse.from(healthRepo.save(hi));
     }
 
-
     @Transactional
     public ElderlySummaryResponse updateElderlyProfile(Long elderlyUserId, ElderlyUpdateRequest req) {
         Elderly elderly = elderlyRepo.findWithUserById(elderlyUserId)
@@ -183,6 +190,22 @@ public class ElderlyService {
 
         elderly.getUser().updateProfile(req.name(), req.phone(), null);
         elderly.updateAddress(req.addressLine1(), req.addressLine2(), req.zipcode());
+
+        // 행정구역 변경
+        if (req.admCode() != null && !req.admCode().equals(elderly.getAdministrativeDivision().getAdmCode())) {
+            AdministrativeDivision newDivision = divisionRepository.findById(req.admCode())
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 행정구역 코드입니다: " + req.admCode()));
+            elderly.changeAdministrativeDivision(newDivision);
+        }
+
+        // 통화 스케줄 수정
+        if (req.preferredCallTime() != null || req.preferredCallDays() != null || req.callScheduleEnabled() != null) {
+            elderly.updateCallSchedule(
+                    req.preferredCallTime() != null ? req.preferredCallTime() : elderly.getPreferredCallTime(),
+                    req.getPreferredCallDaysAsString() != null ? req.getPreferredCallDaysAsString()
+                            : elderly.getPreferredCallDays(),
+                    req.callScheduleEnabled() != null ? req.callScheduleEnabled() : elderly.getCallScheduleEnabled());
+        }
 
         return ElderlySummaryResponse.from(elderly);
     }
@@ -208,12 +231,14 @@ public class ElderlyService {
     // ========== 권한 검증 로직 ==========
 
     private void assertCanReadHealthInfo(Long requesterUserId, Long elderlyUserId) {
-        if (requesterUserId.equals(elderlyUserId)) return; // 본인 허용
+        if (requesterUserId.equals(elderlyUserId))
+            return; // 본인 허용
 
         User requester = userRepo.findById(requesterUserId)
                 .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
 
-        if (requester.getRole() == Role.ADMIN) return; // 관리자 허용
+        if (requester.getRole() == Role.ADMIN)
+            return; // 관리자 허용
 
         if (requester.getRole() == Role.COUNSELOR) {
             validateCounselorAccess(requesterUserId, elderlyUserId);
@@ -228,7 +253,6 @@ public class ElderlyService {
         throw new AccessDeniedException("권한이 없습니다.");
     }
 
-
     /**
      * 민감정보 쓰기 권한 확인
      */
@@ -236,7 +260,8 @@ public class ElderlyService {
         User requester = userRepo.findById(requesterUserId)
                 .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
 
-        if (requester.getRole() == Role.ADMIN) return;
+        if (requester.getRole() == Role.ADMIN)
+            return;
         if (requester.getRole() == Role.COUNSELOR) {
             validateCounselorAccess(requesterUserId, elderlyUserId);
             return;
@@ -264,9 +289,12 @@ public class ElderlyService {
      */
     private void validateGuardianAccess(Long guardianUserId, Long elderlyUserId, AccessScope scope) {
         boolean isGuardian = guardianElderlyRepo.existsByGuardianIdAndElderlyId(guardianUserId, elderlyUserId);
-        if (!isGuardian) throw new AccessDeniedException("연결된 보호자가 아닙니다.");
+        if (!isGuardian)
+            throw new AccessDeniedException("연결된 보호자가 아닙니다.");
 
-        boolean hasValidAccess = accessRequestRepo.hasValidAccess(guardianUserId, elderlyUserId, scope, LocalDateTime.now());
-        if (!hasValidAccess) throw new AccessDeniedException("민감정보 열람 승인이 필요합니다.");
+        boolean hasValidAccess = accessRequestRepo.hasValidAccess(guardianUserId, elderlyUserId, scope,
+                LocalDateTime.now());
+        if (!hasValidAccess)
+            throw new AccessDeniedException("민감정보 열람 승인이 필요합니다.");
     }
 }
