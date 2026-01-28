@@ -5,6 +5,9 @@ import com.aicc.silverlink.domain.notice.entity.Notice.NoticeStatus;
 import com.aicc.silverlink.domain.notice.entity.Notice.TargetMode;
 import com.aicc.silverlink.domain.notice.entity.NoticeCategory;
 import com.aicc.silverlink.domain.user.entity.Role;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -15,12 +18,18 @@ import java.util.List;
 @NoArgsConstructor
 public class NoticeRequest {
 
+    @NotBlank(message = "제목은 필수입니다.")
+    @Size(max = 255, message = "제목은 255자를 초과할 수 없습니다.")
     private String title;
+
+    @NotBlank(message = "내용은 필수입니다.")
     private String content;
 
+    @NotNull(message = "카테고리는 필수입니다.")
     private NoticeCategory category; // 카테고리 추가
 
     // 타겟 설정 (ALL 또는 ROLE_SET)
+    @NotNull(message = "타겟 모드는 필수입니다.")
     private TargetMode targetMode;
     // ROLE_SET일 경우 선택된 권한들 (ADMIN, COUNSELOR, GUARDIAN, ELDERLY)
     private List<Role> targetRoles;

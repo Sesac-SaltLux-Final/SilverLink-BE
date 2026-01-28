@@ -9,10 +9,8 @@ import com.aicc.silverlink.domain.notice.repository.NoticeReadLogRepository;
 import com.aicc.silverlink.domain.notice.repository.NoticeRepository;
 import com.aicc.silverlink.domain.notice.repository.NoticeTargetRoleRepository; // 가정
 import com.aicc.silverlink.domain.notice.repository.NoticeAttachmentRepository; // 가정
-import com.aicc.silverlink.domain.notification.service.NotificationService;
 import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.domain.user.entity.User; // User 엔티티 가정
-import com.aicc.silverlink.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,8 +31,6 @@ public class NoticeService {
     // 아래 레포지토리들은 파일에는 없었으나 Service 구현을 위해 필요하다고 가정하고 주입
     private final NoticeTargetRoleRepository noticeTargetRoleRepository;
     private final NoticeAttachmentRepository noticeAttachmentRepository;
-    private final NotificationService notificationService;
-    private final UserRepository userRepository;
 
     // --- 관리자(Admin) 기능 ---
 
@@ -97,25 +93,19 @@ public class NoticeService {
             noticeAttachmentRepository.saveAll(attachments);
         }
 
-        // 4. 대상 사용자들에게 알림 발송
-        if (request.getTargetRoles() != null && !request.getTargetRoles().isEmpty()) {
-            List<Long> targetUserIds = userRepository.findByRoleIn(request.getTargetRoles()).stream()
-                    .map(User::getId)
-                    .collect(Collectors.toList());
-            notificationService.createNoticeNotifications(
-                    savedNotice.getId(),
-                    savedNotice.getTitle(),
-                    targetUserIds);
-        }
-
         return savedNotice.getId();
     }
 
     // Req 68: 삭제 정책 (Soft Delete)
     @Transactional
-    public void deleteNotice(Long noticeId) {
+    public void deleteNotice(Long noticeId, Admin admin) { // Admin 파라미터 추가
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 공지사항입니다."));
+
+        // 작성자 본인 확인 (슈퍼 관리자 권한이 있다면 이 로직을 건너뛸 수 있음)
+        if (!notice.getCreatedBy().getUserId().equals(admin.getUserId())) { // getId() -> getUserId() 수정
+            throw new IllegalArgumentException("본인이 작성한 공지사항만 삭제할 수 있습니다.");
+        }
 
         // 엔티티 내에 삭제 메서드를 호출하여 상태 변경
         // notice.markAsDeleted(); (status = DELETED, deletedAt = now)
@@ -131,11 +121,15 @@ public class NoticeService {
 
     // Req 64, 65: 사용자 권한별 목록 조회 + 중요공지 우선 (검색 기능 추가)
     public Page<NoticeResponse> getNoticesForUser(User user, String keyword, Pageable pageable) {
-        Page<Notice> notices = noticeRepository.findAllForUser(user.getRole(), keyword, pageable);
+        Role role = (user != null) ? user.getRole() : null;
+        Page<Notice> notices = noticeRepository.findAllForUser(role, keyword, pageable);
 
         return notices.map(notice -> {
-            boolean isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(notice.getId(),
-                    String.valueOf(user.getId()));
+            boolean isRead = false;
+            if (user != null) {
+                isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(notice.getId(),
+                        String.valueOf(user.getId()));
+            }
             return convertToResponse(notice, isRead);
         });
     }
@@ -143,15 +137,19 @@ public class NoticeService {
     // Req 67: 팝업 공지 조회
     public List<NoticeResponse> getActivePopupsForUser(User user) {
         LocalDateTime now = LocalDateTime.now();
-        List<Notice> notices = noticeRepository.findActivePopups(user.getRole(), now);
+        Role role = (user != null) ? user.getRole() : null;
+        List<Notice> notices = noticeRepository.findActivePopups(role, now);
 
         // 이미 읽은(확인한) 팝업은 제외할지, 프론트에서 처리할지는 기획에 따름.
         // 보통 "오늘 하루 보지 않기"는 쿠키로, "다시 보지 않기"는 DB로 처리.
         // 여기서는 읽음 여부만 같이 내려줌.
         return notices.stream()
                 .map(notice -> {
-                    boolean isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(notice.getId(),
-                            String.valueOf(user.getId()));
+                    boolean isRead = false;
+                    if (user != null) {
+                        isRead = noticeReadLogRepository.existsByNoticeIdAndUserId(notice.getId(),
+                                String.valueOf(user.getId()));
+                    }
                     return convertToResponse(notice, isRead);
                 })
                 .collect(Collectors.toList());
@@ -202,5 +200,4 @@ public class NoticeService {
 
         return NoticeResponse.from(notice, roles, attachments, isRead);
     }
-
 }
