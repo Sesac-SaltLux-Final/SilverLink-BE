@@ -19,4 +19,10 @@ public interface LlmModelRepository extends JpaRepository<LlmModel, Long> {
      * 특정 통화의 LLM 발화 개수
      */
     long countByCallRecordId(Long callId);
+
+    /**
+     * 특정 통화의 가장 최근 LLM 발화 조회
+     */
+    java.util.Optional<LlmModel> findFirstByCallRecordOrderByCreatedAtDesc(
+            com.aicc.silverlink.domain.call.entity.CallRecord callRecord);
 }
