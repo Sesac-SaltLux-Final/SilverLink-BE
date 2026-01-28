@@ -96,10 +96,8 @@ public class PhoneVerificationService {
             throw new IllegalArgumentException("PV_NOT_REQUESTED");
         }
 
-        if (LocalDateTime.now().isAfter(pv.getExpiresAt())) {
-            pv.expire();
-            throw new IllegalArgumentException("PV_EXPIRED");
-        }
+        // 시간 비교는 Twilio Verify API에 위임 (서버 시간대 불일치 문제 방지)
+        // Twilio가 EXPIRED를 반환하면 switch 문에서 처리됨
 
         if (pv.getFailCount() >= props.getMaxAttemps()) {
             pv.fail();
