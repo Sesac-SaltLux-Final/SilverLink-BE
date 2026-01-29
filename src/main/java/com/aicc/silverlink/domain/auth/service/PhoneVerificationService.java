@@ -77,9 +77,14 @@ public class PhoneVerificationService {
 
         repo.save(pv);
 
+        // 남은 시간(초)을 서버에서 계산하여 반환 - 클라이언트 시간대 불일치 문제 방지
+        long expiresInSeconds = java.time.Duration.between(
+                LocalDateTime.now(), pv.getExpiresAt()).getSeconds();
+
         return new PhoneVerificationDtos.RequestCodeResponse(
                 pv.getId(),
                 pv.getExpiresAt(),
+                Math.max(expiresInSeconds, 0), // 음수 방지
                 null // Twilio 방식에서는 디버그 코드 반환 불가
         );
     }
