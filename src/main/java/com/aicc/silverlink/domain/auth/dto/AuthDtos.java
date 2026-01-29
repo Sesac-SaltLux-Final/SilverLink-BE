@@ -69,4 +69,19 @@ public class AuthDtos {
                         @Schema(description = "남은 시간 (초)") long remainingSeconds,
                         @Schema(description = "Idle TTL (초)") long idleTtl) {
         }
+
+        // Passkey(지문) 로그인 응답 - 토큰 + 사용자 프로필 포함
+        public record PasskeyLoginResponse(
+                        @Schema(description = "Access Token 값") String accessToken,
+                        @Schema(description = "토큰 만료 시간(초)") long expiresInSeconds,
+                        @Schema(description = "사용자 정보") UserProfile user) {
+        }
+
+        // Passkey 로그인용 사용자 프로필
+        public record UserProfile(
+                        @Schema(description = "사용자 ID") Long id,
+                        @Schema(description = "사용자 이름") String name,
+                        @Schema(description = "휴대폰 번호") String phone,
+                        @Schema(description = "사용자 권한") String role) {
+        }
 }
