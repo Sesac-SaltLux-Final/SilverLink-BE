@@ -18,6 +18,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +32,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("CallScheduleService 테스트")
 class CallScheduleServiceTest {
 
@@ -55,20 +58,20 @@ class CallScheduleServiceTest {
     @BeforeEach
     void setUp() {
         mockUser = mock(User.class);
-        when(mockUser.getId()).thenReturn(1L);
-        when(mockUser.getName()).thenReturn("홍길동");
+        lenient().when(mockUser.getId()).thenReturn(1L);
+        lenient().when(mockUser.getName()).thenReturn("홍길동");
 
         mockCounselor = mock(User.class);
-        when(mockCounselor.getId()).thenReturn(100L);
-        when(mockCounselor.getName()).thenReturn("상담사");
-        when(mockCounselor.getRole()).thenReturn(Role.COUNSELOR);
+        lenient().when(mockCounselor.getId()).thenReturn(100L);
+        lenient().when(mockCounselor.getName()).thenReturn("상담사");
+        lenient().when(mockCounselor.getRole()).thenReturn(Role.COUNSELOR);
 
         mockElderly = mock(Elderly.class);
-        when(mockElderly.getId()).thenReturn(1L);
-        when(mockElderly.getUser()).thenReturn(mockUser);
-        when(mockElderly.getPreferredCallTime()).thenReturn("09:00");
-        when(mockElderly.getPreferredCallDays()).thenReturn("MON,WED,FRI");
-        when(mockElderly.getCallScheduleEnabled()).thenReturn(true);
+        lenient().when(mockElderly.getId()).thenReturn(1L);
+        lenient().when(mockElderly.getUser()).thenReturn(mockUser);
+        lenient().when(mockElderly.getPreferredCallTime()).thenReturn("09:00");
+        lenient().when(mockElderly.getPreferredCallDays()).thenReturn("MON,WED,FRI");
+        lenient().when(mockElderly.getCallScheduleEnabled()).thenReturn(true);
     }
 
     @Nested

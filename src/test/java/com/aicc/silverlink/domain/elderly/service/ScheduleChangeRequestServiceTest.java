@@ -58,8 +58,8 @@ class ScheduleChangeRequestServiceTest {
     @BeforeEach
     void setUp() {
         mockElderlyUser = mock(User.class);
-        when(mockElderlyUser.getId()).thenReturn(1L);
-        when(mockElderlyUser.getName()).thenReturn("홍길동");
+        lenient().when(mockElderlyUser.getId()).thenReturn(1L);
+        lenient().when(mockElderlyUser.getName()).thenReturn("홍길동");
 
         mockCounselor = mock(User.class);
         lenient().when(mockCounselor.getId()).thenReturn(100L);
