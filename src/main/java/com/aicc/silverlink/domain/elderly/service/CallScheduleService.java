@@ -1,12 +1,20 @@
 package com.aicc.silverlink.domain.elderly.service;
 
 import com.aicc.silverlink.domain.elderly.dto.CallScheduleDto.*;
+import com.aicc.silverlink.domain.elderly.entity.CallScheduleHistory;
 import com.aicc.silverlink.domain.elderly.entity.Elderly;
 import com.aicc.silverlink.domain.elderly.entity.ElderlyHealthInfo;
+import com.aicc.silverlink.domain.elderly.repository.CallScheduleHistoryRepository;
 import com.aicc.silverlink.domain.elderly.repository.ElderlyRepository;
 import com.aicc.silverlink.domain.elderly.repository.HealthInfoRepository;
+import com.aicc.silverlink.domain.user.entity.User;
+import com.aicc.silverlink.domain.user.repository.UserRepository;
+import com.aicc.silverlink.global.exception.BusinessException;
+import com.aicc.silverlink.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +36,8 @@ public class CallScheduleService {
 
     private final ElderlyRepository elderlyRepository;
     private final HealthInfoRepository healthInfoRepository;
+    private final CallScheduleHistoryRepository historyRepository;
+    private final UserRepository userRepository;
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -60,6 +70,104 @@ public class CallScheduleService {
                 elderlyId, request.getPreferredCallTime(), request.getDaysAsString(), request.getCallScheduleEnabled());
 
         return Response.from(elderly);
+    }
+
+    // ===== 상담사/관리자 직접 수정 =====
+
+    /**
+     * 상담사/관리자가 직접 스케줄 수정 (구두 요청 등)
+     */
+    @Transactional
+    public Response directUpdateSchedule(Long elderlyId, Long changerUserId, DirectUpdateRequest request) {
+        Elderly elderly = elderlyRepository.findWithUserById(elderlyId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND, "어르신을 찾을 수 없습니다."));
+
+        User changer = userRepository.findById(changerUserId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        // 이전 값 저장
+        String previousTime = elderly.getPreferredCallTime();
+        String previousDays = elderly.getPreferredCallDays();
+        Boolean previousEnabled = elderly.getCallScheduleEnabled();
+
+        // 스케줄 업데이트
+        elderly.updateCallSchedule(
+                request.getPreferredCallTime(),
+                request.getDaysAsString(),
+                request.getCallScheduleEnabled());
+
+        elderlyRepository.save(elderly);
+
+        // 변경 이력 저장
+        CallScheduleHistory history = CallScheduleHistory.createDirectUpdate(
+                elderly,
+                changer,
+                previousTime, previousDays, previousEnabled,
+                request.getPreferredCallTime(), request.getDaysAsString(), request.getCallScheduleEnabled(),
+                request.getChangeReason());
+
+        historyRepository.save(history);
+
+        log.info("[CallSchedule] 직접 수정: elderlyId={}, changedBy={}, reason={}",
+                elderlyId, changer.getName(), request.getChangeReason());
+
+        return Response.from(elderly);
+    }
+
+    // ===== 변경 이력 조회 =====
+
+    /**
+     * 특정 어르신의 변경 이력 조회
+     */
+    public List<HistoryResponse> getHistoryByElderly(Long elderlyId) {
+        return historyRepository.findByElderlyIdOrderByCreatedAtDesc(elderlyId)
+                .stream()
+                .map(HistoryResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 특정 어르신의 변경 이력 조회 (페이징)
+     */
+    public Page<HistoryResponse> getHistoryByElderly(Long elderlyId, Pageable pageable) {
+        return historyRepository.findByElderlyId(elderlyId, pageable)
+                .map(HistoryResponse::from);
+    }
+
+    /**
+     * 상담사 담당 어르신들의 변경 이력 조회
+     */
+    public List<HistoryResponse> getHistoryByCounselor(Long counselorId) {
+        return historyRepository.findByCounselorAssigned(counselorId)
+                .stream()
+                .map(HistoryResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 상담사 담당 어르신들의 변경 이력 조회 (페이징)
+     */
+    public Page<HistoryResponse> getHistoryByCounselor(Long counselorId, Pageable pageable) {
+        return historyRepository.findByCounselorAssigned(counselorId, pageable)
+                .map(HistoryResponse::from);
+    }
+
+    /**
+     * 전체 변경 이력 조회 (관리자용)
+     */
+    public List<HistoryResponse> getAllHistory() {
+        return historyRepository.findAllWithDetails()
+                .stream()
+                .map(HistoryResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 전체 변경 이력 조회 (관리자용, 페이징)
+     */
+    public Page<HistoryResponse> getAllHistory(Pageable pageable) {
+        return historyRepository.findAllWithDetails(pageable)
+                .map(HistoryResponse::from);
     }
 
     // ===== CallBot용 =====
