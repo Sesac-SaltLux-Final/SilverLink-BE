@@ -63,7 +63,7 @@ public class PasskeyController {
         AuthService.AuthResult result = authService.issueForUser(userId, http);
 
         setRefreshCookie(res, result.sid() + "." + result.refreshToken());
-        return new AuthDtos.TokenResponse(result.accessToken(), result.ttl(), "USER");
+        return new AuthDtos.TokenResponse(result.accessToken(), result.ttl(), result.role().name());
     }
 
     private void setRefreshCookie(HttpServletResponse res, String value) {
