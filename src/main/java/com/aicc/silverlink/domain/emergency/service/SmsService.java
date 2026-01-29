@@ -33,14 +33,21 @@ public class SmsService {
     private final SmsLogRepository smsLogRepository;
     private final EmergencyAlertRecipientRepository recipientRepository;
 
-    private String fromNumber;
+    private String messagingServiceSid;
 
     @PostConstruct
     public void init() {
         Twilio.init(twilioProperties.getAccountSid(), twilioProperties.getAuthToken());
-        this.fromNumber = twilioProperties.getFromNumber();
-        log.info("[SmsService] Twilio 초기화 완료. From: {}", maskPhone(fromNumber));
+        this.messagingServiceSid = twilioProperties.getMessagingServiceSid();
+        log.info("[SmsService] Twilio 초기화 완료. MessagingServiceSid: {}",
+                messagingServiceSid != null && messagingServiceSid.length() > 6
+                        ? messagingServiceSid.substring(0, 6) + "****"
+                        : "UNKNOWN");
+
+        log.info("Messaging Service SID: {}", twilioProperties.getMessagingServiceSid());
     }
+
+
 
     // ========== 긴급 알림 SMS ==========
 
@@ -213,9 +220,10 @@ public class SmsService {
      */
     private void sendSms(String toPhone, String messageContent, SmsLog smsLog, EmergencyAlertRecipient recipient) {
         try {
+            // Twilio Messaging Service를 사용하여 SMS 발송
             Message message = Message.creator(
                     new PhoneNumber(toPhone),
-                    new PhoneNumber(fromNumber),
+                    messagingServiceSid,
                     messageContent).create();
 
             String messageSid = message.getSid();

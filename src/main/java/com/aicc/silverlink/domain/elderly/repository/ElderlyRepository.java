@@ -12,37 +12,55 @@ import java.util.Optional;
 @Repository
 public interface ElderlyRepository extends JpaRepository<Elderly, Long> {
 
-    @Query("SELECT e FROM Elderly e " +
-            "JOIN FETCH e.user " +
-            "JOIN FETCH e.administrativeDivision " +
-            "WHERE e.id = :id")
-    Optional<Elderly> findWithUserById(@Param("id") Long id);
+        @Query("SELECT e FROM Elderly e " +
+                        "JOIN FETCH e.user " +
+                        "JOIN FETCH e.administrativeDivision " +
+                        "WHERE e.id = :id")
+        Optional<Elderly> findWithUserById(@Param("id") Long id);
 
-    boolean existsById(Long id);
+        boolean existsById(Long id);
 
-    /**
-     * 행정구역 코드로 어르신 목록 조회
-     */
-    @Query("SELECT e FROM Elderly e " +
-            "JOIN FETCH e.user " +
-            "JOIN FETCH e.administrativeDivision ad " +
-            "WHERE ad.admCode = :admCode")
-    List<Elderly> findByAdmCode(@Param("admCode") Long admCode);
+        /**
+         * 행정구역 코드로 어르신 목록 조회
+         */
+        @Query("SELECT e FROM Elderly e " +
+                        "JOIN FETCH e.user " +
+                        "JOIN FETCH e.administrativeDivision ad " +
+                        "WHERE ad.admCode = :admCode")
+        List<Elderly> findByAdmCode(@Param("admCode") Long admCode);
 
-    /**
-     * ✅ 전체 어르신 목록 조회 (관리자용: User 및 행정구역 정보 포함)
-     */
-    @Query("SELECT e FROM Elderly e " +
-            "JOIN FETCH e.user " +
-            "JOIN FETCH e.administrativeDivision")
-    List<Elderly> findAllWithUserAndDivision();
+        /**
+         * ✅ 전체 어르신 목록 조회 (관리자용: User 및 행정구역 정보 포함)
+         */
+        @Query("SELECT e FROM Elderly e " +
+                        "JOIN FETCH e.user " +
+                        "JOIN FETCH e.administrativeDivision")
+        List<Elderly> findAllWithUserAndDivision();
 
-    /**
-     * ✅ 특정 시/도에 속한 어르신 목록 조회
-     */
-    @Query("SELECT e FROM Elderly e " +
-            "JOIN FETCH e.user " +
-            "JOIN FETCH e.administrativeDivision ad " +
-            "WHERE ad.sidoCode = :sidoCode")
-    List<Elderly> findBySidoCode(@Param("sidoCode") String sidoCode);
+        /**
+         * ✅ 특정 시/도에 속한 어르신 목록 조회
+         */
+        @Query("SELECT e FROM Elderly e " +
+                        "JOIN FETCH e.user " +
+                        "JOIN FETCH e.administrativeDivision ad " +
+                        "WHERE ad.sidoCode = :sidoCode")
+        List<Elderly> findBySidoCode(@Param("sidoCode") String sidoCode);
+
+        /**
+         * 현재 시간/요일에 통화 예정인 어르신 목록 (CallBot용)
+         */
+        @Query("SELECT e FROM Elderly e " +
+                        "JOIN FETCH e.user u " +
+                        "WHERE e.callScheduleEnabled = true " +
+                        "AND e.preferredCallTime = :time " +
+                        "AND e.preferredCallDays LIKE %:dayCode%")
+        List<Elderly> findDueForCall(@Param("time") String time, @Param("dayCode") String dayCode);
+
+        /**
+         * 통화 스케줄이 활성화된 전체 어르신 목록 조회
+         */
+        @Query("SELECT e FROM Elderly e " +
+                        "JOIN FETCH e.user " +
+                        "WHERE e.callScheduleEnabled = true")
+        List<Elderly> findAllWithCallScheduleEnabled();
 }

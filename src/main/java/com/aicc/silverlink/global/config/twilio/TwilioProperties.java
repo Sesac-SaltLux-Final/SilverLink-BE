@@ -9,11 +9,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * application.yml 예시:
  * twilio:
- *   account-sid: ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
- *   auth-token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
- *   verify-service-sid: VAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
- *   from-number: +821012345678
- *   sms-enabled: true
+ * account-sid: ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ * auth-token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ * verify-service-sid: VAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ * messaging-service-sid: MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ * sms-enabled: true
  */
 @Getter
 @Setter
@@ -36,10 +36,9 @@ public class TwilioProperties {
     private String verifyServiceSid;
 
     /**
-     * SMS 발송 번호 (E.164 형식: +821012345678)
-     * 일반 SMS 발송 시 사용
+     * Twilio Messaging Service SID (일반 SMS 발송용)
      */
-    private String fromNumber;
+    private String messagingServiceSid;
 
     /**
      * SMS 발송 활성화 여부

@@ -11,4 +11,7 @@ public interface NoticeAttachmentRepository extends JpaRepository<NoticeAttachme
 
     // 특정 공지사항에 속한 첨부파일 목록을 가져옵니다.
     List<NoticeAttachment> findAllByNoticeId(Long noticeId);
+
+    // 특정 공지사항의 첨부파일 모두 삭제
+    void deleteAllByNoticeId(Long noticeId);
 }

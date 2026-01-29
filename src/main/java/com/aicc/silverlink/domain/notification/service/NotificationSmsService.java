@@ -172,9 +172,10 @@ public class NotificationSmsService {
         try {
             String formattedPhone = formatPhoneNumber(phone);
 
+            // Twilio Messaging Service를 사용하여 SMS 발송
             Message message = Message.creator(
                     new PhoneNumber(formattedPhone),
-                    new PhoneNumber(getFromNumber()),
+                    getMessagingServiceSid(),
                     messageContent).create();
 
             smsLog.markSent(message.getSid());
@@ -238,10 +239,9 @@ public class NotificationSmsService {
     }
 
     /**
-     * 발송 번호
+     * Messaging Service SID
      */
-    private String getFromNumber() {
-        // TwilioProperties에 fromNumber 필드 추가 필요
-        return "+821012345678"; // 기본값, 실제 발급받은 번호로 변경
+    private String getMessagingServiceSid() {
+        return twilioProperties.getMessagingServiceSid();
     }
 }

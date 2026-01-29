@@ -49,6 +49,9 @@ class AdminNoticeControllerTest {
     @Mock
     private NoticeService noticeService;
 
+    @Mock
+    private com.aicc.silverlink.domain.admin.repository.AdminRepository adminRepository;
+
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
 
@@ -65,12 +68,13 @@ class AdminNoticeControllerTest {
                         new HandlerMethodArgumentResolver() {
                             @Override
                             public boolean supportsParameter(MethodParameter parameter) {
-                                return parameter.getParameterType().equals(Admin.class);
+                                return parameter.getParameterType().equals(Long.class) 
+                                    && parameter.hasParameterAnnotation(org.springframework.security.core.annotation.AuthenticationPrincipal.class);
                             }
 
                             @Override
                             public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-                                return mock(Admin.class);
+                                return 1L; // Mock admin user ID
                             }
                         }
                 )
@@ -113,6 +117,8 @@ class AdminNoticeControllerTest {
         request.setCategory(NoticeCategory.NOTICE); // 필수 값 추가
         request.setTargetMode(TargetMode.ALL); // 필수 값 추가
 
+        Admin mockAdmin = mock(Admin.class);
+        given(adminRepository.findByUserId(1L)).willReturn(java.util.Optional.of(mockAdmin));
         given(noticeService.createNotice(any(NoticeRequest.class), any(Admin.class))).willReturn(1L);
 
         // when & then
@@ -151,6 +157,8 @@ class AdminNoticeControllerTest {
     void deleteNotice() throws Exception {
         // given
         Long noticeId = 1L;
+        Admin mockAdmin = mock(Admin.class);
+        given(adminRepository.findByUserId(1L)).willReturn(java.util.Optional.of(mockAdmin));
 
         // when & then
         mockMvc.perform(delete("/api/admin/notices/{id}", noticeId)
