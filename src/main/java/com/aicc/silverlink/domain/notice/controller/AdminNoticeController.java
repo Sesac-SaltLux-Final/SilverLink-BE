@@ -5,6 +5,7 @@ import com.aicc.silverlink.domain.admin.repository.AdminRepository;
 import com.aicc.silverlink.domain.notice.dto.NoticeRequest;
 import com.aicc.silverlink.domain.notice.dto.NoticeResponse;
 import com.aicc.silverlink.domain.notice.service.NoticeService;
+import com.aicc.silverlink.domain.user.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -37,8 +38,8 @@ public class AdminNoticeController {
     @PostMapping
     public ResponseEntity<Long> createNotice(
             @RequestBody @Valid NoticeRequest request,
-            @AuthenticationPrincipal Long userId) {
-        Admin admin = adminRepository.findByUserId(userId)
+            @AuthenticationPrincipal User user) {
+        Admin admin = adminRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("관리자 정보를 찾을 수 없습니다."));
         Long noticeId = noticeService.createNotice(request, admin);
         return ResponseEntity.ok(noticeId);
@@ -54,8 +55,8 @@ public class AdminNoticeController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteNotice(
             @PathVariable Long id,
-            @AuthenticationPrincipal Long userId) {
-        Admin admin = adminRepository.findByUserId(userId)
+            @AuthenticationPrincipal User user) {
+        Admin admin = adminRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("관리자 정보를 찾을 수 없습니다."));
         noticeService.deleteNotice(id, admin);
         return ResponseEntity.ok().build();
@@ -66,8 +67,8 @@ public class AdminNoticeController {
     public ResponseEntity<Void> updateNotice(
             @PathVariable Long id,
             @RequestBody @Valid NoticeRequest request,
-            @AuthenticationPrincipal Long userId) {
-        Admin admin = adminRepository.findByUserId(userId)
+            @AuthenticationPrincipal User user) {
+        Admin admin = adminRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("관리자 정보를 찾을 수 없습니다."));
         noticeService.updateNotice(id, request, admin);
         return ResponseEntity.ok().build();

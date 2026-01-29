@@ -6,6 +6,7 @@ import com.aicc.silverlink.domain.notice.dto.NoticeResponse;
 import com.aicc.silverlink.domain.notice.entity.Notice.TargetMode;
 import com.aicc.silverlink.domain.notice.entity.NoticeCategory;
 import com.aicc.silverlink.domain.notice.service.NoticeService;
+import com.aicc.silverlink.domain.user.entity.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,12 +55,17 @@ class AdminNoticeControllerTest {
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
+    private User mockUser;
 
     @BeforeEach
     void setUp() {
         // ObjectMapper 설정 (LocalDateTime 지원)
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
+
+        // Mock User 생성
+        mockUser = mock(User.class);
+        given(mockUser.getId()).willReturn(1L);
 
         // MockMvc 설정 (AuthenticationPrincipal 처리 포함)
         mockMvc = MockMvcBuilders.standaloneSetup(adminNoticeController)
@@ -68,16 +74,17 @@ class AdminNoticeControllerTest {
                         new HandlerMethodArgumentResolver() {
                             @Override
                             public boolean supportsParameter(MethodParameter parameter) {
-                                return parameter.getParameterType().equals(Long.class) 
-                                    && parameter.hasParameterAnnotation(org.springframework.security.core.annotation.AuthenticationPrincipal.class);
+                                return parameter.getParameterType().equals(User.class)
+                                        && parameter.hasParameterAnnotation(
+                                                org.springframework.security.core.annotation.AuthenticationPrincipal.class);
                             }
 
                             @Override
-                            public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-                                return 1L; // Mock admin user ID
+                            public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
+                                    NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+                                return mockUser; // Return mock User object
                             }
-                        }
-                )
+                        })
                 .build();
     }
 
@@ -92,15 +99,16 @@ class AdminNoticeControllerTest {
                 .build();
 
         List<NoticeResponse> content = Collections.singletonList(response);
-        Page<NoticeResponse> pageResponse = new PageImpl<>(content, org.springframework.data.domain.PageRequest.of(0, 10), content.size());
+        Page<NoticeResponse> pageResponse = new PageImpl<>(content,
+                org.springframework.data.domain.PageRequest.of(0, 10), content.size());
 
         given(noticeService.getAllNoticesForAdmin(any(Pageable.class))).willReturn(pageResponse);
 
         // when & then
         mockMvc.perform(get("/api/admin/notices")
-                        .param("page", "0")
-                        .param("size", "10")
-                        .contentType(MediaType.APPLICATION_JSON))
+                .param("page", "0")
+                .param("size", "10")
+                .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].id").value(1))
@@ -123,8 +131,8 @@ class AdminNoticeControllerTest {
 
         // when & then
         mockMvc.perform(post("/api/admin/notices")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(content().string("1"));
@@ -145,7 +153,7 @@ class AdminNoticeControllerTest {
 
         // when & then
         mockMvc.perform(get("/api/admin/notices/{id}", noticeId)
-                        .contentType(MediaType.APPLICATION_JSON))
+                .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(noticeId))
@@ -162,7 +170,7 @@ class AdminNoticeControllerTest {
 
         // when & then
         mockMvc.perform(delete("/api/admin/notices/{id}", noticeId)
-                        .contentType(MediaType.APPLICATION_JSON))
+                .contentType(MediaType.APPLICATION_JSON))
                 .andDo(print())
                 .andExpect(status().isOk());
 
