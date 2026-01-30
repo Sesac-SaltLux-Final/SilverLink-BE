@@ -15,6 +15,7 @@ public class WelfareListResponse {
     private String jurMnofNm;
     private String category;
     private String servDgst;
+    private String rprsCtadr; // 문의처
 
     // Getter에서 가공 로직을 처리하면 ModelMapper를 써도 UI 대응이 가능합니다.
     public String getServDgst() {
