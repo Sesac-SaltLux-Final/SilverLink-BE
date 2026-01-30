@@ -67,7 +67,7 @@ security:
   jwt:
     secret: ${JWT_SECRET}
 
-# 공공데이터 API 설정 (변경 없음)
+# 공공데이터 API 설정 (변경 없음).
 api:
   welfare:
     service-key: ${API_SERVICE_KEY}
