@@ -20,6 +20,13 @@ spring:
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:password}
 
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 180000
+      max-lifetime: 300000   # 5분
+      leak-detection-threshold: 2000
+
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
@@ -60,7 +67,7 @@ security:
   jwt:
     secret: ${JWT_SECRET}
 
-# 공공데이터 API 설정 (변경 없음)
+# 공공데이터 API 설정 (변경 없음).
 api:
   welfare:
     service-key: ${API_SERVICE_KEY}
@@ -100,11 +107,10 @@ cloud:
 
 #cloud:
 #  aws:
-#    s3:
-#      enabled: true
-#      bucket: silverlink-files
 #    credentials:
-#      access-key: ${AWS_ACCESS_KEY}
-#      secret-key: ${AWS_SECRET_KEY}
+#      access-key: ${AWS_ACCESS_KEY_ID}      # 환경변수나 값을 직접 입력
+#      secret-key: ${AWS_SECRET_ACCESS_KEY}
 #    region:
 #      static: ap-northeast-2
+#    s3:
+#      bucket: silverlink-storage
