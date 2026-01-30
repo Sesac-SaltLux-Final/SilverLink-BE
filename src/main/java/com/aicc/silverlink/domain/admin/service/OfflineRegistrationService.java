@@ -64,6 +64,15 @@ public class OfflineRegistrationService {
 
         Elderly elderly = Elderly.create(user, div, req.birthDate(), req.gender());
         elderly.updateAddress(req.addressLine1(), req.addressLine2(), req.zipcode());
+
+        // 통화 스케줄 설정 (선택사항)
+        if (req.preferredCallTime() != null || req.preferredCallDays() != null) {
+            elderly.updateCallSchedule(
+                    req.preferredCallTime(),
+                    req.getCallDaysAsString(),
+                    req.callScheduleEnabled() != null ? req.callScheduleEnabled() : false);
+        }
+
         elderlyRepository.save(elderly);
 
         // 3. 로그 기록

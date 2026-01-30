@@ -21,8 +21,18 @@ public class AdminMemberDtos {
                         String addressLine2,
                         String zipcode,
 
-                        String memo // 오프라인 등록 메모
-        ) {
+                        String memo, // 오프라인 등록 메모
+
+                        // 통화 스케줄 (선택)
+                        String preferredCallTime, // "09:00" 형식
+                        java.util.List<String> preferredCallDays, // ["MON", "WED", "FRI"]
+                        Boolean callScheduleEnabled) {
+                public String getCallDaysAsString() {
+                        if (preferredCallDays == null || preferredCallDays.isEmpty()) {
+                                return null;
+                        }
+                        return String.join(",", preferredCallDays);
+                }
         }
 
         public record RegisterGuardianRequest(

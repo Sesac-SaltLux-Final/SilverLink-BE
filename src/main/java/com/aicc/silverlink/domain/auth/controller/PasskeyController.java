@@ -3,9 +3,10 @@ package com.aicc.silverlink.domain.auth.controller;
 import com.aicc.silverlink.domain.auth.dto.AuthDtos;
 import com.aicc.silverlink.domain.auth.service.AuthService;
 import com.aicc.silverlink.domain.auth.service.WebAuthnService;
+import com.aicc.silverlink.domain.user.entity.User;
+import com.aicc.silverlink.domain.user.repository.UserRepository;
 import com.aicc.silverlink.global.config.auth.AuthPolicyProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -30,6 +31,7 @@ public class PasskeyController {
     private final WebAuthnService webAuthnService;
     private final AuthService authService;
     private final AuthPolicyProperties props;
+    private final UserRepository userRepository;
 
     // ✅ 보안 강화: userId를 요청에서 받지 않고 인증 정보에서 추출
     public record StartRegReq() {
@@ -77,16 +79,30 @@ public class PasskeyController {
         return webAuthnService.startAssertion(req.loginId());
     }
 
+    /**
+     * Passkey 로그인 완료 - 토큰 + 사용자 프로필 반환 (추가 API 호출 불필요)
+     */
     @PostMapping("/login/verify")
-    public AuthDtos.TokenResponse finishLogin(
+    public AuthDtos.PasskeyLoginResponse finishLogin(
             @Valid @RequestBody FinishLoginReq req,
             HttpServletRequest http,
             HttpServletResponse res) {
         Long userId = webAuthnService.finishAssertion(req.requestId(), req.credentialJson());
         AuthService.AuthResult result = authService.issueForUser(userId, http);
 
+        // 사용자 정보 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
+
         setRefreshCookie(res, result.sid() + "." + result.refreshToken());
-        return new AuthDtos.TokenResponse(result.accessToken(), result.ttl(), "USER");
+
+        // 토큰 + 사용자 프로필 함께 반환
+        AuthDtos.UserProfile userProfile = new AuthDtos.UserProfile(
+                user.getId(),
+                user.getName(),
+                user.getPhone(),
+                user.getRole().name());
+        return new AuthDtos.PasskeyLoginResponse(result.accessToken(), result.ttl(), userProfile);
     }
 
     private void setRefreshCookie(HttpServletResponse res, String value) {

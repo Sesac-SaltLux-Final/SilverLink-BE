@@ -6,6 +6,7 @@ import com.aicc.silverlink.domain.notice.dto.NoticeResponse;
 import com.aicc.silverlink.domain.notice.entity.Notice.TargetMode;
 import com.aicc.silverlink.domain.notice.entity.NoticeCategory;
 import com.aicc.silverlink.domain.notice.service.NoticeService;
+import com.aicc.silverlink.domain.user.entity.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +35,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -43,129 +45,138 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class AdminNoticeControllerTest {
 
-    @InjectMocks
-    private AdminNoticeController adminNoticeController;
+        @InjectMocks
+        private AdminNoticeController adminNoticeController;
 
-    @Mock
-    private NoticeService noticeService;
+        @Mock
+        private NoticeService noticeService;
 
-    @Mock
-    private com.aicc.silverlink.domain.admin.repository.AdminRepository adminRepository;
+        @Mock
+        private com.aicc.silverlink.domain.admin.repository.AdminRepository adminRepository;
 
-    private MockMvc mockMvc;
-    private ObjectMapper objectMapper;
+        private MockMvc mockMvc;
+        private ObjectMapper objectMapper;
+        private User mockUser;
 
-    @BeforeEach
-    void setUp() {
-        // ObjectMapper 설정 (LocalDateTime 지원)
-        objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
+        @BeforeEach
+        void setUp() {
+                // ObjectMapper 설정 (LocalDateTime 지원)
+                objectMapper = new ObjectMapper();
+                objectMapper.registerModule(new JavaTimeModule());
 
-        // MockMvc 설정 (AuthenticationPrincipal 처리 포함)
-        mockMvc = MockMvcBuilders.standaloneSetup(adminNoticeController)
-                .setCustomArgumentResolvers(
-                        new PageableHandlerMethodArgumentResolver(),
-                        new HandlerMethodArgumentResolver() {
-                            @Override
-                            public boolean supportsParameter(MethodParameter parameter) {
-                                return parameter.getParameterType().equals(Long.class) 
-                                    && parameter.hasParameterAnnotation(org.springframework.security.core.annotation.AuthenticationPrincipal.class);
-                            }
+                // Mock User 생성
+                mockUser = mock(User.class);
+                lenient().when(mockUser.getId()).thenReturn(1L);
 
-                            @Override
-                            public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-                                return 1L; // Mock admin user ID
-                            }
-                        }
-                )
-                .build();
-    }
+                // MockMvc 설정 (AuthenticationPrincipal 처리 포함)
+                mockMvc = MockMvcBuilders.standaloneSetup(adminNoticeController)
+                                .setCustomArgumentResolvers(
+                                                new PageableHandlerMethodArgumentResolver(),
+                                                new HandlerMethodArgumentResolver() {
+                                                        @Override
+                                                        public boolean supportsParameter(MethodParameter parameter) {
+                                                                return parameter.getParameterType().equals(User.class)
+                                                                                && parameter.hasParameterAnnotation(
+                                                                                                org.springframework.security.core.annotation.AuthenticationPrincipal.class);
+                                                        }
 
-    @Test
-    @DisplayName("관리자 공지사항 목록 조회 테스트")
-    void getAllNotices() throws Exception {
-        // given
-        NoticeResponse response = NoticeResponse.builder()
-                .id(1L)
-                .title("Admin Notice")
-                .content("Content")
-                .build();
+                                                        @Override
+                                                        public Object resolveArgument(MethodParameter parameter,
+                                                                        ModelAndViewContainer mavContainer,
+                                                                        NativeWebRequest webRequest,
+                                                                        WebDataBinderFactory binderFactory) {
+                                                                return mockUser; // Return mock User object
+                                                        }
+                                                })
+                                .build();
+        }
 
-        List<NoticeResponse> content = Collections.singletonList(response);
-        Page<NoticeResponse> pageResponse = new PageImpl<>(content, org.springframework.data.domain.PageRequest.of(0, 10), content.size());
+        @Test
+        @DisplayName("관리자 공지사항 목록 조회 테스트")
+        void getAllNotices() throws Exception {
+                // given
+                NoticeResponse response = NoticeResponse.builder()
+                                .id(1L)
+                                .title("Admin Notice")
+                                .content("Content")
+                                .build();
 
-        given(noticeService.getAllNoticesForAdmin(any(Pageable.class))).willReturn(pageResponse);
+                List<NoticeResponse> content = Collections.singletonList(response);
+                Page<NoticeResponse> pageResponse = new PageImpl<>(content,
+                                org.springframework.data.domain.PageRequest.of(0, 10), content.size());
 
-        // when & then
-        mockMvc.perform(get("/api/admin/notices")
-                        .param("page", "0")
-                        .param("size", "10")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].id").value(1))
-                .andExpect(jsonPath("$.content[0].title").value("Admin Notice"));
-    }
+                given(noticeService.getAllNoticesForAdmin(any(Pageable.class))).willReturn(pageResponse);
 
-    @Test
-    @DisplayName("공지사항 등록 테스트")
-    void createNotice() throws Exception {
-        // given
-        NoticeRequest request = new NoticeRequest();
-        request.setTitle("New Notice");
-        request.setContent("New Content");
-        request.setCategory(NoticeCategory.NOTICE); // 필수 값 추가
-        request.setTargetMode(TargetMode.ALL); // 필수 값 추가
+                // when & then
+                mockMvc.perform(get("/api/admin/notices")
+                                .param("page", "0")
+                                .param("size", "10")
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andDo(print())
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.content[0].id").value(1))
+                                .andExpect(jsonPath("$.content[0].title").value("Admin Notice"));
+        }
 
-        Admin mockAdmin = mock(Admin.class);
-        given(adminRepository.findByUserId(1L)).willReturn(java.util.Optional.of(mockAdmin));
-        given(noticeService.createNotice(any(NoticeRequest.class), any(Admin.class))).willReturn(1L);
+        @Test
+        @DisplayName("공지사항 등록 테스트")
+        void createNotice() throws Exception {
+                // given
+                NoticeRequest request = new NoticeRequest();
+                request.setTitle("New Notice");
+                request.setContent("New Content");
+                request.setCategory(NoticeCategory.NOTICE); // 필수 값 추가
+                request.setTargetMode(TargetMode.ALL); // 필수 값 추가
 
-        // when & then
-        mockMvc.perform(post("/api/admin/notices")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(content().string("1"));
-    }
+                Admin mockAdmin = mock(Admin.class);
+                given(adminRepository.findByUserId(1L)).willReturn(java.util.Optional.of(mockAdmin));
+                given(noticeService.createNotice(any(NoticeRequest.class), any(Admin.class))).willReturn(1L);
 
-    @Test
-    @DisplayName("공지사항 상세 조회 테스트")
-    void getNotice() throws Exception {
-        // given
-        Long noticeId = 1L;
-        NoticeResponse response = NoticeResponse.builder()
-                .id(noticeId)
-                .title("Detail Notice")
-                .content("Detail Content")
-                .build();
+                // when & then
+                mockMvc.perform(post("/api/admin/notices")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request)))
+                                .andDo(print())
+                                .andExpect(status().isOk())
+                                .andExpect(content().string("1"));
+        }
 
-        given(noticeService.getNoticeDetail(eq(noticeId), any())).willReturn(response);
+        @Test
+        @DisplayName("공지사항 상세 조회 테스트")
+        void getNotice() throws Exception {
+                // given
+                Long noticeId = 1L;
+                NoticeResponse response = NoticeResponse.builder()
+                                .id(noticeId)
+                                .title("Detail Notice")
+                                .content("Detail Content")
+                                .build();
 
-        // when & then
-        mockMvc.perform(get("/api/admin/notices/{id}", noticeId)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(noticeId))
-                .andExpect(jsonPath("$.title").value("Detail Notice"));
-    }
+                given(noticeService.getNoticeDetail(eq(noticeId), any())).willReturn(response);
 
-    @Test
-    @DisplayName("공지사항 삭제 테스트")
-    void deleteNotice() throws Exception {
-        // given
-        Long noticeId = 1L;
-        Admin mockAdmin = mock(Admin.class);
-        given(adminRepository.findByUserId(1L)).willReturn(java.util.Optional.of(mockAdmin));
+                // when & then
+                mockMvc.perform(get("/api/admin/notices/{id}", noticeId)
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andDo(print())
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.id").value(noticeId))
+                                .andExpect(jsonPath("$.title").value("Detail Notice"));
+        }
 
-        // when & then
-        mockMvc.perform(delete("/api/admin/notices/{id}", noticeId)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andDo(print())
-                .andExpect(status().isOk());
+        @Test
+        @DisplayName("공지사항 삭제 테스트")
+        void deleteNotice() throws Exception {
+                // given
+                Long noticeId = 1L;
+                Admin mockAdmin = mock(Admin.class);
+                given(adminRepository.findByUserId(1L)).willReturn(java.util.Optional.of(mockAdmin));
 
-        verify(noticeService).deleteNotice(eq(noticeId), any(Admin.class));
-    }
+                // when & then
+                mockMvc.perform(delete("/api/admin/notices/{id}", noticeId)
+                                .contentType(MediaType.APPLICATION_JSON))
+                                .andDo(print())
+                                .andExpect(status().isOk());
+
+                verify(noticeService).deleteNotice(eq(noticeId), any(Admin.class));
+        }
 }
