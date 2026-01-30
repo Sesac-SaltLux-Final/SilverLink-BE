@@ -1,7 +1,6 @@
 package com.aicc.silverlink.domain.counseling.controller;
 
 import com.aicc.silverlink.domain.counseling.dto.CounselingRecordRequest;
-import com.aicc.silverlink.domain.counseling.dto.CounselingRecordRequest;
 import com.aicc.silverlink.domain.counseling.dto.CounselingRecordResponse;
 import com.aicc.silverlink.domain.counseling.service.CounselingRecordService;
 import io.swagger.v3.oas.annotations.tags.Tag;
