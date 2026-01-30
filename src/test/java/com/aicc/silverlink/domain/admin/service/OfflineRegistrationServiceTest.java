@@ -130,6 +130,7 @@ class OfflineRegistrationServiceTest {
         return new AdminMemberDtos.RegisterElderlyRequest(
                 "elder1", "pass", "Kim", "010-1111-2222", null,
                 1L, LocalDate.of(1950, 1, 1), Elderly.Gender.M,
-                "Addr1", "Addr2", "12345", "Memo");
+                "Addr1", "Addr2", "12345", "Memo",
+                "09:00", java.util.List.of("MON", "WED", "FRI"), true);
     }
 }

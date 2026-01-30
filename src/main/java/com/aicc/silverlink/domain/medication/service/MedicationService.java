@@ -148,12 +148,17 @@ public class MedicationService {
 
     private List<MedicationScheduleTime> createScheduleTimes(MedicationSchedule schedule, List<String> times) {
         short seq = 1;
-        return times.stream()
-                .map(timeStr -> MedicationScheduleTime.builder()
-                        .schedule(schedule)
-                        .doseSeq(seq)
-                        .intakeTime(TIME_MAP.getOrDefault(timeStr, LocalTime.of(8, 0)))
-                        .build())
-                .collect(Collectors.toList());
+        List<MedicationScheduleTime> scheduleTimes = new java.util.ArrayList<>();
+        
+        for (String timeStr : times) {
+            MedicationScheduleTime scheduleTime = MedicationScheduleTime.builder()
+                    .schedule(schedule)
+                    .doseSeq(seq++)  // seq를 증가시킴
+                    .intakeTime(TIME_MAP.getOrDefault(timeStr, LocalTime.of(8, 0)))
+                    .build();
+            scheduleTimes.add(scheduleTime);
+        }
+        
+        return scheduleTimes;
     }
 }

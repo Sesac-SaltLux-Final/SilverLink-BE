@@ -22,11 +22,20 @@ public class SessionService {
     private final StringRedisTemplate redis;
     private final AuthPolicyProperties props;
 
-    private static String userSidKey(Long userId) { return "user:" + userId + ":sid"; }
-    private static String sessKey(String sid) { return "sess:" + sid; }
+    private static String userSidKey(Long userId) {
+        return "user:" + userId + ":sid";
+    }
 
-    public record SessionIssue(String sid, String refreshToken) {}
+    private static String sessKey(String sid) {
+        return "sess:" + sid;
+    }
 
+    private static String invalidatedKey(String sid) {
+        return "sess:invalidated:" + sid;
+    }
+
+    public record SessionIssue(String sid, String refreshToken) {
+    }
 
     public SessionIssue issueSession(Long userId, Role role) {
 
@@ -53,20 +62,22 @@ public class SessionService {
                 "userId", String.valueOf(userId),
                 "role", role.name(),
                 "refreshHash", sha256(refresh),
-                "lastSeen", String.valueOf(now)
-        );
-        redis.opsForHash().putAll(sessionKey, sessionData);  // putAll을 사용하여 네트워크 왕복 횟수 줄이기
+                "lastSeen", String.valueOf(now));
+        redis.opsForHash().putAll(sessionKey, sessionData); // putAll을 사용하여 네트워크 왕복 횟수 줄이기
 
-        //  TTL 설정 (두 키 모두 설정해야 함)
+        // TTL 설정 (두 키 모두 설정해야 함)
         redis.expire(sessionKey, idleSeconds, TimeUnit.SECONDS);
         redis.opsForValue().set(userKey, sid, idleSeconds, TimeUnit.SECONDS);
 
         return new SessionIssue(sid, refresh);
     }
 
-
-    public Map<String, String> getSessionMeta(String sid){
-        if (Boolean.FALSE.equals(redis.hasKey(sessKey(sid)))){
+    public Map<String, String> getSessionMeta(String sid) {
+        if (Boolean.FALSE.equals(redis.hasKey(sessKey(sid)))) {
+            // 세션이 강제 종료된 것인지 확인 (다른 기기에서 로그인)
+            if (wasInvalidated(sid)) {
+                throw new IllegalStateException("SESSION_INVALIDATED");
+            }
             throw new IllegalStateException("SESSION_EXPIRED");
         }
 
@@ -74,12 +85,13 @@ public class SessionService {
 
     }
 
-
     public void touch(String sid) {
-        if (sid == null) return;
+        if (sid == null)
+            return;
         String sessionKey = sessKey(sid);
 
-        if (Boolean.FALSE.equals(redis.hasKey(sessionKey))) return;
+        if (Boolean.FALSE.equals(redis.hasKey(sessionKey)))
+            return;
 
         long idleSeconds = props.getIdleTtlSeconds();
 
@@ -93,16 +105,16 @@ public class SessionService {
         }
     }
 
-
     public boolean isActive(String sid, Long userId) {
-        if (sid == null) return false;
+        if (sid == null)
+            return false;
 
-        if (Boolean.FALSE.equals(redis.hasKey(sessKey(sid)))) return false;
+        if (Boolean.FALSE.equals(redis.hasKey(sessKey(sid))))
+            return false;
 
         String mappedSid = redis.opsForValue().get(userSidKey(userId));
         return sid.equals(mappedSid);
     }
-
 
     public String rotateRefresh(String sid, String presentedRefresh) {
         String sessionKey = sessKey(sid);
@@ -118,7 +130,8 @@ public class SessionService {
             throw new IllegalStateException("REFRESH_REUSED"); // GlobalExceptionHandler에서 401/403 처리
         }
 
-        String newRefresh = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
+        String newRefresh = UUID.randomUUID().toString().replace("-", "")
+                + UUID.randomUUID().toString().replace("-", "");
         redis.opsForHash().put(sessionKey, "refreshHash", sha256(newRefresh));
 
         touch(sid);
@@ -127,10 +140,14 @@ public class SessionService {
     }
 
     public void invalidateBySid(String sid) {
-        if (sid == null) return;
+        if (sid == null)
+            return;
         String sessionKey = sessKey(sid);
 
         String userId = (String) redis.opsForHash().get(sessionKey, "userId");
+
+        // 세션 강제 종료 마킹 (10분간 유지) - 다른 기기에서 로그인 시 기존 세션 종료 감지용
+        redis.opsForValue().set(invalidatedKey(sid), "true", 10, TimeUnit.MINUTES);
 
         redis.delete(sessionKey);
 
@@ -140,12 +157,19 @@ public class SessionService {
     }
 
     /**
+     * 세션이 강제 종료되었는지 확인
+     */
+    public boolean wasInvalidated(String sid) {
+        return Boolean.TRUE.equals(redis.hasKey(invalidatedKey(sid)));
+    }
+
+    /**
      * 사용자의 기존 세션 존재 여부 확인
      */
     public String hasExistingSession(Long userId) {
         String userKey = userSidKey(userId);
         String existingSid = redis.opsForValue().get(userKey);
-        
+
         if (existingSid != null && Boolean.TRUE.equals(redis.hasKey(sessKey(existingSid)))) {
             return existingSid;
         }
@@ -185,13 +209,13 @@ public class SessionService {
         return Long.valueOf(userId);
     }
 
-
     private static String sha256(String raw) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] digest = md.digest(raw.getBytes(StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder();
-            for (byte b : digest) sb.append(String.format("%02x", b));
+            for (byte b : digest)
+                sb.append(String.format("%02x", b));
             return sb.toString();
         } catch (Exception e) {
             throw new RuntimeException("Hashing failed", e);

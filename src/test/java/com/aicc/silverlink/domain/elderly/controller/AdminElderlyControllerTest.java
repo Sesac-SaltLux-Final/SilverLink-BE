@@ -38,9 +38,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("ci")
 class AdminElderlyControllerTest {
 
-    @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
-    @MockitoBean private ElderlyService elderlyService;
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @MockitoBean
+    private ElderlyService elderlyService;
 
     private ElderlySummaryResponse createSummaryResponse(Long id, String name) {
         return new ElderlySummaryResponse(id, name, "01011112222", 11110L, "서울", "종로", "동", "전체주소",
@@ -53,7 +56,7 @@ class AdminElderlyControllerTest {
         given(elderlyService.getAllElderlyForAdmin()).willReturn(List.of(createSummaryResponse(10L, "이노인")));
 
         mockMvc.perform(get("/api/admin/elderly")
-                        .with(user("1").roles("ADMIN")))
+                .with(user("1").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.size()").value(1));
     }
@@ -71,7 +74,7 @@ class AdminElderlyControllerTest {
         given(elderlyService.getElderlyDetailForAdmin(eId)).willReturn(response);
 
         mockMvc.perform(get("/api/admin/elderly/{elderlyUserId}/detail", eId)
-                        .with(user("1").roles("ADMIN")))
+                .with(user("1").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.elderly.name").value("이노인"));
     }
@@ -79,14 +82,15 @@ class AdminElderlyControllerTest {
     @Test
     @DisplayName("성공: 관리자가 새로운 어르신을 등록한다")
     void create() throws Exception {
-        ElderlyCreateRequest req = new ElderlyCreateRequest(10L, 11110L, LocalDate.of(1950, 1, 1), Elderly.Gender.M, "주소1", "주소2", "123");
+        ElderlyCreateRequest req = new ElderlyCreateRequest(10L, 11110L, LocalDate.of(1950, 1, 1), Elderly.Gender.M,
+                "주소1", "주소2", "123", null, null, null);
         given(elderlyService.createElderly(any())).willReturn(createSummaryResponse(10L, "이노인"));
 
         mockMvc.perform(post("/api/admin/elderly")
-                        .with(user("1").roles("ADMIN"))
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
+                .with(user("1").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk());
     }
 
@@ -100,10 +104,10 @@ class AdminElderlyControllerTest {
         given(elderlyService.upsertHealthInfo(any(), eq(eId), any())).willReturn(response);
 
         mockMvc.perform(patch("/api/admin/elderly/{elderlyUserId}/health", eId)
-                        .with(user("1").roles("ADMIN"))
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
+                .with(user("1").roles("ADMIN"))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk());
     }
 
@@ -111,7 +115,7 @@ class AdminElderlyControllerTest {
     @DisplayName("실패: 관리자 권한이 없는 사용자가 접근하면 403 에러가 발생한다")
     void listAll_Fail_Forbidden() throws Exception {
         mockMvc.perform(get("/api/admin/elderly")
-                        .with(user("2").roles("COUNSELOR")))
+                .with(user("2").roles("COUNSELOR")))
                 .andExpect(status().isForbidden());
     }
 }

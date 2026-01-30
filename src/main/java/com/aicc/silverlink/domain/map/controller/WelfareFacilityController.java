@@ -22,7 +22,7 @@ public class WelfareFacilityController {
 
     /**
      * 현재 위치 반경 내 사회복지시설 목록을 조회합니다.
-     * 
+     *
      * @param latitude  사용자 현재 위도
      * @param longitude 사용자 현재 경도
      * @param radius    검색 반경 (km, 기본값 1km)

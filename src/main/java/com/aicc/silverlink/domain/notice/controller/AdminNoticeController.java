@@ -1,9 +1,11 @@
 package com.aicc.silverlink.domain.notice.controller;
 
 import com.aicc.silverlink.domain.admin.entity.Admin;
+import com.aicc.silverlink.domain.admin.repository.AdminRepository;
 import com.aicc.silverlink.domain.notice.dto.NoticeRequest;
 import com.aicc.silverlink.domain.notice.dto.NoticeResponse;
 import com.aicc.silverlink.domain.notice.service.NoticeService;
+import com.aicc.silverlink.domain.user.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,6 +25,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class AdminNoticeController {
 
     private final NoticeService noticeService;
+    private final AdminRepository adminRepository;
 
     // 공지사항 목록 조회
     @GetMapping
@@ -34,8 +37,10 @@ public class AdminNoticeController {
     // 공지사항 등록
     @PostMapping
     public ResponseEntity<Long> createNotice(
-            @RequestBody @Valid NoticeRequest request, // @Valid 추가
-            @AuthenticationPrincipal Admin admin) { // Spring Security 사용 가정
+            @RequestBody @Valid NoticeRequest request,
+            @AuthenticationPrincipal User user) {
+        Admin admin = adminRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("관리자 정보를 찾을 수 없습니다."));
         Long noticeId = noticeService.createNotice(request, admin);
         return ResponseEntity.ok(noticeId);
     }
@@ -50,10 +55,22 @@ public class AdminNoticeController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteNotice(
             @PathVariable Long id,
-            @AuthenticationPrincipal Admin admin) { // Admin 파라미터 추가
+            @AuthenticationPrincipal User user) {
+        Admin admin = adminRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("관리자 정보를 찾을 수 없습니다."));
         noticeService.deleteNotice(id, admin);
         return ResponseEntity.ok().build();
     }
 
-    // 수정 API는 create와 유사하므로 생략하거나 추가 가능
+    // 공지사항 수정
+    @PutMapping("/{id}")
+    public ResponseEntity<Void> updateNotice(
+            @PathVariable Long id,
+            @RequestBody @Valid NoticeRequest request,
+            @AuthenticationPrincipal User user) {
+        Admin admin = adminRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("관리자 정보를 찾을 수 없습니다."));
+        noticeService.updateNotice(id, request, admin);
+        return ResponseEntity.ok().build();
+    }
 }

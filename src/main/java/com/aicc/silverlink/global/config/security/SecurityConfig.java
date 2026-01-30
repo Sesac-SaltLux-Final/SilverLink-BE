@@ -49,7 +49,10 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/auth/**",
+                                "/api/auth/login/**",
+                                "/api/auth/passkey/login/**",
+                                "/api/auth/refresh",
+                                "/api/auth/phone/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
@@ -61,12 +64,15 @@ public class SecurityConfig {
                                 "/", // 주의: requestMatchers("/")는 “정확히 루트만” 열어주는 거고, /**는 아님.
                                 "/health",
                                 "/error",
-                                "/api/data/faqs/all")
+                                "/api/data/faqs/all",
+                                 "/api/data/inquiries/answered"
+                                    )
                         .permitAll()
 
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/admins/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/policies").hasRole("ADMIN")
+                        .requestMatchers("/api/auth/passkey/register/**").authenticated()
 
                         // 각 컨트롤러에서 @PreAuthorize로 권한을 세분화하므로 여기서는 인증만 요구
                         .anyRequest().authenticated())

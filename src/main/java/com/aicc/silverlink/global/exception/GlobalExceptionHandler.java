@@ -88,6 +88,12 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED) // 401
                     .body(Map.of("error", code, "message", message));
         }
+        
+        // NO_TOKEN 예외 처리 추가
+        if ("NO_TOKEN".equals(code)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST) // 400
+                    .body(Map.of("error", code, "message", "토큰이 없습니다."));
+        }
 
         log.warn("IllegalArgumentException: code={}, message={}", code, message);
 
@@ -95,26 +101,22 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", code, "message", message));
     }
 
-
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<String> handleMethodNotSupported(
             HttpRequestMethodNotSupportedException e,
-            HttpServletRequest req
-    ) {
+            HttpServletRequest req) {
         log.warn("MethodNotSupported: {} {} | supported={}",
                 req.getMethod(), req.getRequestURI(), e.getSupportedHttpMethods());
 
         String message = String.format(
                 "HTTP 메서드가 잘못되었습니다. 사용 불가: %s\n허용된 메서드: %s",
                 req.getMethod(),
-                e.getSupportedHttpMethods()
-        );
+                e.getSupportedHttpMethods());
 
         return ResponseEntity
-                .status(HttpStatus.METHOD_NOT_ALLOWED)  // 405
+                .status(HttpStatus.METHOD_NOT_ALLOWED) // 405
                 .body(message);
     }
-
 
     /**
      * 오류 코드를 사용자 친화적인 메시지로 변환
@@ -258,7 +260,7 @@ public class GlobalExceptionHandler {
         log.warn("IllegalStateException: code={}, message={}", code, message);
 
         // 일부 상태 오류는 401로 처리
-        if ("SESSION_EXPIRED".equals(code) || "REFRESH_REUSED".equals(code)) {
+        if ("SESSION_EXPIRED".equals(code) || "REFRESH_REUSED".equals(code) || "SESSION_INVALIDATED".equals(code)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", code, "message", message));
         }
@@ -278,6 +280,7 @@ public class GlobalExceptionHandler {
         return switch (code) {
             case "ALREADY_LOGGED_IN" -> "이미 다른 기기에서 로그인되어 있습니다.";
             case "SESSION_EXPIRED" -> "세션이 만료되었습니다. 다시 로그인해주세요.";
+            case "SESSION_INVALIDATED" -> "다른 기기에서 로그인하여 현재 세션이 종료되었습니다.";
             case "REFRESH_REUSED" -> "비정상적인 세션 사용이 감지되었습니다. 다시 로그인해주세요.";
             case "TOO_MANY_ATTEMPS" -> "로그인 시도 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.";
             case "USER_INACTIVE" -> "비활성화된 계정입니다. 관리자에게 문의해주세요.";
