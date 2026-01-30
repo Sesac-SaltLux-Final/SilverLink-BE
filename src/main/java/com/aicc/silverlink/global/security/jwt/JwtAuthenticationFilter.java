@@ -2,6 +2,7 @@ package com.aicc.silverlink.global.security.jwt;
 
 import com.aicc.silverlink.domain.session.service.SessionService;
 import com.aicc.silverlink.domain.user.entity.Role;
+import com.aicc.silverlink.global.exception.UnauthorizedException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
@@ -53,10 +54,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Role role = Role.valueOf(roleStr);
 
                 if (!sessionService.isActive(sid, userId)) {
-                    logger.warn("Session expired or invalid for sid: {}");
+                    logger.warn("Session expired or invalid for sid: " + sid);
 
-                    filterChain.doFilter(request, response);
-                    return;
+                    SecurityContextHolder.clearContext();
+                    throw new UnauthorizedException("세션이 만료되었습니다.");
                 }
 
                 // idle 연장

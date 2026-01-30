@@ -38,11 +38,10 @@ public class AccessRequestController {
      * POST /api/access-requests
      */
     @PostMapping
-    @PreAuthorize("hasRole('GUARDIAN')")
+    @PreAuthorize("hasAnyRole('GUARDIAN', 'COUNSELOR')")
     @Operation(summary = "접근 권한 요청", description = "보호자가 어르신의 민감정보 열람 권한을 요청합니다.")
     public ResponseEntity<AccessRequestResponse> createRequest(
-            @Valid @RequestBody CreateRequest request
-    ) {
+            @Valid @RequestBody CreateRequest request) {
         Long guardianUserId = SecurityUtils.currentUserId();
         log.info("POST /api/access-requests - 접근 권한 요청 (guardianId: {})", guardianUserId);
 
@@ -55,7 +54,7 @@ public class AccessRequestController {
      * GET /api/access-requests/my
      */
     @GetMapping("/my")
-    @PreAuthorize("hasRole('GUARDIAN')")
+    @PreAuthorize("hasAnyRole('GUARDIAN', 'COUNSELOR')")
     @Operation(summary = "내 요청 목록 조회", description = "보호자가 자신이 신청한 접근 권한 요청 목록을 조회합니다.")
     public ResponseEntity<List<AccessRequestSummary>> getMyRequests() {
         Long guardianUserId = SecurityUtils.currentUserId();
@@ -70,7 +69,7 @@ public class AccessRequestController {
      * DELETE /api/access-requests/{requestId}
      */
     @DeleteMapping("/{requestId}")
-    @PreAuthorize("hasRole('GUARDIAN')")
+    @PreAuthorize("hasAnyRole('GUARDIAN', 'COUNSELOR')")
     @Operation(summary = "요청 취소", description = "보호자가 대기 중인 요청을 취소합니다.")
     public ResponseEntity<Void> cancelRequest(@PathVariable Long requestId) {
         Long guardianUserId = SecurityUtils.currentUserId();
@@ -144,8 +143,7 @@ public class AccessRequestController {
      */
     @PostMapping("/{requestId}/verify-documents")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "서류 확인 완료",
-            description = "관리자가 동의서와 가족관계증명서 확인을 완료했음을 표시합니다.")
+    @Operation(summary = "서류 확인 완료", description = "관리자가 동의서와 가족관계증명서 확인을 완료했음을 표시합니다.")
     public ResponseEntity<AccessRequestResponse> verifyDocuments(@PathVariable Long requestId) {
         Long adminUserId = SecurityUtils.currentUserId();
         log.info("POST /api/access-requests/{}/verify-documents - 서류 확인 (adminId: {})", requestId, adminUserId);
@@ -161,12 +159,10 @@ public class AccessRequestController {
      */
     @PostMapping("/{requestId}/approve")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "요청 승인",
-            description = "서류 확인이 완료된 요청을 승인합니다. 승인 시 보호자는 해당 범위의 민감정보를 열람할 수 있습니다.")
+    @Operation(summary = "요청 승인", description = "서류 확인이 완료된 요청을 승인합니다. 승인 시 보호자는 해당 범위의 민감정보를 열람할 수 있습니다.")
     public ResponseEntity<AccessRequestResponse> approveRequest(
             @PathVariable Long requestId,
-            @RequestBody(required = false) ApproveRequest request
-    ) {
+            @RequestBody(required = false) ApproveRequest request) {
         Long adminUserId = SecurityUtils.currentUserId();
         log.info("POST /api/access-requests/{}/approve - 요청 승인 (adminId: {})", requestId, adminUserId);
 
@@ -187,8 +183,7 @@ public class AccessRequestController {
     @Operation(summary = "요청 거절", description = "접근 권한 요청을 거절합니다. 거절 사유는 필수입니다.")
     public ResponseEntity<AccessRequestResponse> rejectRequest(
             @PathVariable Long requestId,
-            @Valid @RequestBody RejectRequest request
-    ) {
+            @Valid @RequestBody RejectRequest request) {
         Long adminUserId = SecurityUtils.currentUserId();
         log.info("POST /api/access-requests/{}/reject - 요청 거절 (adminId: {})", requestId, adminUserId);
 
@@ -206,8 +201,7 @@ public class AccessRequestController {
     @Operation(summary = "권한 철회 (관리자)", description = "승인된 접근 권한을 철회합니다.")
     public ResponseEntity<AccessRequestResponse> revokeAccess(
             @PathVariable Long requestId,
-            @RequestBody(required = false) RevokeRequest request
-    ) {
+            @RequestBody(required = false) RevokeRequest request) {
         Long adminUserId = SecurityUtils.currentUserId();
         log.info("POST /api/access-requests/{}/revoke - 권한 철회 (adminId: {})", requestId, adminUserId);
 
@@ -245,8 +239,7 @@ public class AccessRequestController {
     @Operation(summary = "권한 철회 (어르신)", description = "어르신이 승인된 접근 권한을 직접 철회합니다.")
     public ResponseEntity<AccessRequestResponse> revokeAccessByElderly(
             @PathVariable Long requestId,
-            @RequestBody(required = false) RevokeRequest request
-    ) {
+            @RequestBody(required = false) RevokeRequest request) {
         Long elderlyUserId = SecurityUtils.currentUserId();
         log.info("POST /api/access-requests/{}/revoke-by-elderly - 권한 철회 (elderlyId: {})", requestId, elderlyUserId);
 
@@ -269,8 +262,7 @@ public class AccessRequestController {
     @Operation(summary = "접근 권한 확인", description = "특정 어르신의 특정 범위 민감정보에 대한 접근 권한을 확인합니다.")
     public ResponseEntity<AccessCheckResult> checkAccess(
             @RequestParam Long elderlyUserId,
-            @RequestParam AccessScope scope
-    ) {
+            @RequestParam AccessScope scope) {
         Long requesterId = SecurityUtils.currentUserId();
         log.info("GET /api/access-requests/check - 권한 확인 (requesterId: {}, elderlyId: {}, scope: {})",
                 requesterId, elderlyUserId, scope);

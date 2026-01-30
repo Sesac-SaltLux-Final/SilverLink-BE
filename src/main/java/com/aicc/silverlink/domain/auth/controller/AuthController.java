@@ -32,7 +32,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public AuthDtos.TokenResponse login(@RequestBody AuthDtos.LoginRequest req, HttpServletResponse res,
-                                        HttpServletRequest request) {
+            HttpServletRequest request) {
 
         AuthService.AuthResult result = authService.login(req);
 
@@ -44,7 +44,7 @@ public class AuthController {
 
     @PostMapping("/login/phone")
     public AuthDtos.TokenResponse loginWithPhone(@RequestBody AuthDtos.PhoneLoginRequest req, HttpServletResponse res,
-                                                 HttpServletRequest request) {
+            HttpServletRequest request) {
         AuthService.AuthResult result = authService.loginWithPhone(req.phone(), req.proofToken());
 
         String cookieValue = result.sid() + "." + result.refreshToken();

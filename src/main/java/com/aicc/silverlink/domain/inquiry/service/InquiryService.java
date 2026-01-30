@@ -49,22 +49,14 @@ public class InquiryService {
 
         } else if (user.getRole() == Role.COUNSELOR) {
             // 상담사: 배정된(ACTIVE) 어르신의 문의만 조회
-            // TODO: AssignmentRepository(팀원 기능) 연동 필요
-            /*
-             * List<Long> elderlyIds =
-             * assignmentRepository.findAllByCounselorIdAndStatus(user.getId(),
-             * AssignmentStatus.ACTIVE)
-             * .stream()
-             * .map(Assignment::getElderly)
-             * .map(Elderly::getId)
-             * .collect(Collectors.toList());
-             * 
-             * if (!elderlyIds.isEmpty()) {
-             * inquiries =
-             * inquiryRepository.findAllByElderlyIdInAndIsDeletedFalseOrderByCreatedAtDesc(
-             * elderlyIds);
-             * }
-             */
+            List<Long> elderlyIds = assignmentRepository.findAllActiveByCounselorId(user.getId())
+                    .stream()
+                    .map(assignment -> assignment.getElderly().getId())
+                    .collect(Collectors.toList());
+
+            if (!elderlyIds.isEmpty()) {
+                inquiries = inquiryRepository.findAllByElderlyIdInAndIsDeletedFalseOrderByCreatedAtDesc(elderlyIds);
+            }
         }
 
         return inquiries.stream()
@@ -110,18 +102,12 @@ public class InquiryService {
                 .orElseThrow(() -> new IllegalArgumentException("문의를 찾을 수 없습니다."));
 
         // 권한 체크 (담당 어르신인지)
-        // TODO: AssignmentRepository(팀원 기능) 연동 필요
-        /*
-         * boolean isAssigned =
-         * assignmentRepository.findAllByCounselorIdAndStatus(user.getId(),
-         * AssignmentStatus.ACTIVE)
-         * .stream()
-         * .anyMatch(a -> a.getElderly().getId().equals(inquiry.getElderly().getId()));
-         * 
-         * if (!isAssigned) {
-         * throw new IllegalArgumentException("담당 어르신의 문의만 답변할 수 있습니다.");
-         * }
-         */
+        boolean isAssigned = assignmentRepository.existsByCounselorIdAndElderlyIdAndStatusActive(
+                user.getId(), inquiry.getElderly().getId());
+
+        if (!isAssigned) {
+            throw new IllegalArgumentException("담당 어르신의 문의만 답변할 수 있습니다.");
+        }
 
         InquiryAnswer answer = new InquiryAnswer(inquiry, user, request.getAnswerText());
         inquiryAnswerRepository.save(answer);
@@ -151,17 +137,11 @@ public class InquiryService {
                 throw new IllegalArgumentException("본인의 문의만 조회할 수 있습니다.");
             }
         } else if (user.getRole() == Role.COUNSELOR) {
-            // TODO: AssignmentRepository(팀원 기능) 연동 필요
-            /*
-             * boolean isAssigned =
-             * assignmentRepository.findAllByCounselorIdAndStatus(user.getId(),
-             * AssignmentStatus.ACTIVE)
-             * .stream()
-             * .anyMatch(a -> a.getElderly().getId().equals(inquiry.getElderly().getId()));
-             * if (!isAssigned) {
-             * throw new IllegalArgumentException("담당 어르신의 문의만 조회할 수 있습니다.");
-             * }
-             */
+            boolean isAssigned = assignmentRepository.existsByCounselorIdAndElderlyIdAndStatusActive(
+                    user.getId(), inquiry.getElderly().getId());
+            if (!isAssigned) {
+                throw new IllegalArgumentException("담당 어르신의 문의만 조회할 수 있습니다.");
+            }
         }
     }
 

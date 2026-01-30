@@ -126,7 +126,12 @@ public class ElderlyService {
     public ElderlySummaryResponse getSummary(Long elderlyUserId) {
         Elderly elderly = elderlyRepo.findWithUserById(elderlyUserId)
                 .orElseThrow(() -> new IllegalArgumentException("ELDERLY_NOT_FOUND"));
-        return ElderlySummaryResponse.from(elderly);
+
+        String guardianName = guardianElderlyRepo.findByElderlyId(elderlyUserId)
+                .map(ge -> ge.getGuardian().getUser().getName())
+                .orElse(null);
+
+        return ElderlySummaryResponse.from(elderly, guardianName);
     }
 
     @Transactional

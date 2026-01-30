@@ -88,6 +88,12 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED) // 401
                     .body(Map.of("error", code, "message", message));
         }
+        
+        // NO_TOKEN 예외 처리 추가
+        if ("NO_TOKEN".equals(code)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST) // 400
+                    .body(Map.of("error", code, "message", "토큰이 없습니다."));
+        }
 
         log.warn("IllegalArgumentException: code={}, message={}", code, message);
 
