@@ -58,7 +58,7 @@ public class CounselingRecord extends BaseTimeEntity {
     private CounselingStatus status;
 
     public void update(LocalDate counselingDate, LocalTime counselingTime, CounselingType type,
-            String category, String summary, String content, String result, String followUp, CounselingStatus status) {
+                       String category, String summary, String content, String result, String followUp, CounselingStatus status) {
         this.counselingDate = counselingDate;
         this.counselingTime = counselingTime;
         this.type = type;

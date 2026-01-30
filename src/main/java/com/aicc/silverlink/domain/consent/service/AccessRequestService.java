@@ -360,10 +360,10 @@ public class AccessRequestService {
      */
     public AccessCheckResult checkAccess(Long requesterId, Long elderlyUserId, AccessScope scope) {
         return accessRequestRepository.findValidAccess(
-                requesterId,
-                elderlyUserId,
-                scope,
-                LocalDateTime.now())
+                        requesterId,
+                        elderlyUserId,
+                        scope,
+                        LocalDateTime.now())
                 .map(AccessCheckResult::granted)
                 .orElse(AccessCheckResult.denied("접근 권한이 없습니다. 관리자에게 권한을 요청하세요."));
     }
