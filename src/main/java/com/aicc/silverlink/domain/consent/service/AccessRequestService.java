@@ -50,6 +50,7 @@ public class AccessRequestService {
     private final ElderlyRepository elderlyRepository;
     private final AdminRepository adminRepository;
     private final GuardianElderlyRepository guardianElderlyRepository;
+    private final com.aicc.silverlink.domain.assignment.repository.AssignmentRepository assignmentRepository;
     private final NotificationService notificationService;
 
     // ========== 보호자용 메서드 ==========
@@ -71,20 +72,30 @@ public class AccessRequestService {
         User guardian = userRepository.findById(guardianUserId)
                 .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
 
-        if (guardian.getRole() != Role.GUARDIAN) {
-            throw new IllegalArgumentException("ONLY_GUARDIAN_CAN_REQUEST");
+        if (guardian.getRole() != Role.GUARDIAN && guardian.getRole() != Role.COUNSELOR) {
+            throw new IllegalArgumentException("ONLY_GUARDIAN_OR_COUNSELOR_CAN_REQUEST");
         }
 
         // 2. 대상 어르신 확인
         Elderly elderly = elderlyRepository.findById(request.elderlyUserId())
                 .orElseThrow(() -> new IllegalArgumentException("ELDERLY_NOT_FOUND"));
 
-        // 3. 보호자-어르신 관계 확인
-        GuardianElderly relation = guardianElderlyRepository.findByGuardianId(guardianUserId)
-                .orElseThrow(() -> new IllegalArgumentException("GUARDIAN_ELDERLY_RELATION_NOT_FOUND"));
+        // 3. 관계 확인
+        if (guardian.getRole() == Role.GUARDIAN) {
+            GuardianElderly relation = guardianElderlyRepository.findByGuardianId(guardianUserId)
+                    .orElseThrow(() -> new IllegalArgumentException("GUARDIAN_ELDERLY_RELATION_NOT_FOUND"));
 
-        if (!relation.getElderly().getId().equals(request.elderlyUserId())) {
-            throw new IllegalArgumentException("NOT_YOUR_ELDERLY");
+            if (!relation.getElderly().getId().equals(request.elderlyUserId())) {
+                throw new IllegalArgumentException("NOT_YOUR_ELDERLY");
+            }
+        } else if (guardian.getRole() == Role.COUNSELOR) {
+            boolean isAssigned = assignmentRepository.existsByCounselor_IdAndElderly_IdAndStatus(
+                    guardianUserId, request.elderlyUserId(),
+                    com.aicc.silverlink.domain.assignment.entity.AssignmentStatus.ACTIVE);
+
+            if (!isAssigned) {
+                throw new IllegalArgumentException("NOT_YOUR_ASSIGNED_ELDERLY");
+            }
         }
 
         // 4. 중복 요청 확인 (이미 대기 중이거나 승인된 요청이 있는지)
@@ -349,10 +360,10 @@ public class AccessRequestService {
      */
     public AccessCheckResult checkAccess(Long requesterId, Long elderlyUserId, AccessScope scope) {
         return accessRequestRepository.findValidAccess(
-                requesterId,
-                elderlyUserId,
-                scope,
-                LocalDateTime.now())
+                        requesterId,
+                        elderlyUserId,
+                        scope,
+                        LocalDateTime.now())
                 .map(AccessCheckResult::granted)
                 .orElse(AccessCheckResult.denied("접근 권한이 없습니다. 관리자에게 권한을 요청하세요."));
     }
