@@ -23,6 +23,15 @@ public interface LlmModelRepository extends JpaRepository<LlmModel, Long> {
     /**
      * 특정 통화의 가장 최근 LLM 발화 조회
      */
+    /**
+     * 특정 통화의 가장 최근 LLM 발화 조회 (ID 기준 내림차순)
+     */
+    java.util.Optional<LlmModel> findTopByCallRecordOrderByIdDesc(
+            com.aicc.silverlink.domain.call.entity.CallRecord callRecord);
+
+    /**
+     * 특정 통화의 가장 최근 LLM 발화 조회 (시간순)
+     */
     java.util.Optional<LlmModel> findFirstByCallRecordOrderByCreatedAtDesc(
             com.aicc.silverlink.domain.call.entity.CallRecord callRecord);
 }

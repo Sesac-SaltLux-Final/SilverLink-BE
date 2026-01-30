@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * CallBot Internal API 서비스
@@ -29,6 +30,7 @@ public class CallBotInternalService {
     private final CallEmotionRepository callEmotionRepository;
     private final CallDailyStatusRepository callDailyStatusRepository;
     private final ElderlyRepository elderlyRepository;
+    private final com.aicc.silverlink.global.sse.SseService sseService;
 
     // ========== 통화 시작 ==========
 
@@ -54,6 +56,79 @@ public class CallBotInternalService {
                 .elderlyId(elderly.getId())
                 .callAt(callRecord.getCallAt())
                 .build();
+    }
+
+    // ========== LLM Prompt 저장 ==========
+
+    public void savePrompt(Long callId, SavePromptRequest request) {
+        CallRecord callRecord = getCallRecord(callId);
+
+        LlmModel llmModel = LlmModel.builder()
+                .callRecord(callRecord)
+                .prompt(request.getPrompt())
+                .build();
+
+        llmModelRepository.save(llmModel);
+
+        // SSE 알림 전송
+        sseService.broadcast(callId, "prompt", request.getPrompt());
+    }
+
+    // ========== 어르신 응답 저장 ==========
+
+    public void saveReply(Long callId, SaveReplyRequest request) {
+        CallRecord callRecord = getCallRecord(callId);
+
+        // 가장 최근의 CallBot 발화(LlmModel) 조회 (ID 기준 최댓값)
+        LlmModel llmModel = llmModelRepository.findTopByCallRecordOrderByIdDesc(callRecord)
+                .orElseThrow(() -> new IllegalArgumentException("이전 발화(Prompt)를 찾을 수 없습니다. callId=" + callId));
+
+        ElderlyResponse response = ElderlyResponse.builder()
+                .callRecord(callRecord)
+                .llmModel(llmModel)
+                .content(request.getContent())
+                .danger(request.getDanger() != null && request.getDanger())
+                .build();
+
+        elderlyResponseRepository.save(response);
+
+        // SSE 알림 전송
+        sseService.broadcast(callId, "reply", request.getContent());
+    }
+
+    // ========== 통화 로그 조회 ==========
+
+    public List<CallLogResponse> getCallLogs(Long callId) {
+        CallRecord callRecord = getCallRecord(callId);
+
+        List<CallLogResponse> logs = new java.util.ArrayList<>();
+
+        // 1. Prompts
+        List<LlmModel> prompts = llmModelRepository.findByCallIdOrderByCreatedAtAsc(callId);
+        for (LlmModel p : prompts) {
+            logs.add(CallLogResponse.builder()
+                    .id(p.getId())
+                    .type("PROMPT")
+                    .content(p.getPrompt())
+                    .timestamp(p.getCreatedAt())
+                    .build());
+        }
+
+        // 2. Replies
+        List<ElderlyResponse> replies = elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId);
+        for (ElderlyResponse r : replies) {
+            logs.add(CallLogResponse.builder()
+                    .id(r.getId()) // ID 충돌 가능성 있으나 FE에서 type+id로 구분하면 됨
+                    .type("REPLY")
+                    .content(r.getContent())
+                    .timestamp(r.getRespondedAt())
+                    .build());
+        }
+
+        // 3. Sort by timestamp
+        logs.sort(java.util.Comparator.comparing(CallLogResponse::getTimestamp));
+
+        return logs;
     }
 
     // ========== 대화 메시지 저장 ==========

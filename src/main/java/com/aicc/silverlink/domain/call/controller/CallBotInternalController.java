@@ -27,6 +27,15 @@ import org.springframework.web.bind.annotation.*;
 public class CallBotInternalController {
 
     private final CallBotInternalService callBotInternalService;
+    private final com.aicc.silverlink.global.sse.SseService sseService;
+
+    // ========== SSE 연결 ==========
+
+    @Operation(summary = "SSE 연결", description = "통화 모니터링을 위한 SSE 연결")
+    @GetMapping(value = "/calls/{callId}/sse", produces = "text/event-stream")
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter subscribe(@PathVariable Long callId) {
+        return sseService.connect(callId);
+    }
 
     // ========== 통화 시작 ==========
 
@@ -38,6 +47,30 @@ public class CallBotInternalController {
         StartCallResponse response = callBotInternalService.startCall(request);
         log.info("[CallBot API] 통화 시작: elderlyId={}", request.getElderlyId());
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    // ========== LLM Prompt 저장 ==========
+
+    @PostMapping("/calls/{callId}/llm/prompt")
+    public ResponseEntity<ApiResponse<Void>> savePrompt(
+            @PathVariable Long callId,
+            @RequestBody SavePromptRequest request) {
+        callBotInternalService.savePrompt(callId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @PostMapping("/calls/{callId}/llm/reply")
+    public ResponseEntity<ApiResponse<Void>> saveReply(
+            @PathVariable Long callId,
+            @RequestBody SaveReplyRequest request) {
+        callBotInternalService.saveReply(callId, request);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @Operation(summary = "통화 로그 조회", description = "저장된 통화 내용(Prompt + Reply) 전체를 시간순으로 조회합니다")
+    @GetMapping("/calls/{callId}/logs")
+    public ResponseEntity<ApiResponse<java.util.List<CallLogResponse>>> getCallLogs(@PathVariable Long callId) {
+        return ResponseEntity.ok(ApiResponse.success(callBotInternalService.getCallLogs(callId)));
     }
 
     // ========== 대화 메시지 저장 ==========
