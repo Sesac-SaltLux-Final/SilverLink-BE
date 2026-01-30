@@ -7,6 +7,7 @@ import com.aicc.silverlink.domain.notice.entity.Notice.NoticeStatus;
 import com.aicc.silverlink.domain.notice.entity.Notice.TargetMode;
 import com.aicc.silverlink.domain.notice.entity.NoticeCategory;
 import com.aicc.silverlink.domain.user.entity.Role;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 
@@ -30,7 +31,10 @@ public class NoticeResponse {
     @Builder.Default
     private List<Role> targetRoles = new ArrayList<>(); // 설정된 타겟 권한들
 
+    @JsonProperty("isPriority")
     private boolean isPriority;
+    
+    @JsonProperty("isPopup")
     private boolean isPopup;
     private LocalDateTime popupStartAt;
     private LocalDateTime popupEndAt;

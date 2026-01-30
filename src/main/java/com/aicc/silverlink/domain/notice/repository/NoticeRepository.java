@@ -17,7 +17,10 @@ import java.util.Optional;
 @Repository
 public interface NoticeRepository extends JpaRepository<Notice, Long> {
 
-    // 관리자용: 삭제되지 않은 모든 공지 조회 (상태 필터링 가능)
+    // 관리자용: 삭제되지 않은 모든 공지 조회 (중요공지 우선 정렬)
+    @Query("SELECT n FROM Notice n " +
+            "WHERE n.status != 'DELETED' " +
+            "ORDER BY n.isPriority DESC, n.createdAt DESC")
     Page<Notice> findAllByStatusNot(NoticeStatus status, Pageable pageable);
 
     // Req 64, 65: 사용자용 공지 목록 조회 (검색 기능 포함)

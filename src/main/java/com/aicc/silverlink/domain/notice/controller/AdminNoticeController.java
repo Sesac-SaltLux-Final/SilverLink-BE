@@ -5,7 +5,8 @@ import com.aicc.silverlink.domain.admin.repository.AdminRepository;
 import com.aicc.silverlink.domain.notice.dto.NoticeRequest;
 import com.aicc.silverlink.domain.notice.dto.NoticeResponse;
 import com.aicc.silverlink.domain.notice.service.NoticeService;
-import com.aicc.silverlink.domain.user.entity.User;
+import com.aicc.silverlink.global.exception.UnauthorizedException;
+import com.aicc.silverlink.global.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -13,7 +14,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,11 +36,19 @@ public class AdminNoticeController {
 
     // 공지사항 등록
     @PostMapping
-    public ResponseEntity<Long> createNotice(
-            @RequestBody @Valid NoticeRequest request,
-            @AuthenticationPrincipal User user) {
-        Admin admin = adminRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new IllegalArgumentException("관리자 정보를 찾을 수 없습니다."));
+    public ResponseEntity<Long> createNotice(@RequestBody @Valid NoticeRequest request) {
+        
+        // SecurityUtils를 통해 현재 사용자 ID 가져오기
+        if (!SecurityUtils.isAuthenticated()) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        
+        Long userId = SecurityUtils.currentUserId();
+        
+        // 관리자 정보 조회
+        Admin admin = adminRepository.findByUserId(userId)
+                .orElseThrow(() -> new UnauthorizedException("관리자 권한이 필요합니다."));
+        
         Long noticeId = noticeService.createNotice(request, admin);
         return ResponseEntity.ok(noticeId);
     }
@@ -53,11 +61,16 @@ public class AdminNoticeController {
 
     // Req 68: 공지사항 삭제 (Soft Delete)
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteNotice(
-            @PathVariable Long id,
-            @AuthenticationPrincipal User user) {
-        Admin admin = adminRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new IllegalArgumentException("관리자 정보를 찾을 수 없습니다."));
+    public ResponseEntity<Void> deleteNotice(@PathVariable Long id) {
+        
+        if (!SecurityUtils.isAuthenticated()) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        
+        Long userId = SecurityUtils.currentUserId();
+        Admin admin = adminRepository.findByUserId(userId)
+                .orElseThrow(() -> new UnauthorizedException("관리자 권한이 필요합니다."));
+        
         noticeService.deleteNotice(id, admin);
         return ResponseEntity.ok().build();
     }
@@ -66,10 +79,16 @@ public class AdminNoticeController {
     @PutMapping("/{id}")
     public ResponseEntity<Void> updateNotice(
             @PathVariable Long id,
-            @RequestBody @Valid NoticeRequest request,
-            @AuthenticationPrincipal User user) {
-        Admin admin = adminRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new IllegalArgumentException("관리자 정보를 찾을 수 없습니다."));
+            @RequestBody @Valid NoticeRequest request) {
+        
+        if (!SecurityUtils.isAuthenticated()) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        
+        Long userId = SecurityUtils.currentUserId();
+        Admin admin = adminRepository.findByUserId(userId)
+                .orElseThrow(() -> new UnauthorizedException("관리자 권한이 필요합니다."));
+        
         noticeService.updateNotice(id, request, admin);
         return ResponseEntity.ok().build();
     }
