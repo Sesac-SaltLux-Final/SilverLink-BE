@@ -33,7 +33,7 @@ public class AuditLogService {
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordLog(Long actorId, String action, String targetEntity, Long targetId, String clientIp,
-                          String meta) {
+            String meta) {
         try {
             // actorId가 null이면 시스템(System) 또는 비회원
             // getReferenceById: DB 조회를 하지 않고 프록시 객체만 가져옴 (성능 최적화)

@@ -62,6 +62,8 @@ dependencies {
     // AWS S3 SDK
     implementation platform('software.amazon.awssdk:bom:2.25.70')
     implementation 'software.amazon.awssdk:s3'
+    implementation 'net.ttddyy:datasource-proxy:1.10'
+
 }
 
 

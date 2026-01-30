@@ -39,7 +39,7 @@ public class InquiryController {
     @PostMapping
     @Operation(summary = "문의 등록", description = "보호자가 1:1 문의를 등록합니다.")
     public ResponseEntity<InquiryResponse> createInquiry(@RequestBody InquiryRequest request,
-                                                         @AuthenticationPrincipal Long userId) {
+            @AuthenticationPrincipal Long userId) {
         User user = getUser(userId);
         return ResponseEntity.ok(inquiryService.createInquiry(user, request));
     }
@@ -47,7 +47,7 @@ public class InquiryController {
     @PostMapping("/{id}/answer")
     @Operation(summary = "답변 등록", description = "상담사가 문의에 대한 답변을 등록합니다.")
     public ResponseEntity<Void> registerAnswer(@PathVariable Long id, @RequestBody InquiryRequest request,
-                                               @AuthenticationPrincipal Long userId) {
+            @AuthenticationPrincipal Long userId) {
         User user = getUser(userId);
         inquiryService.registerAnswer(id, user, request);
         return ResponseEntity.ok().build();

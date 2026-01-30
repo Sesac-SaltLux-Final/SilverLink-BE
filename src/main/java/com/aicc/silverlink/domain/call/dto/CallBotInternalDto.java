@@ -36,6 +36,46 @@ public class CallBotInternalDto {
         private LocalDateTime callAt;
     }
 
+    // ========== LLM Prompt 저장 ==========
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SavePromptRequest {
+        private String prompt;
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class SavePromptResponse {
+        private Long modelId;
+    }
+
+    // ========== 어르신 응답 저장 ==========
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SaveReplyRequest {
+        private String content;
+        private Boolean danger;
+    }
+
+    // ========== 통화 로그 조회 ==========
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class CallLogResponse {
+        private Long id;
+        private String type; // PROMPT or REPLY
+        private String content;
+        private LocalDateTime timestamp;
+    }
+
     // ========== 대화 메시지 저장 ==========
 
     /**
