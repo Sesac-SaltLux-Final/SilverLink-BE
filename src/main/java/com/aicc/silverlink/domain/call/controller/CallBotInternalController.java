@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.*;
 public class CallBotInternalController {
 
     private final CallBotInternalService callBotInternalService;
-    private final com.aicc.silverlink.global.sse.SseService sseService;
+    private final com.aicc.silverlink.global.sse.CallBotSseService sseService;
 
     // ========== SSE 연결 ==========
 

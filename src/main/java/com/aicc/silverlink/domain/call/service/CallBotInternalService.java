@@ -8,7 +8,6 @@ import com.aicc.silverlink.domain.elderly.repository.ElderlyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,7 +18,6 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-@Transactional
 @Slf4j
 public class CallBotInternalService {
 
@@ -30,7 +28,7 @@ public class CallBotInternalService {
     private final CallEmotionRepository callEmotionRepository;
     private final CallDailyStatusRepository callDailyStatusRepository;
     private final ElderlyRepository elderlyRepository;
-    private final com.aicc.silverlink.global.sse.SseService sseService;
+    private final com.aicc.silverlink.global.sse.CallBotSseService sseService;
 
     // ========== 통화 시작 ==========
 
@@ -99,7 +97,8 @@ public class CallBotInternalService {
     // ========== 통화 로그 조회 ==========
 
     public List<CallLogResponse> getCallLogs(Long callId) {
-        CallRecord callRecord = getCallRecord(callId);
+        // 존재 여부 확인
+        getCallRecord(callId);
 
         List<CallLogResponse> logs = new java.util.ArrayList<>();
 

@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
-public class SseService {
+public class CallBotSseService {
 
     private final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
 
