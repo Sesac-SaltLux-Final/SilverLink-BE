@@ -1,6 +1,7 @@
 package com.aicc.silverlink.domain.complaint.service;
 
 import com.aicc.silverlink.domain.admin.entity.Admin;
+import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.domain.complaint.dto.ComplaintRequest;
 import com.aicc.silverlink.domain.complaint.dto.ComplaintResponse;
 import com.aicc.silverlink.domain.complaint.entity.Complaint;
@@ -43,6 +44,17 @@ public class ComplaintService {
                 .build();
 
         Complaint saved = complaintRepository.save(complaint);
+
+        // 모든 관리자에게 알림 발송
+        List<User> admins = userRepository.findByRoleIn(List.of(Role.ADMIN));
+        for (User admin : admins) {
+            notificationService.createComplaintNewNotification(
+                    admin.getId(),
+                    saved.getId(),
+                    writer.getName(),
+                    saved.getTitle());
+        }
+
         return ComplaintResponse.from(saved);
     }
 
