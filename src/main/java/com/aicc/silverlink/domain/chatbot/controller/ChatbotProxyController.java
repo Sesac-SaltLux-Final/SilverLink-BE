@@ -9,7 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,6 +34,12 @@ public class ChatbotProxyController {
 
         @Value("${chatbot.python.url:http://localhost:8000}")
         private String pythonChatbotUrl;
+
+        @Value("${chatbot.secret.header:X-SilverLink-Secret}")
+        private String secretHeader;
+
+        @Value("${chatbot.secret.key:X-SilverLink-Key!}")
+        private String secretKey;
 
         @PostMapping("/chat")
         @Operation(summary = "챗봇 질문", description = "보호자가 어르신 돌봄 관련 질문을 하면 AI 챗봇이 FAQ 및 과거 문의 기록을 기반으로 답변합니다.")
@@ -81,10 +87,20 @@ public class ChatbotProxyController {
                                 pythonChatbotUrl, threadId);
 
                 try {
-                        ChatResponse response = restTemplate.postForObject(
-                                        pythonChatbotUrl + "/api/chatbot/chat",
-                                        chatbotRequest,
-                                        ChatResponse.class);
+                        HttpHeaders headers = new HttpHeaders();
+                        headers.setContentType(MediaType.APPLICATION_JSON);
+                        headers.set(secretHeader, secretKey);
+
+                        HttpEntity<ChatbotRequest> entity = new HttpEntity<>(chatbotRequest, headers);
+
+                        ResponseEntity<ChatResponse> responseEntity = restTemplate.exchange(
+                                pythonChatbotUrl + "/api/chatbot/chat",
+                                HttpMethod.POST,
+                                entity,
+                                ChatResponse.class
+                        );
+
+                        ChatResponse response = responseEntity.getBody();
 
                         log.info("Chatbot response received: threadId={}, confidence={}",
                                         threadId, response != null ? response.getConfidence() : null);

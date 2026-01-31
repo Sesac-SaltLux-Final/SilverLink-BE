@@ -106,4 +106,10 @@ public class AssignmentService {
                                 .orElseThrow(() -> new IllegalArgumentException("현재 담당 상담사가 없습니다."));
                 return AssignmentResponse.from(assignment);
         }
+
+        public AssignmentResponse getAssignmentByElderlyOrNull(Long elderlyId) {
+                return assignmentRepository.findActiveByElderlyId(elderlyId)
+                                .map(AssignmentResponse::from)
+                                .orElse(null);
+        }
 }
