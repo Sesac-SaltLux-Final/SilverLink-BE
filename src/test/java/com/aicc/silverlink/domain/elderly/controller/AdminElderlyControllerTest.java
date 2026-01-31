@@ -47,7 +47,7 @@ class AdminElderlyControllerTest {
 
     private ElderlySummaryResponse createSummaryResponse(Long id, String name) {
         return new ElderlySummaryResponse(id, name, "01011112222", 11110L, "서울", "종로", "동", "전체주소",
-                LocalDate.of(1950, 1, 1), 75, Elderly.Gender.M, "주소1", "주소2", "123", "김보호");
+                LocalDate.of(1950, 1, 1), 75, Elderly.Gender.M, "주소1", "주소2", "123", "김보호", "박상담");
     }
 
     @Test
