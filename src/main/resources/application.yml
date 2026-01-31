@@ -81,6 +81,7 @@ logging:
   level:
     com.aicc.silverlink: debug
     org.hibernate.SQL: debug
+    net.ttddyy.dsproxy: error  # datasource-proxy 쿼리 로그 비활성화
 
 twilio:
   account-sid: ${TWILIO_ACCOUNT_SID}
