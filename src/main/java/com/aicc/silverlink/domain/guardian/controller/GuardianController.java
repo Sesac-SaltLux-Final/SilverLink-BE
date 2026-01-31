@@ -61,7 +61,11 @@ public class GuardianController {
     @GetMapping("/admin/elderly/{elderlyId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<GuardianResponse> getGuardianByElderlyForAdmin(@PathVariable Long elderlyId) {
-        return ResponseEntity.ok(guardianService.getGuardianByElderly(elderlyId));
+        GuardianResponse guardian = guardianService.getGuardianByElderlyOrNull(elderlyId);
+        if (guardian == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(guardian);
     }
 
     // 관리자는 특정 보호자에 연결된 노인 정보를 조회할 수 있다.

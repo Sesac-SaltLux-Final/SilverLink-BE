@@ -62,6 +62,10 @@ public class AssignmentController {
     @GetMapping("/admin/elderly/{elderlyId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AssignmentResponse> getElderlyAssignmentByAdmin(@PathVariable Long elderlyId) {
-        return ResponseEntity.ok(assignmentService.getAssignmentByElderly(elderlyId));
+        AssignmentResponse assignment = assignmentService.getAssignmentByElderlyOrNull(elderlyId);
+        if (assignment == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(assignment);
     }
 }

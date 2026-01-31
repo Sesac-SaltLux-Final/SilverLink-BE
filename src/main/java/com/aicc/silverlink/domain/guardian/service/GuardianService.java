@@ -80,6 +80,12 @@ public class GuardianService {
         return GuardianResponse.from(relation.getGuardian());
     }
 
+    public GuardianResponse getGuardianByElderlyOrNull(Long elderlyId) {
+        return guardianElderlyRepository.findByElderlyId(elderlyId)
+                .map(relation -> GuardianResponse.from(relation.getGuardian()))
+                .orElse(null);
+    }
+
     public GuardianResponse getGuardianForCounselor(Long guardianId, Long counselorId) {
         Guardian guardian = guardianRepository.findByIdWithUser(guardianId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 보호자를 찾을 수 없습니다."));

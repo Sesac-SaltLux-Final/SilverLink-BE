@@ -99,8 +99,14 @@ luxia:
     connect-ms: 3000
     response-ms: 60000
 
+chatbot:
+  python:
+    url: ${CHATBOT_PYTHON_URL:http://localhost:5000}
+  secret:
+    header: "X-SilverLink-Secret"
+    key: ${CHATBOT_SECRET_KEY:X-SilverLink-Key!}
 
-cloud:
+
   aws:
     s3:
       enabled: false  # 로컬 모드
