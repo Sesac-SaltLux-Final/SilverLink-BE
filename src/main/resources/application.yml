@@ -96,7 +96,7 @@ luxia:
     path: "/luxia/v1/document-ai"
     model: "luxia-document-ai"
   timeout:
-    connect-ms: 3000
+    connect-ms: 10000
     response-ms: 60000
 
 chatbot:
