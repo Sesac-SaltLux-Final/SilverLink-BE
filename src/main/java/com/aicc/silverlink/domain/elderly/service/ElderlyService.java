@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -95,8 +96,29 @@ public class ElderlyService {
 
     @Transactional(readOnly = true)
     public List<ElderlySummaryResponse> getAllElderlyForAdmin() {
-        return elderlyRepo.findAllWithUserAndDivision().stream()
-                .map(ElderlySummaryResponse::from)
+        // 1. 전체 어르신 조회
+        List<Elderly> elderlyList = elderlyRepo.findAllWithUserAndDivision();
+
+        // 2. 보호자 매핑 (어르신 ID -> 보호자 이름)
+        Map<Long, String> guardianMap = guardianElderlyRepo.findAllWithDetails().stream()
+                .collect(Collectors.toMap(
+                        ge -> ge.getElderly().getId(),
+                        ge -> ge.getGuardian().getUser().getName(),
+                        (existing, replacement) -> existing));
+
+        // 3. 상담사 매핑 (어르신 ID -> 상담사 이름)
+        Map<Long, String> counselorMap = assignmentRepo.findAllActiveWithDetails().stream()
+                .collect(Collectors.toMap(
+                        a -> a.getElderly().getId(),
+                        a -> a.getCounselor().getUser().getName(),
+                        (existing, replacement) -> existing));
+
+        // 4. 조합
+        return elderlyList.stream()
+                .map(e -> ElderlySummaryResponse.from(
+                        e,
+                        guardianMap.get(e.getId()),
+                        counselorMap.get(e.getId())))
                 .collect(Collectors.toList());
     }
 

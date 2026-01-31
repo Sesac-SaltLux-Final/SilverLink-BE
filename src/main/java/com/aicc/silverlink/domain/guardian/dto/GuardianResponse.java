@@ -26,12 +26,17 @@ public class GuardianResponse {
 
     private LocalDateTime createdAt;
     private int elderlyCount;
+    private String elderlyName;
 
     public static GuardianResponse from(Guardian guardian) {
-        return from(guardian, 0);
+        return from(guardian, 0, null);
     }
 
     public static GuardianResponse from(Guardian guardian, int elderlyCount) {
+        return from(guardian, elderlyCount, null);
+    }
+
+    public static GuardianResponse from(Guardian guardian, int elderlyCount, String elderlyName) {
         User user = guardian.getUser();
 
         return GuardianResponse.builder()
@@ -45,6 +50,7 @@ public class GuardianResponse {
                 .zipcode(guardian.getZipcode())
                 .createdAt(user.getCreatedAt())
                 .elderlyCount(elderlyCount)
+                .elderlyName(elderlyName)
                 .build();
     }
 }

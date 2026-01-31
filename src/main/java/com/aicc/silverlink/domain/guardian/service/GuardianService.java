@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -118,10 +119,17 @@ public class GuardianService {
     }
 
     public List<GuardianResponse> getAllGuardian() {
+        Map<Long, String> elderlyMap = guardianElderlyRepository.findAllWithDetails().stream()
+                .collect(Collectors.toMap(
+                        ge -> ge.getGuardian().getId(),
+                        ge -> ge.getElderly().getUser().getName(),
+                        (existing, replacement) -> existing));
+
         return guardianRepository.findAllWithUser().stream()
                 .map(guardian -> {
-                    int elderlyCount = guardianElderlyRepository.countByGuardianId(guardian.getId());
-                    return GuardianResponse.from(guardian, elderlyCount);
+                    String elderlyName = elderlyMap.get(guardian.getId());
+                    int elderlyCount = elderlyName != null ? 1 : 0;
+                    return GuardianResponse.from(guardian, elderlyCount, elderlyName);
                 })
                 .collect(Collectors.toList());
     }

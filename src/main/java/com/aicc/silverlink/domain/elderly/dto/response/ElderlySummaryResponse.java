@@ -22,12 +22,17 @@ public record ElderlySummaryResponse(
         String addressLine1,
         String addressLine2,
         String zipcode,
-        String guardianName) {
+        String guardianName,
+        String counselorName) {
     public static ElderlySummaryResponse from(Elderly e) {
-        return from(e, null);
+        return from(e, null, null);
     }
 
     public static ElderlySummaryResponse from(Elderly e, String guardianName) {
+        return from(e, guardianName, null);
+    }
+
+    public static ElderlySummaryResponse from(Elderly e, String guardianName, String counselorName) {
         AdministrativeDivision division = e.getAdministrativeDivision();
 
         return new ElderlySummaryResponse(
@@ -45,6 +50,7 @@ public record ElderlySummaryResponse(
                 e.getAddressLine1(),
                 e.getAddressLine2(),
                 e.getZipcode(),
-                guardianName);
+                guardianName,
+                counselorName);
     }
 }
