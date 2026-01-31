@@ -32,4 +32,10 @@ public class NoticeReadLog {
             this.readAt = LocalDateTime.now();
         }
     }
+
+    public NoticeReadLog(Notice notice, User user) {
+        this.notice = notice;
+        this.user = user;
+        this.readAt = LocalDateTime.now();
+    }
 }

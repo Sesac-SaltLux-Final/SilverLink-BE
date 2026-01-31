@@ -16,9 +16,15 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:silverlink}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:silverlink}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:password}
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
 
     hikari:
       maximum-pool-size: 10
@@ -35,7 +41,7 @@ spring:
         enabled: false
 
   jpa:
-    #    database-platform: org.hibernate.dialect.MySQLDialect
+    database-platform: org.hibernate.dialect.MySQLDialect
     open-in-view: false
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:update}
@@ -44,6 +50,7 @@ spring:
       hibernate:
         format_sql: true
         physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+        dialect: org.hibernate.dialect.MySQLDialect
 
 # 인증/보안 설정 (spring 네임스페이스 밖으로 이동)
 security:

@@ -4,8 +4,11 @@ import com.aicc.silverlink.domain.session.service.SessionService;
 import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.global.exception.UnauthorizedException;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,7 +42,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = resolveBearer(request);
-
+        
         if (token != null) {
             try {
                 Jws<Claims> jws = jwt.parseAndValidate(token); // 토큰 서명 검증 + 만료 체크
@@ -55,7 +58,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 if (!sessionService.isActive(sid, userId)) {
                     logger.warn("Session expired or invalid for sid: " + sid);
-
                     SecurityContextHolder.clearContext();
                     throw new UnauthorizedException("세션이 만료되었습니다.");
                 }
@@ -68,13 +70,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         null,
                         List.of(new SimpleGrantedAuthority("ROLE_" + role.name())));
 
-                // ✅ SecurityContext에 인증 설정 (이 부분이 누락되어 있었음!)
+                // ✅ SecurityContext에 인증 설정
                 SecurityContextHolder.getContext().setAuthentication(auth);
 
+            } catch (ExpiredJwtException e) {
+                logger.warn("JWT Token Expired: " + e.getMessage());
+            } catch (SignatureException e) {
+                logger.error("JWT Signature Invalid: " + e.getMessage());
+            } catch (MalformedJwtException e) {
+                logger.error("JWT Malformed: " + e.getMessage());
             } catch (JwtException | IllegalArgumentException e) {
-                logger.error("Invalid JWT Token: {}");
+                logger.error("Invalid JWT Token: " + e.getMessage());
             } catch (Exception e) {
-                logger.error("Authentication Error: {}");
+                logger.error("Authentication Error: " + e.getMessage());
+                e.printStackTrace();
             }
         }
         filterChain.doFilter(request, response);
@@ -85,7 +94,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (h == null || h.isBlank())
             return null;
 
-        // "Bearer " 대소문자/공백 약간 방어하고 싶으면 더 탄탄하게 처리
         if (!h.startsWith("Bearer "))
             return null;
 

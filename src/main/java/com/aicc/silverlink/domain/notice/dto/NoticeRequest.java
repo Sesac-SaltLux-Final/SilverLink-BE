@@ -5,6 +5,7 @@ import com.aicc.silverlink.domain.notice.entity.Notice.NoticeStatus;
 import com.aicc.silverlink.domain.notice.entity.Notice.TargetMode;
 import com.aicc.silverlink.domain.notice.entity.NoticeCategory;
 import com.aicc.silverlink.domain.user.entity.Role;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -35,10 +36,24 @@ public class NoticeRequest {
     private List<Role> targetRoles;
 
     // Req 65: 중요 공지 여부
+    @JsonProperty("isPriority")
     private boolean isPriority;
+    
+    // Jackson이 priority로 변환할 경우를 대비한 setter
+    @JsonProperty("priority")
+    public void setPriority(boolean priority) {
+        this.isPriority = priority;
+    }
 
     // Req 67: 팝업 설정
+    @JsonProperty("isPopup")
     private boolean isPopup;
+    
+    // Jackson이 popup으로 변환할 경우를 대비한 setter
+    @JsonProperty("popup")
+    public void setPopup(boolean popup) {
+        this.isPopup = popup;
+    }
     private LocalDateTime popupStartAt;
     private LocalDateTime popupEndAt;
 

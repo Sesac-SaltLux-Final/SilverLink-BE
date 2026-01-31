@@ -19,7 +19,7 @@ public class Notice {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_admin_user_id", nullable = false)
+    @JoinColumn(name = "created_by_admin_user_id", nullable = false) // 데이터베이스 스키마에 맞춰 NOT NULL
     private Admin createdBy;
 
     @Enumerated(EnumType.STRING)
@@ -79,6 +79,48 @@ public class Notice {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    // Soft Delete를 위한 메서드 추가
+    public Notice markAsDeleted() {
+        return Notice.builder()
+                .id(this.id)
+                .createdBy(this.createdBy)
+                .category(this.category)
+                .targetMode(this.targetMode)
+                .title(this.title)
+                .content(this.content)
+                .status(NoticeStatus.DELETED)
+                .isPriority(this.isPriority)
+                .isPopup(this.isPopup)
+                .popupStartAt(this.popupStartAt)
+                .popupEndAt(this.popupEndAt)
+                .createdAt(this.createdAt)
+                .updatedAt(LocalDateTime.now())
+                .deletedAt(LocalDateTime.now())
+                .build();
+    }
+
+    // 업데이트를 위한 메서드 추가
+    public Notice updateNotice(String title, String content, NoticeCategory category, 
+                              TargetMode targetMode, boolean isPriority, boolean isPopup,
+                              LocalDateTime popupStartAt, LocalDateTime popupEndAt, NoticeStatus status) {
+        return Notice.builder()
+                .id(this.id)
+                .createdBy(this.createdBy)
+                .category(category)
+                .targetMode(targetMode)
+                .title(title)
+                .content(content)
+                .status(status)
+                .isPriority(isPriority)
+                .isPopup(isPopup)
+                .popupStartAt(popupStartAt)
+                .popupEndAt(popupEndAt)
+                .createdAt(this.createdAt)
+                .updatedAt(LocalDateTime.now())
+                .deletedAt(this.deletedAt)
+                .build();
     }
 
     public enum TargetMode {
