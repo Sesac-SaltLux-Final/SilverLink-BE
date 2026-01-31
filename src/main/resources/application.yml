@@ -20,15 +20,9 @@ spring:
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:password}
     hikari:
-      maximum-pool-size: 3
-      minimum-idle: 1
-      connection-timeout: 20000
-      idle-timeout: 300000
-      max-lifetime: 1200000
-
-    hikari:
       maximum-pool-size: 10
       minimum-idle: 2
+      connection-timeout: 20000
       idle-timeout: 180000
       max-lifetime: 300000   # 5분
       leak-detection-threshold: 2000
