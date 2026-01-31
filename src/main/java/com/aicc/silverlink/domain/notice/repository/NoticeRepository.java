@@ -24,12 +24,16 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
     Page<Notice> findAllByStatusNot(NoticeStatus status, Pageable pageable);
 
     // Req 64, 65: 사용자용 공지 목록 조회 (검색 기능 포함)
+    // targetMode가 ALL인 경우와 ROLE_SET인 경우를 명확히 분리
     @Query("SELECT DISTINCT n FROM Notice n " +
             "LEFT JOIN NoticeTargetRole ntr ON n.id = ntr.notice.id " +
             "WHERE n.status = 'PUBLISHED' " +
             "AND n.deletedAt IS NULL " +
-            "AND (n.targetMode = 'ALL' OR ntr.targetRole = :role) " +
-            "AND (:keyword IS NULL OR n.title LIKE %:keyword% OR n.content LIKE %:keyword%) " +
+            "AND (" +
+            "  n.targetMode = 'ALL' " +
+            "  OR (n.targetMode = 'ROLE_SET' AND ntr.targetRole = :role)" +
+            ") " +
+            "AND (:keyword IS NULL OR :keyword = '' OR n.title LIKE %:keyword% OR n.content LIKE %:keyword%) " +
             "ORDER BY n.isPriority DESC, n.createdAt DESC")
     Page<Notice> findAllForUser(@Param("role") Role role, @Param("keyword") String keyword, Pageable pageable);
 
@@ -37,9 +41,10 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
     @Query("SELECT DISTINCT n FROM Notice n " +
             "LEFT JOIN NoticeTargetRole ntr ON n.id = ntr.notice.id " +
             "WHERE n.status = 'PUBLISHED' " +
+            "AND n.deletedAt IS NULL " +
             "AND n.isPopup = true " +
             "AND :now BETWEEN n.popupStartAt AND n.popupEndAt " +
-            "AND (n.targetMode = 'ALL' OR ntr.targetRole = :role)")
+            "AND (n.targetMode = 'ALL' OR (n.targetMode = 'ROLE_SET' AND ntr.targetRole = :role))")
     List<Notice> findActivePopups(@Param("role") Role role, @Param("now") LocalDateTime now);
 
     // 이전 글 조회 (현재 ID보다 작은 ID 중 가장 큰 값)
