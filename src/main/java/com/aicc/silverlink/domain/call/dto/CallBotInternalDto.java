@@ -21,6 +21,8 @@ public class CallBotInternalDto {
     @AllArgsConstructor
     public static class StartCallRequest {
         private Long elderlyId;
+        private String name;
+        private String phoneNumber;
         private LocalDateTime callAt;
     }
 

@@ -1,5 +1,6 @@
 package com.aicc.silverlink.domain.elderly.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 import java.util.Arrays;
@@ -76,23 +77,14 @@ public class CallScheduleDto {
     @Builder
     @AllArgsConstructor
     public static class StartCallRequest {
+        @JsonProperty("elderly_id")
         private Long elderlyId;
-        private String elderlyName;
-        private String phone;
-        private List<String> chronicDiseases;
 
-        /**
-         * 만성질환 문자열(TEXT)을 리스트로 변환
-         */
-        public static List<String> parseChronicDiseases(String chronicDiseases) {
-            if (chronicDiseases == null || chronicDiseases.isBlank()) {
-                return List.of();
-            }
-            return Arrays.stream(chronicDiseases.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .collect(Collectors.toList());
-        }
+        @JsonProperty("elderly_name")
+        private String elderlyName;
+
+        @JsonProperty("phone_number")
+        private String phone;
     }
 
     /**
