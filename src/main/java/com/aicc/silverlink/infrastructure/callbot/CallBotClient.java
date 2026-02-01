@@ -21,14 +21,11 @@ public class CallBotClient {
 
     private final RestTemplate restTemplate;
     private final CallBotProperties callBotProperties;
-    private final String chatbotPythonUrl;
 
     public CallBotClient(@Qualifier("callBotRestTemplate") RestTemplate restTemplate,
-                         CallBotProperties callBotProperties,
-                         @Value("${chatbot.python.url}") String chatbotPythonUrl) {
+                         CallBotProperties callBotProperties) {
         this.restTemplate = restTemplate;
         this.callBotProperties = callBotProperties;
-        this.chatbotPythonUrl = chatbotPythonUrl;
     }
 
     /**
@@ -38,7 +35,7 @@ public class CallBotClient {
      * @return 요청 성공 여부
      */
     public boolean startCall(StartCallRequest request) {
-        String url = chatbotPythonUrl + "/api/callbot/call";
+        String url = callBotProperties.getUrl() + "/api/callbot/call";
 
         try {
             HttpHeaders headers = new HttpHeaders();

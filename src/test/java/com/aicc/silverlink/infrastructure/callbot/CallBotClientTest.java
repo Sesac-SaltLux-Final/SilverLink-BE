@@ -33,7 +33,7 @@ class CallBotClientTest {
         String pythonUrl = "http://localhost:5000";
         callBotProperties.setUrl(pythonUrl);
         
-        callBotClient = new CallBotClient(restTemplate, callBotProperties, pythonUrl);
+        callBotClient = new CallBotClient(restTemplate, callBotProperties);
     }
 
     @Test
@@ -42,9 +42,9 @@ class CallBotClientTest {
     void startCall_shouldSendPostRequestWithJsonBody() {
         // given
         StartCallRequest request = StartCallRequest.builder()
-                .elderlyId(123L)
+                .elderlyId(3L)
                 .elderlyName("HongGilDong")
-                .phone("+811012345678")
+                .phone("+811053915653")
                 .build();
 
         String expectedUrl = "http://localhost:5000/api/callbot/call";
@@ -60,9 +60,9 @@ class CallBotClientTest {
         
         // 검증: 바디 내용
         assertThat(capturedEntity.getBody()).isNotNull();
-        assertThat(capturedEntity.getBody().getElderlyId()).isEqualTo(123L);
+        assertThat(capturedEntity.getBody().getElderlyId()).isEqualTo(3L);
         assertThat(capturedEntity.getBody().getElderlyName()).isEqualTo("HongGilDong");
-        assertThat(capturedEntity.getBody().getPhone()).isEqualTo("+811012345678");
+        assertThat(capturedEntity.getBody().getPhone()).isEqualTo("+811053915653");
         
         // 검증: 헤더 (Content-Type)
         assertThat(capturedEntity.getHeaders().getContentType()).isEqualTo(org.springframework.http.MediaType.APPLICATION_JSON);

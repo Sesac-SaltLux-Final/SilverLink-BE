@@ -92,7 +92,8 @@ class CallSchedulerTest {
         RestTemplate restTemplate = new RestTemplate();
         CallBotProperties properties = new CallBotProperties();
         String pythonUrl = "http://localhost:5000"; // Assuming default local python URL
-        CallBotClient realCallBotClient = new CallBotClient(restTemplate, properties, pythonUrl);
+        properties.setUrl(pythonUrl);
+        CallBotClient realCallBotClient = new CallBotClient(restTemplate, properties);
 
         // Inject real client into scheduler
         CallScheduler integrationScheduler = new CallScheduler(callScheduleService, realCallBotClient);

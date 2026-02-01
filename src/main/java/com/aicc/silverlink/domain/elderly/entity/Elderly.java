@@ -101,6 +101,7 @@ public class Elderly {
         this.administrativeDivision = administrativeDivision;
         this.birthDate = birthDate;
         this.gender = gender;
+        this.callScheduleEnabled = false;
     }
 
     public static Elderly create(User user, AdministrativeDivision administrativeDivision,

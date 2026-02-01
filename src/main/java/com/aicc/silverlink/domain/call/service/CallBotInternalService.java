@@ -8,6 +8,7 @@ import com.aicc.silverlink.domain.elderly.repository.ElderlyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
+@Transactional
 @Slf4j
 public class CallBotInternalService {
 
@@ -32,9 +34,6 @@ public class CallBotInternalService {
 
     // ========== 통화 시작 ==========
 
-    /**
-     * 통화 시작 - CallRecord 생성
-     */
     public StartCallResponse startCall(StartCallRequest request) {
         Elderly elderly = elderlyRepository.findById(request.getElderlyId())
                 .orElseThrow(() -> new IllegalArgumentException("어르신을 찾을 수 없습니다."));
@@ -47,7 +46,8 @@ public class CallBotInternalService {
                 .build();
 
         callRecordRepository.save(callRecord);
-        log.info("[CallBotInternal] 통화 시작: callId={}, elderlyId={}", callRecord.getId(), elderly.getId());
+        log.info("✅ [DB 저장] 통화 기록 생성 성공: callId={}, elderlyId={}, name={}", 
+                callRecord.getId(), elderly.getId(), elderly.getUser().getName());
 
         return StartCallResponse.builder()
                 .callId(callRecord.getId())
@@ -67,8 +67,8 @@ public class CallBotInternalService {
                 .build();
 
         llmModelRepository.save(llmModel);
+        log.info("✅ [DB 저장] LLM 발화(Prompt) 저장 완료: callId={}, modelId={}", callId, llmModel.getId());
 
-        // SSE 알림 전송
         sseService.broadcast(callId, "prompt", request.getPrompt());
     }
 
@@ -77,7 +77,6 @@ public class CallBotInternalService {
     public void saveReply(Long callId, SaveReplyRequest request) {
         CallRecord callRecord = getCallRecord(callId);
 
-        // 가장 최근의 CallBot 발화(LlmModel) 조회 (ID 기준 최댓값)
         LlmModel llmModel = llmModelRepository.findTopByCallRecordOrderByIdDesc(callRecord)
                 .orElseThrow(() -> new IllegalArgumentException("이전 발화(Prompt)를 찾을 수 없습니다. callId=" + callId));
 
@@ -89,59 +88,25 @@ public class CallBotInternalService {
                 .build();
 
         elderlyResponseRepository.save(response);
+        log.info("✅ [DB 저장] 어르신 응답(Reply) 저장 완료: callId={}, responseId={}, danger={}", 
+                callId, response.getId(), response.isDanger());
 
-        // SSE 알림 전송
         sseService.broadcast(callId, "reply", request.getContent());
     }
 
-    // ========== 통화 로그 조회 ==========
+    // ========== 대화 메시지 저장 (Unified) ==========
 
-    public List<CallLogResponse> getCallLogs(Long callId) {
-        // 존재 여부 확인
-        getCallRecord(callId);
-
-        List<CallLogResponse> logs = new java.util.ArrayList<>();
-
-        // 1. Prompts
-        List<LlmModel> prompts = llmModelRepository.findByCallIdOrderByCreatedAtAsc(callId);
-        for (LlmModel p : prompts) {
-            logs.add(CallLogResponse.builder()
-                    .id(p.getId())
-                    .type("PROMPT")
-                    .content(p.getPrompt())
-                    .timestamp(p.getCreatedAt())
-                    .build());
-        }
-
-        // 2. Replies
-        List<ElderlyResponse> replies = elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId);
-        for (ElderlyResponse r : replies) {
-            logs.add(CallLogResponse.builder()
-                    .id(r.getId()) // ID 충돌 가능성 있으나 FE에서 type+id로 구분하면 됨
-                    .type("REPLY")
-                    .content(r.getContent())
-                    .timestamp(r.getRespondedAt())
-                    .build());
-        }
-
-        // 3. Sort by timestamp
-        logs.sort(java.util.Comparator.comparing(CallLogResponse::getTimestamp));
-
-        return logs;
-    }
-
-    // ========== 대화 메시지 저장 ==========
-
-    /**
-     * 대화 메시지 저장 (CallBot 발화 또는 어르신 응답)
-     */
     public MessageResponse saveMessage(Long callId, MessageRequest request) {
         CallRecord callRecord = getCallRecord(callId);
 
         if ("CALLBOT".equalsIgnoreCase(request.getSpeaker())) {
-            return saveCallBotMessage(callRecord, request);
+            MessageResponse resp = saveCallBotMessage(callRecord, request);
+            log.info("✅ [DB 저장] 메시지(BOT) 저장 성공: callId={}, msgId={}", callId, resp.getMessageId());
+            return resp;
         } else if ("ELDERLY".equalsIgnoreCase(request.getSpeaker())) {
-            return saveElderlyMessage(callRecord, request);
+            MessageResponse resp = saveElderlyMessage(callRecord, request);
+            log.info("✅ [DB 저장] 메시지(USER) 저장 성공: callId={}, msgId={}", callId, resp.getMessageId());
+            return resp;
         } else {
             throw new IllegalArgumentException("speaker는 'CALLBOT' 또는 'ELDERLY'여야 합니다.");
         }
@@ -154,8 +119,6 @@ public class CallBotInternalService {
                 .build();
 
         llmModelRepository.save(llmModel);
-        log.debug("[CallBotInternal] CallBot 발화 저장: callId={}, modelId={}", callRecord.getId(), llmModel.getId());
-
         return MessageResponse.builder()
                 .messageId(llmModel.getId())
                 .speaker("CALLBOT")
@@ -164,18 +127,8 @@ public class CallBotInternalService {
     }
 
     private MessageResponse saveElderlyMessage(CallRecord callRecord, MessageRequest request) {
-        // LlmModel 연결 (선택)
-        LlmModel llmModel = null;
-        if (request.getLlmModelId() != null) {
-            llmModel = llmModelRepository.findById(request.getLlmModelId())
-                    .orElse(null);
-        }
-
-        // 연결할 LlmModel이 없으면 가장 최근 것 사용
-        if (llmModel == null) {
-            llmModel = llmModelRepository.findFirstByCallRecordOrderByCreatedAtDesc(callRecord)
-                    .orElseThrow(() -> new IllegalArgumentException("연결할 CallBot 발화가 없습니다."));
-        }
+        LlmModel llmModel = llmModelRepository.findFirstByCallRecordOrderByCreatedAtDesc(callRecord)
+                .orElseThrow(() -> new IllegalArgumentException("연결할 CallBot 발화가 없습니다."));
 
         ElderlyResponse response = ElderlyResponse.builder()
                 .llmModel(llmModel)
@@ -187,9 +140,6 @@ public class CallBotInternalService {
                 .build();
 
         elderlyResponseRepository.save(response);
-        log.debug("[CallBotInternal] 어르신 응답 저장: callId={}, responseId={}, danger={}",
-                callRecord.getId(), response.getId(), response.isDanger());
-
         return MessageResponse.builder()
                 .messageId(response.getId())
                 .speaker("ELDERLY")
@@ -199,11 +149,9 @@ public class CallBotInternalService {
 
     // ========== 통화 요약 저장 ==========
 
-    /**
-     * 통화 요약 저장
-     */
     public SimpleResponse saveSummary(Long callId, SummaryRequest request) {
         CallRecord callRecord = getCallRecord(callId);
+        callSummaryRepository.deleteByCallRecord(callRecord);
 
         CallSummary summary = CallSummary.builder()
                 .callRecord(callRecord)
@@ -211,49 +159,33 @@ public class CallBotInternalService {
                 .build();
 
         callSummaryRepository.save(summary);
-        log.info("[CallBotInternal] 통화 요약 저장: callId={}, summaryId={}", callId, summary.getId());
+        log.info("✅ [DB 저장] 통화 요약 저장 완료: callId={}, summaryId={}", callId, summary.getId());
 
-        return SimpleResponse.builder()
-                .success(true)
-                .message("통화 요약 저장 완료")
-                .id(summary.getId())
-                .build();
+        return SimpleResponse.builder().success(true).message("요약 저장 완료").id(summary.getId()).build();
     }
 
     // ========== 감정 분석 저장 ==========
 
-    /**
-     * 감정 분석 저장
-     */
     public SimpleResponse saveEmotion(Long callId, EmotionRequest request) {
         CallRecord callRecord = getCallRecord(callId);
+        callEmotionRepository.deleteByCallRecord(callRecord);
 
         EmotionLevel emotionLevel = EmotionLevel.valueOf(request.getEmotionLevel().toUpperCase());
-
         CallEmotion emotion = CallEmotion.builder()
                 .callRecord(callRecord)
                 .emotionLevel(emotionLevel)
                 .build();
 
         callEmotionRepository.save(emotion);
-        log.info("[CallBotInternal] 감정 분석 저장: callId={}, emotionLevel={}", callId, emotionLevel);
+        log.info("✅ [DB 저장] 감정 분석 저장 완료: callId={}, level={}", callId, emotionLevel);
 
-        return SimpleResponse.builder()
-                .success(true)
-                .message("감정 분석 저장 완료")
-                .id(emotion.getId())
-                .build();
+        return SimpleResponse.builder().success(true).message("감정 저장 완료").id(emotion.getId()).build();
     }
 
     // ========== 일일 상태 저장 ==========
 
-    /**
-     * 일일 상태 저장
-     */
     public SimpleResponse saveDailyStatus(Long callId, DailyStatusRequest request) {
         CallRecord callRecord = getCallRecord(callId);
-
-        // 기존 상태가 있으면 삭제 후 재생성
         callDailyStatusRepository.deleteByCallRecord(callRecord);
 
         CallDailyStatus dailyStatus = CallDailyStatus.builder()
@@ -267,56 +199,30 @@ public class CallBotInternalService {
 
         callDailyStatusRepository.save(dailyStatus);
         callRecord.setDailyStatus(dailyStatus);
-
-        log.info("[CallBotInternal] 일일 상태 저장: callId={}, meal={}, health={}, sleep={}",
+        log.info("✅ [DB 저장] 일일 상태 저장 완료: callId={}, meal={}, health={}, sleep={}", 
                 callId, request.getMealTaken(), request.getHealthStatus(), request.getSleepStatus());
 
-        return SimpleResponse.builder()
-                .success(true)
-                .message("일일 상태 저장 완료")
-                .id(dailyStatus.getId())
-                .build();
+        return SimpleResponse.builder().success(true).message("일일 상태 저장 완료").id(dailyStatus.getId()).build();
     }
 
     // ========== 통화 종료 ==========
 
-    /**
-     * 통화 종료 처리
-     */
     public SimpleResponse endCall(Long callId, EndCallRequest request) {
         CallRecord callRecord = getCallRecord(callId);
-
-        // 통화 시간 및 녹음 URL 업데이트
         callRecord.setRecordingUrl(request.getRecordingUrl());
-        // 상태 변경 (IN_PROGRESS -> COMPLETED)
-        // 참고: CallRecord에 상태 변경 메서드가 없으면 추가 필요
+        
+        // 상태 변경
+        // callRecord.updateState(CallState.COMPLETED); // 엔티티에 메서드 추가 권장
 
-        // 요약 저장 (있으면)
-        if (request.getSummary() != null && request.getSummary().getContent() != null) {
-            saveSummary(callId, request.getSummary());
-        }
-
-        // 감정 저장 (있으면)
-        if (request.getEmotion() != null && request.getEmotion().getEmotionLevel() != null) {
-            saveEmotion(callId, request.getEmotion());
-        }
-
-        // 일일 상태 저장 (있으면)
-        if (request.getDailyStatus() != null) {
-            saveDailyStatus(callId, request.getDailyStatus());
-        }
+        if (request.getSummary() != null) saveSummary(callId, request.getSummary());
+        if (request.getEmotion() != null) saveEmotion(callId, request.getEmotion());
+        if (request.getDailyStatus() != null) saveDailyStatus(callId, request.getDailyStatus());
 
         callRecordRepository.save(callRecord);
-        log.info("[CallBotInternal] 통화 종료: callId={}, duration={}sec", callId, request.getCallTimeSec());
+        log.info("🚀 [DB 최종확정] 통화 종료 처리 완료: callId={}, duration={}sec", callId, request.getCallTimeSec());
 
-        return SimpleResponse.builder()
-                .success(true)
-                .message("통화 종료 처리 완료")
-                .id(callId)
-                .build();
+        return SimpleResponse.builder().success(true).message("통화 종료 처리 완료").id(callId).build();
     }
-
-    // ========== Private Methods ==========
 
     private CallRecord getCallRecord(Long callId) {
         return callRecordRepository.findById(callId)
@@ -324,14 +230,26 @@ public class CallBotInternalService {
     }
 
     private CallDailyStatus.StatusLevel parseStatusLevel(String status) {
-        if (status == null || status.isBlank()) {
-            return null;
-        }
+        if (status == null || status.isBlank()) return null;
         try {
             return CallDailyStatus.StatusLevel.valueOf(status.toUpperCase());
         } catch (IllegalArgumentException e) {
-            log.warn("[CallBotInternal] 잘못된 상태 값: {}", status);
             return null;
         }
+    }
+
+    public List<CallLogResponse> getCallLogs(Long callId) {
+        getCallRecord(callId);
+        List<CallLogResponse> logs = new java.util.ArrayList<>();
+        List<LlmModel> prompts = llmModelRepository.findByCallIdOrderByCreatedAtAsc(callId);
+        for (LlmModel p : prompts) {
+            logs.add(CallLogResponse.builder().id(p.getId()).type("PROMPT").content(p.getPrompt()).timestamp(p.getCreatedAt()).build());
+        }
+        List<ElderlyResponse> replies = elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId);
+        for (ElderlyResponse r : replies) {
+            logs.add(CallLogResponse.builder().id(r.getId()).type("REPLY").content(r.getContent()).timestamp(r.getRespondedAt()).build());
+        }
+        logs.sort(java.util.Comparator.comparing(CallLogResponse::getTimestamp));
+        return logs;
     }
 }

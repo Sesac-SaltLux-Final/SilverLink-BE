@@ -107,6 +107,11 @@ chatbot:
     header: "X-SilverLink-Secret"
     key: ${CHATBOT_SECRET_KEY:X-SilverLink-Key!}
 
+callbot:
+  api:
+    url: ${CALLBOT_API_URL:http://localhost:5000}
+    connect-timeout: 5000
+    read-timeout: 10000
 
   aws:
     s3:

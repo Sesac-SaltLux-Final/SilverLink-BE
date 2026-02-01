@@ -66,8 +66,8 @@ public class SecurityConfig {
                                 "/error",
                                 "/api/data/faqs/all",
                                  "/api/data/inquiries/answered",
-                                    "/calls/{callId}/llm/prompt",
-                            "/calls/{callId}/llm/reply"
+                                "/calls/{callId}/llm/prompt",
+                                "/calls/{callId}/llm/reply"
                 )
                         .permitAll()
 
