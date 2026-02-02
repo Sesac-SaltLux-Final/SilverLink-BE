@@ -210,9 +210,10 @@ public class CallBotInternalService {
     public SimpleResponse endCall(Long callId, EndCallRequest request) {
         CallRecord callRecord = getCallRecord(callId);
         callRecord.setRecordingUrl(request.getRecordingUrl());
-
+        callRecord.setCallTimeSec(request.getCallTimeSec());
+        
         // 상태 변경
-        // callRecord.updateState(CallState.COMPLETED); // 엔티티에 메서드 추가 권장
+        callRecord.updateState(CallState.COMPLETED);
 
         if (request.getSummary() != null)
             saveSummary(callId, request.getSummary());
