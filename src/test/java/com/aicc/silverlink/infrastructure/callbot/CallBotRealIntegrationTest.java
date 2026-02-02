@@ -26,7 +26,7 @@ public class CallBotRealIntegrationTest {
         StartCallRequest request = StartCallRequest.builder()
                 .elderlyId(682L) // 테스트용 ID
                 .elderlyName("노인")
-                .phone("+821086769789") // 테스트용 번호 (Twilio Verified Number여야 실제 발신됨)
+                .phone("+821080509357") // 테스트용 번호 (Twilio Verified Number여야 실제 발신됨)
                 .build();
 
         try {
