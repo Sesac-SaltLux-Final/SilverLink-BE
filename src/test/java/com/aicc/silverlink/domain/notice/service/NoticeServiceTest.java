@@ -96,6 +96,8 @@ class NoticeServiceTest {
         // given
         Long noticeId = 1L;
 
+        Long adminId = 100L;
+
         // Admin Mocking
         Admin admin = mock(Admin.class);
         // Notice Mocking

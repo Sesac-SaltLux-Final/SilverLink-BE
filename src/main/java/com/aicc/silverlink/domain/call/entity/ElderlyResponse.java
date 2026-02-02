@@ -13,11 +13,10 @@ import java.time.LocalDateTime;
  * - 통화 중 어르신이 한 말 (STT 결과)
  */
 @Entity
-@Table(name = "elderly_responses",
-        indexes = {
-                @Index(name = "idx_elderly_responses_call_time", columnList = "call_id, responded_at"),
-                @Index(name = "idx_elderly_responses_model_time", columnList = "model_id, responded_at")
-        })
+@Table(name = "elderly_responses", indexes = {
+        @Index(name = "idx_elderly_responses_call_time", columnList = "call_id, responded_at"),
+        @Index(name = "idx_elderly_responses_model_time", columnList = "model_id, responded_at")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ElderlyResponse {
@@ -28,7 +27,7 @@ public class ElderlyResponse {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "model_id", nullable = false)
+    @JoinColumn(name = "model_id", nullable = true)
     private LlmModel llmModel;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -78,7 +77,7 @@ public class ElderlyResponse {
 
     @Builder
     public ElderlyResponse(LlmModel llmModel, CallRecord callRecord, String content,
-                           LocalDateTime respondedAt, boolean danger, String dangerReason) {
+            LocalDateTime respondedAt, boolean danger, String dangerReason) {
         this.llmModel = llmModel;
         this.callRecord = callRecord;
         this.content = content;
