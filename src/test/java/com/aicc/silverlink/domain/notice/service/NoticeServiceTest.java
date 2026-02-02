@@ -36,6 +36,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class NoticeServiceTest {
@@ -99,13 +100,14 @@ class NoticeServiceTest {
 
         // Admin Mocking
         Admin admin = mock(Admin.class);
-        given(admin.getUserId()).willReturn(adminId); // getUserId() 사용
-
-        // Notice Mocking (작성자가 admin과 동일해야 함)
-        Notice notice = mock(Notice.class);
-        Admin createdBy = mock(Admin.class);
-        given(createdBy.getUserId()).willReturn(adminId); // 작성자 ID도 동일하게 설정
-        given(notice.getCreatedBy()).willReturn(createdBy);
+        // Notice Mocking
+        Notice notice = Notice.builder()
+                .id(noticeId)
+                .title("Delete Test")
+                .content("Content")
+                .targetMode(TargetMode.ALL)
+                .status(NoticeStatus.PUBLISHED)
+                .build();
 
         given(noticeRepository.findById(noticeId)).willReturn(Optional.of(notice));
 
@@ -114,6 +116,12 @@ class NoticeServiceTest {
 
         // then
         verify(noticeRepository, times(1)).findById(noticeId);
+
+        ArgumentCaptor<Notice> noticeCaptor = ArgumentCaptor.forClass(Notice.class);
+        verify(noticeRepository, times(1)).save(noticeCaptor.capture());
+
+        Notice capturedNotice = noticeCaptor.getValue();
+        assertEquals(NoticeStatus.DELETED, capturedNotice.getStatus());
     }
 
     @Test

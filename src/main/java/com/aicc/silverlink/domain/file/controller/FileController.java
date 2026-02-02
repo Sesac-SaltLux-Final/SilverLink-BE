@@ -9,6 +9,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpHeaders;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import java.util.List;
 
@@ -72,60 +75,17 @@ public class FileController {
      * 파일 다운로드
      * GET /api/files/download
      */
-    @Operation(summary = "파일 다운로드", description = "파일을 다운로드합니다. (원본 파일명 유지)")
+    @Operation(summary = "파일 다운로드", description = "파일을 읽어와서 다운로드 처리합니다.")
     @GetMapping("/download")
-    public ResponseEntity<org.springframework.core.io.Resource> downloadFile(
+    public ResponseEntity<byte[]> downloadFile(
             @RequestParam("filePath") String filePath,
             @RequestParam("originalFileName") String originalFileName) {
-        try {
-            org.springframework.core.io.Resource resource = fileService.loadFileAsResource(filePath);
-            
-            // 파일 확장자로 Content-Type 결정
-            String contentType = determineContentType(originalFileName);
-            
-            // RFC 5987 형식으로 파일명 인코딩 (한글 파일명 지원)
-            String encodedFileName = java.net.URLEncoder.encode(originalFileName, java.nio.charset.StandardCharsets.UTF_8)
-                    .replaceAll("\\+", "%20");
-            
-            // Content-Disposition 헤더 설정 (RFC 2231/5987 형식)
-            String contentDisposition = String.format(
-                "attachment; filename=\"%s\"; filename*=UTF-8''%s",
-                originalFileName.replaceAll("[^\\x00-\\x7F]", "_"), // ASCII fallback
-                encodedFileName
-            );
-            
-            return ResponseEntity.ok()
-                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
-                    .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, contentType)
-                    .header(org.springframework.http.HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
-                    .header(org.springframework.http.HttpHeaders.PRAGMA, "no-cache")
-                    .header(org.springframework.http.HttpHeaders.EXPIRES, "0")
-                    .body(resource);
-        } catch (Exception e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-    
-    /**
-     * 파일 확장자로 Content-Type 결정
-     */
-    private String determineContentType(String fileName) {
-        String extension = "";
-        int lastDot = fileName.lastIndexOf('.');
-        if (lastDot > 0) {
-            extension = fileName.substring(lastDot + 1).toLowerCase();
-        }
-        
-        return switch (extension) {
-            case "pdf" -> "application/pdf";
-            case "doc" -> "application/msword";
-            case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-            case "xls" -> "application/vnd.ms-excel";
-            case "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            case "jpg", "jpeg" -> "image/jpeg";
-            case "png" -> "image/png";
-            case "gif" -> "image/gif";
-            default -> "application/octet-stream";
-        };
+
+        byte[] fileData = fileService.downloadFile(filePath);
+        String encodedFileName = URLEncoder.encode(originalFileName, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFileName + "\"")
+                .body(fileData);
     }
 }
