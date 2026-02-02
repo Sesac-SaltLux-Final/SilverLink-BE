@@ -201,6 +201,16 @@ public class CallReviewService {
         // 보호자-어르신 관계 확인
         validateGuardianElderlyRelation(guardianId, callRecord.getElderly().getId());
 
+        // 대화 데이터 로드 (prompts, responses)
+        if (callRecord.getElderlyResponses().isEmpty()) {
+            callRecord.getElderlyResponses().addAll(
+                    elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId));
+        }
+        if (callRecord.getLlmModels().isEmpty()) {
+            callRecord.getLlmModels().addAll(
+                    llmModelRepository.findByCallIdOrderByCreatedAtAsc(callId));
+        }
+
         // 리뷰가 있으면 함께 반환
         List<CounselorCallReview> reviews = reviewRepository.findByCallRecordIdOrderByReviewedAtDesc(callId);
         CounselorCallReview latestReview = reviews.isEmpty() ? null : reviews.get(0);

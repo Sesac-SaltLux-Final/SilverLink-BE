@@ -288,6 +288,8 @@ public class CallReviewDto {
         private String elderlyName;
         private LocalDateTime callAt;
         private String duration;
+        private String state;
+        private String stateKorean;
         private String summary;
         private String emotionLevel;
         private String emotionLevelKorean;
@@ -297,16 +299,40 @@ public class CallReviewDto {
         private boolean urgent;
         private LocalDateTime reviewedAt;
 
+        // 대화 내용
+        private List<CallRecordDetailResponse.PromptItem> prompts;
+        private List<CallRecordDetailResponse.ResponseItem> responses;
+
         public static GuardianCallReviewResponse from(CallRecord callRecord, CounselorCallReview review) {
             CallEmotion latestEmotion = callRecord.getEmotions().isEmpty() ? null
                     : callRecord.getEmotions().get(callRecord.getEmotions().size() - 1);
             String summary = callRecord.getSummaries().isEmpty() ? null : callRecord.getSummaries().get(0).getContent();
+
+            List<CallRecordDetailResponse.PromptItem> promptItems = callRecord.getLlmModels().stream()
+                    .map(p -> CallRecordDetailResponse.PromptItem.builder()
+                            .promptId(p.getId())
+                            .content(p.getPrompt())
+                            .createdAt(p.getCreatedAt())
+                            .build())
+                    .toList();
+
+            List<CallRecordDetailResponse.ResponseItem> responseItems = callRecord.getElderlyResponses().stream()
+                    .map(r -> CallRecordDetailResponse.ResponseItem.builder()
+                            .responseId(r.getId())
+                            .content(r.getContent())
+                            .respondedAt(r.getRespondedAt())
+                            .danger(r.isDanger())
+                            .dangerReason(r.getDangerReason())
+                            .build())
+                    .toList();
 
             return GuardianCallReviewResponse.builder()
                     .callId(callRecord.getId())
                     .elderlyName(callRecord.getElderly().getUser().getName())
                     .callAt(callRecord.getCallAt())
                     .duration(callRecord.getFormattedDuration())
+                    .state(callRecord.getState().name())
+                    .stateKorean(callRecord.getState().getKorean())
                     .summary(summary)
                     .emotionLevel(latestEmotion != null ? latestEmotion.getEmotionLevel().name() : null)
                     .emotionLevelKorean(latestEmotion != null ? latestEmotion.getEmotionLevelKorean() : null)
@@ -315,6 +341,8 @@ public class CallReviewDto {
                     .counselorComment(review != null ? review.getComment() : null)
                     .urgent(review != null && review.isUrgent())
                     .reviewedAt(review != null ? review.getReviewedAt() : null)
+                    .prompts(promptItems)
+                    .responses(responseItems)
                     .build();
         }
     }
