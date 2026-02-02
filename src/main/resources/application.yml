@@ -115,9 +115,19 @@ callbot:
     read-timeout: 10000
 
 
+
+
+
+cloud:
   aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY_ID}      # 환경변수로 관리
+      secret-key: ${AWS_SECRET_ACCESS_KEY}  # 코드에 직접 안 씀
+    region:
+      static: ap-northeast-2
     s3:
-      enabled: false  # 로컬 모드
+      bucket: silverlink-storage
+      enabled: true
 
 #cloud:
 #  aws:

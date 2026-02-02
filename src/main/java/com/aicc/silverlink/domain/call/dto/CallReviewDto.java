@@ -44,8 +44,8 @@ public class CallReviewDto {
         private Long elderlyId;
         private LocalDateTime startDate;
         private LocalDateTime endDate;
-        private Boolean reviewed;      // 확인 여부 필터
-        private Boolean hasDanger;     // 위험 응답 여부 필터
+        private Boolean reviewed; // 확인 여부 필터
+        private Boolean hasDanger; // 위험 응답 여부 필터
         private EmotionLevel emotionLevel;
     }
 
@@ -61,25 +61,24 @@ public class CallReviewDto {
         private Long elderlyId;
         private String elderlyName;
         private LocalDateTime callAt;
-        private String duration;           // "분:초" 형식
+        private String duration; // "분:초" 형식
         private String state;
         private String stateKorean;
         private String emotionLevel;
         private String emotionLevelKorean;
         private boolean hasDangerResponse;
-        private boolean reviewed;          // 상담사 확인 여부
-        private String summaryPreview;     // 요약 미리보기 (최대 100자)
+        private boolean reviewed; // 상담사 확인 여부
+        private String summaryPreview; // 요약 미리보기 (최대 100자)
 
         public static CallRecordSummaryResponse from(CallRecord callRecord, boolean reviewed) {
             // 최신 감정 상태
-            CallEmotion latestEmotion = callRecord.getEmotions().isEmpty() ? null :
-                    callRecord.getEmotions().get(callRecord.getEmotions().size() - 1);
+            CallEmotion latestEmotion = callRecord.getEmotions().isEmpty() ? null
+                    : callRecord.getEmotions().get(callRecord.getEmotions().size() - 1);
 
             // 요약 미리보기
-            String summary = callRecord.getSummaries().isEmpty() ? null :
-                    callRecord.getSummaries().get(0).getContent();
-            String summaryPreview = summary != null && summary.length() > 100 ?
-                    summary.substring(0, 100) + "..." : summary;
+            String summary = callRecord.getSummaries().isEmpty() ? null : callRecord.getSummaries().get(0).getContent();
+            String summaryPreview = summary != null && summary.length() > 100 ? summary.substring(0, 100) + "..."
+                    : summary;
 
             return CallRecordSummaryResponse.builder()
                     .callId(callRecord.getId())
@@ -111,7 +110,9 @@ public class CallReviewDto {
         private Integer callTimeSec;
         private String state;
         private String stateKorean;
+        private String recordingUrl; // 녹음 파일 URL 추가
         private List<ResponseItem> responses;
+        private List<PromptItem> prompts; // AI 발화 추가
         private List<SummaryItem> summaries;
         private List<EmotionItem> emotions;
         private ReviewInfo review;
@@ -155,6 +156,14 @@ public class CallReviewDto {
 
         @Getter
         @Builder
+        public static class PromptItem {
+            private Long promptId;
+            private String content;
+            private LocalDateTime createdAt;
+        }
+
+        @Getter
+        @Builder
         public static class ReviewInfo {
             private Long reviewId;
             private Long counselorId;
@@ -164,7 +173,8 @@ public class CallReviewDto {
             private boolean urgent;
         }
 
-        public static CallRecordDetailResponse from(CallRecord callRecord, CounselorCallReview review) {
+        public static CallRecordDetailResponse from(CallRecord callRecord, CounselorCallReview review,
+                String presignedRecordingUrl) {
             List<ResponseItem> responseItems = callRecord.getElderlyResponses().stream()
                     .map(r -> ResponseItem.builder()
                             .responseId(r.getId())
@@ -192,14 +202,23 @@ public class CallReviewDto {
                             .build())
                     .toList();
 
-            ReviewInfo reviewInfo = review == null ? null : ReviewInfo.builder()
-                    .reviewId(review.getId())
-                    .counselorId(review.getCounselor().getId())
-                    .counselorName(review.getCounselor().getUser().getName())
-                    .reviewedAt(review.getReviewedAt())
-                    .comment(review.getComment())
-                    .urgent(review.isUrgent())
-                    .build();
+            List<PromptItem> promptItems = callRecord.getLlmModels().stream()
+                    .map(p -> PromptItem.builder()
+                            .promptId(p.getId())
+                            .content(p.getPrompt())
+                            .createdAt(p.getCreatedAt())
+                            .build())
+                    .toList();
+
+            ReviewInfo reviewInfo = review == null ? null
+                    : ReviewInfo.builder()
+                            .reviewId(review.getId())
+                            .counselorId(review.getCounselor().getId())
+                            .counselorName(review.getCounselor().getUser().getName())
+                            .reviewedAt(review.getReviewedAt())
+                            .comment(review.getComment())
+                            .urgent(review.isUrgent())
+                            .build();
 
             var elderly = callRecord.getElderly();
             ElderlyInfo elderlyInfo = ElderlyInfo.builder()
@@ -218,7 +237,9 @@ public class CallReviewDto {
                     .callTimeSec(callRecord.getCallTimeSec())
                     .state(callRecord.getState().name())
                     .stateKorean(callRecord.getState().getKorean())
+                    .recordingUrl(presignedRecordingUrl)
                     .responses(responseItems)
+                    .prompts(promptItems)
                     .summaries(summaryItems)
                     .emotions(emotionItems)
                     .review(reviewInfo)
@@ -277,10 +298,9 @@ public class CallReviewDto {
         private LocalDateTime reviewedAt;
 
         public static GuardianCallReviewResponse from(CallRecord callRecord, CounselorCallReview review) {
-            CallEmotion latestEmotion = callRecord.getEmotions().isEmpty() ? null :
-                    callRecord.getEmotions().get(callRecord.getEmotions().size() - 1);
-            String summary = callRecord.getSummaries().isEmpty() ? null :
-                    callRecord.getSummaries().get(0).getContent();
+            CallEmotion latestEmotion = callRecord.getEmotions().isEmpty() ? null
+                    : callRecord.getEmotions().get(callRecord.getEmotions().size() - 1);
+            String summary = callRecord.getSummaries().isEmpty() ? null : callRecord.getSummaries().get(0).getContent();
 
             return GuardianCallReviewResponse.builder()
                     .callId(callRecord.getId())
