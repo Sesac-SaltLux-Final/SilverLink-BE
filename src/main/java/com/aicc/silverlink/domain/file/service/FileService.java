@@ -208,6 +208,27 @@ public class FileService {
         }
     }
 
+    /**
+     * 파일 다운로드 (byte[] 반환)
+     */
+    public byte[] downloadFile(String filePath) {
+        try {
+            if (s3Enabled) {
+                GetObjectRequest getRequest = GetObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(filePath)
+                        .build();
+                return s3Client.getObject(getRequest).readAllBytes();
+            } else {
+                Path file = Paths.get(localUploadPath).resolve(filePath).normalize();
+                return Files.readAllBytes(file);
+            }
+        } catch (Exception e) {
+            log.error("파일 다운로드 실패: {}", filePath, e);
+            throw new RuntimeException("파일 다운로드에 실패했습니다: " + filePath, e);
+        }
+    }
+
     // ==================== S3 Methods ====================
 
     private FileUploadResponse uploadToS3(MultipartFile file, String directory) {
