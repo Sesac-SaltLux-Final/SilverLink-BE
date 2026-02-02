@@ -36,6 +36,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class NoticeServiceTest {
@@ -95,17 +96,16 @@ class NoticeServiceTest {
         // given
         Long noticeId = 1L;
 
-        Long adminId = 100L;
-        
         // Admin Mocking
         Admin admin = mock(Admin.class);
-        given(admin.getUserId()).willReturn(adminId); // getUserId() 사용
-
-        // Notice Mocking (작성자가 admin과 동일해야 함)
-        Notice notice = mock(Notice.class);
-        Admin createdBy = mock(Admin.class);
-        given(createdBy.getUserId()).willReturn(adminId); // 작성자 ID도 동일하게 설정
-        given(notice.getCreatedBy()).willReturn(createdBy);
+        // Notice Mocking
+        Notice notice = Notice.builder()
+                .id(noticeId)
+                .title("Delete Test")
+                .content("Content")
+                .targetMode(TargetMode.ALL)
+                .status(NoticeStatus.PUBLISHED)
+                .build();
 
         given(noticeRepository.findById(noticeId)).willReturn(Optional.of(notice));
 
@@ -114,6 +114,12 @@ class NoticeServiceTest {
 
         // then
         verify(noticeRepository, times(1)).findById(noticeId);
+
+        ArgumentCaptor<Notice> noticeCaptor = ArgumentCaptor.forClass(Notice.class);
+        verify(noticeRepository, times(1)).save(noticeCaptor.capture());
+
+        Notice capturedNotice = noticeCaptor.getValue();
+        assertEquals(NoticeStatus.DELETED, capturedNotice.getStatus());
     }
 
     @Test
@@ -168,7 +174,7 @@ class NoticeServiceTest {
 
         // 검색 키워드 파라미터 추가
         given(noticeRepository.findAllForUser(Role.ELDERLY, keyword, pageable)).willReturn(noticePage);
-        given(noticeReadLogRepository.existsByNoticeIdAndUserId(1L, "100")).willReturn(false);
+        given(noticeReadLogRepository.existsByNoticeIdAndUserId(1L, 100L)).willReturn(false);
         given(noticeTargetRoleRepository.findAllByNoticeId(anyLong())).willReturn(Collections.emptyList());
         given(noticeAttachmentRepository.findAllByNoticeId(anyLong())).willReturn(Collections.emptyList());
 
@@ -202,7 +208,7 @@ class NoticeServiceTest {
 
         given(noticeRepository.findActivePopups(eq(Role.ELDERLY), any(LocalDateTime.class)))
                 .willReturn(Collections.singletonList(notice));
-        given(noticeReadLogRepository.existsByNoticeIdAndUserId(1L, "100")).willReturn(false);
+        given(noticeReadLogRepository.existsByNoticeIdAndUserId(1L, 100L)).willReturn(false);
         given(noticeTargetRoleRepository.findAllByNoticeId(anyLong())).willReturn(Collections.emptyList());
         given(noticeAttachmentRepository.findAllByNoticeId(anyLong())).willReturn(Collections.emptyList());
 
@@ -223,7 +229,7 @@ class NoticeServiceTest {
         User user = mock(User.class);
         given(user.getId()).willReturn(100L);
 
-        given(noticeReadLogRepository.existsByNoticeIdAndUserId(noticeId, "100")).willReturn(false);
+        given(noticeReadLogRepository.existsByNoticeIdAndUserId(noticeId, 100L)).willReturn(false);
         given(noticeRepository.findById(noticeId)).willReturn(Optional.of(mock(Notice.class)));
 
         // when
@@ -253,7 +259,7 @@ class NoticeServiceTest {
                 .build();
 
         given(noticeRepository.findById(noticeId)).willReturn(Optional.of(notice));
-        given(noticeReadLogRepository.existsByNoticeIdAndUserId(noticeId, "100")).willReturn(true);
+        given(noticeReadLogRepository.existsByNoticeIdAndUserId(noticeId, 100L)).willReturn(true);
         given(noticeTargetRoleRepository.findAllByNoticeId(noticeId)).willReturn(Collections.emptyList());
         given(noticeAttachmentRepository.findAllByNoticeId(noticeId)).willReturn(Collections.emptyList());
 
