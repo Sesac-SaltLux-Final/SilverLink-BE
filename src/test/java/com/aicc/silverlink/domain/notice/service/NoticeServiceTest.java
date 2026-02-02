@@ -36,6 +36,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class NoticeServiceTest {
@@ -98,7 +99,13 @@ class NoticeServiceTest {
         // Admin Mocking
         Admin admin = mock(Admin.class);
         // Notice Mocking
-        Notice notice = mock(Notice.class);
+        Notice notice = Notice.builder()
+                .id(noticeId)
+                .title("Delete Test")
+                .content("Content")
+                .targetMode(TargetMode.ALL)
+                .status(NoticeStatus.PUBLISHED)
+                .build();
 
         given(noticeRepository.findById(noticeId)).willReturn(Optional.of(notice));
 
@@ -107,6 +114,12 @@ class NoticeServiceTest {
 
         // then
         verify(noticeRepository, times(1)).findById(noticeId);
+
+        ArgumentCaptor<Notice> noticeCaptor = ArgumentCaptor.forClass(Notice.class);
+        verify(noticeRepository, times(1)).save(noticeCaptor.capture());
+
+        Notice capturedNotice = noticeCaptor.getValue();
+        assertEquals(NoticeStatus.DELETED, capturedNotice.getStatus());
     }
 
     @Test
