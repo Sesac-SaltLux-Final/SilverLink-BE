@@ -195,3 +195,4 @@ class NoticeControllerTest {
         verify(noticeService).readNotice(eq(noticeId), any(User.class));
     }
 }
+//수정
