@@ -3,12 +3,14 @@ package com.aicc.silverlink.domain.elderly.scheduler;
 import com.aicc.silverlink.domain.elderly.dto.CallScheduleDto.StartCallRequest;
 import com.aicc.silverlink.domain.elderly.service.CallScheduleService;
 import com.aicc.silverlink.infrastructure.callbot.CallBotClient;
+import com.aicc.silverlink.infrastructure.callbot.CallBotProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
@@ -52,15 +54,13 @@ class CallSchedulerTest {
         StartCallRequest request1 = StartCallRequest.builder()
                 .elderlyId(1L)
                 .elderlyName("홍길동")
-                .phone("01011112222")
-                .chronicDiseases(List.of("고혈압", "당뇨"))
+                .phone("+811011112222")
                 .build();
 
         StartCallRequest request2 = StartCallRequest.builder()
                 .elderlyId(2L)
                 .elderlyName("김순자")
-                .phone("01033334444")
-                .chronicDiseases(List.of())
+                .phone("+811033334444")
                 .build();
 
         given(callScheduleService.getDueForCall()).willReturn(List.of(request1, request2));
@@ -77,28 +77,56 @@ class CallSchedulerTest {
     }
 
     @Test
+    @DisplayName("예정된 통화가 1명인 경우 실제 CallBot 호출 (Integration)")
+    void triggerScheduledCalls_singleDueCall() {
+        // given
+        StartCallRequest request = StartCallRequest.builder()
+                .elderlyId(1L)
+                .elderlyName("김성호")
+                .phone("+821053915653")
+                .build();
+
+        given(callScheduleService.getDueForCall()).willReturn(List.of(request));
+
+        // Real CallBotClient setup for integration
+        RestTemplate restTemplate = new RestTemplate();
+        CallBotProperties properties = new CallBotProperties();
+        String pythonUrl = "http://localhost:5000"; // Assuming default local python URL
+        properties.setUrl(pythonUrl);
+        CallBotClient realCallBotClient = new CallBotClient(restTemplate, properties);
+
+        // Inject real client into scheduler
+        CallScheduler integrationScheduler = new CallScheduler(callScheduleService, realCallBotClient);
+
+        // when
+        integrationScheduler.triggerScheduledCalls();
+
+        // then
+        verify(callScheduleService).getDueForCall();
+        // Since we used a real client, we can't verify(callBotClient).startCall(...) on the mock.
+        // We verify the side effect (the python server receiving it) externally or assume success if no exception.
+    }
+
+    @Test
     @DisplayName("일부 통화 실패해도 나머지 통화 시도")
     void triggerScheduledCalls_partialFailure() {
         // given
         StartCallRequest request1 = StartCallRequest.builder()
                 .elderlyId(1L)
                 .elderlyName("홍길동")
-                .phone("01011112222")
-                .chronicDiseases(List.of())
+                .phone("+811011112222")
                 .build();
 
         StartCallRequest request2 = StartCallRequest.builder()
                 .elderlyId(2L)
                 .elderlyName("김순자")
-                .phone("01033334444")
-                .chronicDiseases(List.of())
+                .phone("+811033334444")
                 .build();
 
         StartCallRequest request3 = StartCallRequest.builder()
                 .elderlyId(3L)
                 .elderlyName("박영희")
-                .phone("01055556666")
-                .chronicDiseases(List.of())
+                .phone("+811055556666")
                 .build();
 
         given(callScheduleService.getDueForCall()).willReturn(List.of(request1, request2, request3));
@@ -121,8 +149,7 @@ class CallSchedulerTest {
         StartCallRequest request = StartCallRequest.builder()
                 .elderlyId(1L)
                 .elderlyName("홍길동")
-                .phone("01011112222")
-                .chronicDiseases(List.of())
+                .phone("+811011112222")
                 .build();
 
         given(callScheduleService.getDueForCall()).willReturn(List.of(request));

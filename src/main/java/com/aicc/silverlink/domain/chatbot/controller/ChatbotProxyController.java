@@ -32,7 +32,7 @@ public class ChatbotProxyController {
         private final RestTemplate restTemplate;
         private final GuardianElderlyRepository guardianElderlyRepository;
 
-        @Value("${chatbot.python.url:http://localhost:8000}")
+        @Value("${chatbot.python.url:http://localhost:5000}")
         private String pythonChatbotUrl;
 
         @Value("${chatbot.secret.header:X-SilverLink-Secret}")

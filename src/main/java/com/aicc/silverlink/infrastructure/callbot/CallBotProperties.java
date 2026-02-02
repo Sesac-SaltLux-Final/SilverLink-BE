@@ -16,9 +16,9 @@ public class CallBotProperties {
 
     /**
      * Python CallBot API URL
-     * 예: http://localhost:8000
+     * 예: http://localhost:5000
      */
-    private String url = "http://localhost:8000";
+    private String url;
 
     /**
      * 연결 타임아웃 (ms)

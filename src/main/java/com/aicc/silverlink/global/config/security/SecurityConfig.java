@@ -67,8 +67,10 @@ public class SecurityConfig {
                                 "/health",
                                 "/error",
                                 "/api/data/faqs/all",
-                                 "/api/data/inquiries/answered"
-                                    )
+                                 "/api/data/inquiries/answered",
+                                "/calls/{callId}/llm/prompt",
+                                "/calls/{callId}/llm/reply"
+                )
                         .permitAll()
 
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
