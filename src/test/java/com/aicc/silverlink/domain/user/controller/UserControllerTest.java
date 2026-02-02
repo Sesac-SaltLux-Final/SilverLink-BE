@@ -29,20 +29,24 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("ci")
 class UserControllerTest {
 
-    @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
-    @MockitoBean private UserCommandService userCommandService;
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @MockitoBean
+    private UserCommandService userCommandService;
 
     @Test
     @DisplayName("내 프로필 조회 성공")
     void me_Success() throws Exception {
         UserResponses.MyProfileResponse response = new UserResponses.MyProfileResponse(
                 1L, "testUser", Role.ELDERLY, UserStatus.ACTIVE, "홍길동", "01012345678",
-                "test@example.com", true, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now());
+                "test@example.com", true, LocalDateTime.now(), LocalDateTime.now(),
+                LocalDateTime.now());
 
         given(userCommandService.getMyProfile(any())).willReturn(response);
 
@@ -55,7 +59,8 @@ class UserControllerTest {
     @Test
     @DisplayName("내 프로필 수정 성공 - 전화번호 필드 포함")
     void updateMe_Success() throws Exception {
-        UserRequests.UpdateMyProfileRequest request = new UserRequests.UpdateMyProfileRequest("김철수", "01099998888", "new@example.com");
+        UserRequests.UpdateMyProfileRequest request = new UserRequests.UpdateMyProfileRequest("김철수",
+                "01099998888", "new@example.com");
         UserResponses.MyProfileResponse response = new UserResponses.MyProfileResponse(
                 1L, "testUser", Role.ELDERLY, UserStatus.ACTIVE, "김철수", "01099998888",
                 "new@example.com", true, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now());
