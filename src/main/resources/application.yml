@@ -16,13 +16,13 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:silverlink}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:silverlink}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:password}
-
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
+      connection-timeout: 20000
       idle-timeout: 180000
       max-lifetime: 300000   # 5분
       leak-detection-threshold: 2000
@@ -35,7 +35,7 @@ spring:
         enabled: false
 
   jpa:
-    #    database-platform: org.hibernate.dialect.MySQLDialect
+    database-platform: org.hibernate.dialect.MySQLDialect
     open-in-view: false
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:update}
@@ -44,6 +44,7 @@ spring:
       hibernate:
         format_sql: true
         physical_naming_strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+        dialect: org.hibernate.dialect.MySQLDialect
 
 # 인증/보안 설정 (spring 네임스페이스 밖으로 이동)
 security:
@@ -113,9 +114,20 @@ callbot:
     connect-timeout: 5000
     read-timeout: 10000
 
+
+
+
+
+cloud:
   aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY_ID}      # 환경변수로 관리
+      secret-key: ${AWS_SECRET_ACCESS_KEY}  # 코드에 직접 안 씀
+    region:
+      static: ap-northeast-2
     s3:
-      enabled: false  # 로컬 모드
+      bucket: silverlink-storage
+      enabled: true
 
 #cloud:
 #  aws:

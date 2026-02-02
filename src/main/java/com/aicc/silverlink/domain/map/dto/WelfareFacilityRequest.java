@@ -38,4 +38,6 @@ public class WelfareFacilityRequest {
 
     private String phone;
     private String operatingHours;
+    // TODO: 백엔드 description 필드 활성화 후 사용
+    // private String description;
 }

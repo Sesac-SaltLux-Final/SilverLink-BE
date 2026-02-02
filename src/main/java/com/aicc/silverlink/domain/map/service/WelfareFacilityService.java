@@ -64,6 +64,8 @@ public class WelfareFacilityService {
                 .type(request.getType())
                 .phone(request.getPhone())
                 .operatingHours(request.getOperatingHours())
+                // TODO: description 필드 활성화 후 추가
+                // .description(request.getDescription())
                 .build();
         WelfareFacility savedFacility = welfareFacilityRepository.save(facility);
         return savedFacility.getId();

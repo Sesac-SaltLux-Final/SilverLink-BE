@@ -9,6 +9,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpHeaders;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import java.util.List;
 
@@ -66,5 +69,23 @@ public class FileController {
     public ResponseEntity<String> getFileUrl(@RequestParam("filePath") String filePath) {
         String url = fileService.getPresignedUrl(filePath);
         return ResponseEntity.ok(url);
+    }
+
+    /**
+     * 파일 다운로드
+     * GET /api/files/download
+     */
+    @Operation(summary = "파일 다운로드", description = "파일을 읽어와서 다운로드 처리합니다.")
+    @GetMapping("/download")
+    public ResponseEntity<byte[]> downloadFile(
+            @RequestParam("filePath") String filePath,
+            @RequestParam("originalFileName") String originalFileName) {
+
+        byte[] fileData = fileService.downloadFile(filePath);
+        String encodedFileName = URLEncoder.encode(originalFileName, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFileName + "\"")
+                .body(fileData);
     }
 }

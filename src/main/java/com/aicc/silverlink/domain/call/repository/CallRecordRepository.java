@@ -16,62 +16,62 @@ import java.util.Optional;
 @Repository
 public interface CallRecordRepository extends JpaRepository<CallRecord, Long> {
 
-    /**
-     * 어르신 ID로 통화 기록 조회 (최신순)
-     */
-    Page<CallRecord> findByElderlyIdOrderByCallAtDesc(Long elderlyId, Pageable pageable);
+        /**
+         * 어르신 ID로 통화 기록 조회 (최신순)
+         */
+        Page<CallRecord> findByElderlyIdOrderByCallAtDesc(Long elderlyId, Pageable pageable);
 
-    /**
-     * 어르신 ID와 기간으로 통화 기록 조회
-     */
-    @Query("SELECT c FROM CallRecord c WHERE c.elderly.id = :elderlyId " +
-            "AND c.callAt BETWEEN :startDate AND :endDate ORDER BY c.callAt DESC")
-    List<CallRecord> findByElderlyIdAndDateRange(
-            @Param("elderlyId") Long elderlyId,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
+        /**
+         * 어르신 ID와 기간으로 통화 기록 조회
+         */
+        @Query("SELECT c FROM CallRecord c WHERE c.elderly.id = :elderlyId " +
+                        "AND c.callAt BETWEEN :startDate AND :endDate ORDER BY c.callAt DESC")
+        List<CallRecord> findByElderlyIdAndDateRange(
+                        @Param("elderlyId") Long elderlyId,
+                        @Param("startDate") LocalDateTime startDate,
+                        @Param("endDate") LocalDateTime endDate);
 
-    /**
-     * 특정 상담사가 담당하는 어르신들의 통화 기록 조회 (미확인 건 우선)
-     */
-    @Query("SELECT DISTINCT c FROM CallRecord c " +
-            "JOIN Assignment a ON c.elderly.id = a.elderly.id " +
-            "LEFT JOIN CounselorCallReview r ON c.id = r.callRecord.id AND r.counselor.id = :counselorId " +
-            "WHERE a.counselor.id = :counselorId AND a.status = 'ACTIVE' " +
-            "ORDER BY CASE WHEN r.id IS NULL THEN 0 ELSE 1 END, c.callAt DESC")
-    Page<CallRecord> findCallRecordsForCounselor(@Param("counselorId") Long counselorId, Pageable pageable);
+        /**
+         * 특정 상담사가 담당하는 어르신들의 통화 기록 조회 (미확인 건 우선)
+         */
+        @Query("SELECT DISTINCT c FROM CallRecord c " +
+                        "JOIN Assignment a ON c.elderly.id = a.elderly.id " +
+                        "LEFT JOIN CounselorCallReview r ON c.id = r.callRecord.id AND r.counselor.id = :counselorId " +
+                        "WHERE a.counselor.id = :counselorId AND a.status = 'ACTIVE' " +
+                        "ORDER BY CASE WHEN r.id IS NULL THEN 0 ELSE 1 END, c.callAt DESC")
+        Page<CallRecord> findCallRecordsForCounselor(@Param("counselorId") Long counselorId, Pageable pageable);
 
-    /**
-     * 상담사가 확인하지 않은 통화 기록 개수
-     */
-    @Query("SELECT COUNT(c) FROM CallRecord c " +
-            "JOIN Assignment a ON c.elderly.id = a.elderly.id " +
-            "LEFT JOIN CounselorCallReview r ON c.id = r.callRecord.id AND r.counselor.id = :counselorId " +
-            "WHERE a.counselor.id = :counselorId AND a.status = 'ACTIVE' AND r.id IS NULL " +
-            "AND c.state = 'COMPLETED'")
-    long countUnreviewedCallsForCounselor(@Param("counselorId") Long counselorId);
+        /**
+         * 상담사가 확인하지 않은 통화 기록 개수
+         */
+        @Query("SELECT COUNT(c) FROM CallRecord c " +
+                        "JOIN Assignment a ON c.elderly.id = a.elderly.id " +
+                        "LEFT JOIN CounselorCallReview r ON c.id = r.callRecord.id AND r.counselor.id = :counselorId " +
+                        "WHERE a.counselor.id = :counselorId AND a.status = 'ACTIVE' AND r.id IS NULL " +
+                        "AND c.state = 'COMPLETED'")
+        long countUnreviewedCallsForCounselor(@Param("counselorId") Long counselorId);
 
-    /**
-     * 위험 응답이 있는 통화 기록 조회
-     */
-    @Query("SELECT DISTINCT c FROM CallRecord c " +
-            "JOIN c.elderlyResponses er " +
-            "WHERE er.danger = true ORDER BY c.callAt DESC")
-    Page<CallRecord> findCallsWithDangerResponse(Pageable pageable);
+        /**
+         * 위험 응답이 있는 통화 기록 조회
+         */
+        @Query("SELECT DISTINCT c FROM CallRecord c " +
+                        "JOIN c.elderlyResponses er " +
+                        "WHERE er.danger = true ORDER BY c.callAt DESC")
+        Page<CallRecord> findCallsWithDangerResponse(Pageable pageable);
 
-    /**
-     * 통화 기록과 연관된 데이터를 함께 조회 (Fetch Join)
-     */
-    @Query("SELECT c FROM CallRecord c " +
-            "LEFT JOIN FETCH c.elderly e " +
-            "LEFT JOIN FETCH e.user " +
-            "LEFT JOIN FETCH c.summaries " +
-            "LEFT JOIN FETCH c.emotions " +
-            "WHERE c.id = :callId")
-    Optional<CallRecord> findByIdWithDetails(@Param("callId") Long callId);
+        /**
+         * 통화 기록과 연관된 기본 데이터를 조회 (Fetch Join)
+         * 참고: List 타입 컬렉션은 1개만 fetch join 가능 (MultipleBagFetchException 방지)
+         * emotions, summaries, llmModels, elderlyResponses는 Service에서 별도 조회
+         */
+        @Query("SELECT c FROM CallRecord c " +
+                        "LEFT JOIN FETCH c.elderly e " +
+                        "LEFT JOIN FETCH e.user " +
+                        "WHERE c.id = :callId")
+        Optional<CallRecord> findByIdWithDetails(@Param("callId") Long callId);
 
-    /**
-     * 특정 기간 내 완료된 통화 수
-     */
-    long countByStateAndCallAtBetween(CallState state, LocalDateTime start, LocalDateTime end);
+        /**
+         * 특정 기간 내 완료된 통화 수
+         */
+        long countByStateAndCallAtBetween(CallState state, LocalDateTime start, LocalDateTime end);
 }

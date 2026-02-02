@@ -9,12 +9,16 @@ import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +33,7 @@ import java.util.UUID;
 public class FileService {
 
     private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
     private final boolean s3Enabled;
 
     @Value("${cloud.aws.s3.bucket:silverlink-files}")
@@ -41,9 +46,12 @@ public class FileService {
     private String localUploadPath;
 
     @Autowired
-    public FileService(@Autowired(required = false) S3Client s3Client) {
+    public FileService(
+            @Autowired(required = false) S3Client s3Client,
+            @Autowired(required = false) S3Presigner s3Presigner) {
         this.s3Client = s3Client;
-        this.s3Enabled = (s3Client != null);
+        this.s3Presigner = s3Presigner;
+        this.s3Enabled = (s3Client != null && s3Presigner != null);
         log.info("FileService initialized - S3 enabled: {}", this.s3Enabled);
     }
 
@@ -83,13 +91,141 @@ public class FileService {
     }
 
     /**
-     * 파일 URL 조회
+     * 파일 URL 조회 (S3 공개 URL)
      */
     public String getPresignedUrl(String filePath) {
         if (s3Enabled) {
             return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, filePath);
         } else {
             return "/uploads/" + filePath;
+        }
+    }
+
+    /**
+     * S3 Pre-signed URL 생성 (1시간 유효)
+     * 
+     * @param s3Url s3://bucket-name/key 형식 또는 key 직접 전달
+     * @return Pre-signed URL (브라우저에서 접근 가능)
+     */
+    public String generatePresignedUrl(String s3Url) {
+        if (s3Url == null || s3Url.isBlank()) {
+            log.debug("generatePresignedUrl: s3Url is null or blank");
+            return null;
+        }
+
+        // S3가 비활성화된 경우, 원본 URL을 HTTPS 형식으로 변환하여 반환
+        if (!s3Enabled) {
+            log.info("S3 is not enabled, converting s3:// URL to https:// format. Original: {}", s3Url);
+            if (s3Url.startsWith("s3://")) {
+                // s3://bucket-name/key -> https://bucket-name.s3.region.amazonaws.com/key
+                String path = s3Url.substring(5);
+                int slashIndex = path.indexOf('/');
+                if (slashIndex != -1) {
+                    String bucket = path.substring(0, slashIndex);
+                    String key = path.substring(slashIndex + 1);
+                    String httpsUrl = String.format("https://%s.s3.%s.amazonaws.com/%s", bucket, region, key);
+                    log.info("Converted to: {}", httpsUrl);
+                    return httpsUrl;
+                }
+            }
+            return s3Url; // 변환 불가능하면 원본 반환
+        }
+
+        log.debug("generatePresignedUrl: s3Enabled={}, s3Url={}", s3Enabled, s3Url);
+
+        try {
+            String bucket;
+            String key;
+
+            // s3://bucket-name/key 형식 파싱
+            if (s3Url.startsWith("s3://")) {
+                String path = s3Url.substring(5); // "s3://" 제거
+                int slashIndex = path.indexOf('/');
+                if (slashIndex == -1) {
+                    log.warn("Invalid S3 URL format: {}", s3Url);
+                    return null;
+                }
+                bucket = path.substring(0, slashIndex);
+                key = path.substring(slashIndex + 1);
+            } else {
+                // key만 전달된 경우
+                bucket = bucketName;
+                key = s3Url;
+            }
+
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .build();
+
+            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofHours(1)) // 1시간 유효
+                    .getObjectRequest(getObjectRequest)
+                    .build();
+
+            PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(presignRequest);
+            String presignedUrl = presignedRequest.url().toString();
+
+            log.debug("Generated Pre-signed URL for: {}", s3Url);
+            return presignedUrl;
+
+        } catch (Exception e) {
+            log.error("Failed to generate Pre-signed URL for: {}", s3Url, e);
+            return null;
+        }
+    }
+
+    /**
+     * 파일 리소스 로드
+     */
+    public org.springframework.core.io.Resource loadFileAsResource(String filePath) {
+        try {
+            if (s3Enabled) {
+                // S3에서 파일 다운로드
+                software.amazon.awssdk.services.s3.model.GetObjectRequest getRequest = software.amazon.awssdk.services.s3.model.GetObjectRequest
+                        .builder()
+                        .bucket(bucketName)
+                        .key(filePath)
+                        .build();
+
+                byte[] fileBytes = s3Client.getObject(getRequest).readAllBytes();
+                return new org.springframework.core.io.ByteArrayResource(fileBytes);
+            } else {
+                // 로컬 파일 시스템에서 파일 로드
+                Path file = Paths.get(localUploadPath).resolve(filePath).normalize();
+                org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(
+                        file.toUri());
+
+                if (resource.exists() && resource.isReadable()) {
+                    return resource;
+                } else {
+                    throw new RuntimeException("파일을 찾을 수 없거나 읽을 수 없습니다: " + filePath);
+                }
+            }
+        } catch (Exception e) {
+            log.error("파일 로드 실패: {}", filePath, e);
+            throw new RuntimeException("파일 로드에 실패했습니다: " + filePath, e);
+        }
+    }
+
+    /**
+     * 파일 다운로드 (byte[] 반환)
+     */
+    public byte[] downloadFile(String filePath) {
+        try {
+            if (s3Enabled) {
+                GetObjectRequest getRequest = GetObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(filePath)
+                        .build();
+                return s3Client.getObject(getRequest).readAllBytes();
+            } else {
+                Path file = Paths.get(localUploadPath).resolve(filePath).normalize();
+                return Files.readAllBytes(file);
+            }
+        } catch (Exception e) {
+            log.error("파일 다운로드 실패: {}", filePath, e);
+            throw new RuntimeException("파일 다운로드에 실패했습니다: " + filePath, e);
         }
     }
 
