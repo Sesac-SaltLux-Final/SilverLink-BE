@@ -143,4 +143,4 @@ class AssignmentControllerTest {
                     .andExpect(jsonPath("$.elderlyName").value("이노인"));
         }
     }
-}
+} //수정
