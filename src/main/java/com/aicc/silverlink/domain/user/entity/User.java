@@ -94,6 +94,19 @@ public class User {
                 .build();
     }
 
+    // 컨트롤러 등에서 임시 객체 생성용 (DB 저장용 아님)
+    public static User createFake(Long id, Role role) {
+        return User.builder()
+                .id(id)
+                .role(role)
+                .loginId("fake")
+                .passwordHash("fake")
+                .name("fake")
+                .phone("01000000000")
+                .status(UserStatus.ACTIVE)
+                .build();
+    }
+
     public void changePassword(String newEncodedPassword) {
         if (newEncodedPassword == null || newEncodedPassword.isBlank()) {
             throw new IllegalArgumentException("PASSWORD_INVALID");

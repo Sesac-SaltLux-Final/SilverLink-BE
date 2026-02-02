@@ -93,6 +93,38 @@ public class FileService {
         }
     }
 
+    /**
+     * 파일 리소스 로드
+     */
+    public org.springframework.core.io.Resource loadFileAsResource(String filePath) {
+        try {
+            if (s3Enabled) {
+                // S3에서 파일 다운로드
+                software.amazon.awssdk.services.s3.model.GetObjectRequest getRequest = 
+                    software.amazon.awssdk.services.s3.model.GetObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(filePath)
+                        .build();
+                
+                byte[] fileBytes = s3Client.getObject(getRequest).readAllBytes();
+                return new org.springframework.core.io.ByteArrayResource(fileBytes);
+            } else {
+                // 로컬 파일 시스템에서 파일 로드
+                Path file = Paths.get(localUploadPath).resolve(filePath).normalize();
+                org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(file.toUri());
+                
+                if (resource.exists() && resource.isReadable()) {
+                    return resource;
+                } else {
+                    throw new RuntimeException("파일을 찾을 수 없거나 읽을 수 없습니다: " + filePath);
+                }
+            }
+        } catch (Exception e) {
+            log.error("파일 로드 실패: {}", filePath, e);
+            throw new RuntimeException("파일 로드에 실패했습니다: " + filePath, e);
+        }
+    }
+
     // ==================== S3 Methods ====================
 
     private FileUploadResponse uploadToS3(MultipartFile file, String directory) {

@@ -39,6 +39,10 @@ public class WelfareFacility {
     @Column(name = "operating_hours", length = 255)
     private String operatingHours;
 
+    // TODO: 데이터베이스에 description 컬럼 수동 추가 필요
+    // @Column(name = "description", columnDefinition = "TEXT")
+    // private String description;
+
     // 기타 필요한 필드 추가 가능 (예: 웹사이트, 상세 설명 등)
 
     public Long getId() {
@@ -53,5 +57,7 @@ public class WelfareFacility {
         this.type = request.getType();
         this.phone = request.getPhone();
         this.operatingHours = request.getOperatingHours();
+        // TODO: description 필드 활성화 후 추가
+        // this.description = request.getDescription();
     }
 }

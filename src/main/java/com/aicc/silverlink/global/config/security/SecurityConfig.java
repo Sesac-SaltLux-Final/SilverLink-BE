@@ -61,7 +61,9 @@ public class SecurityConfig {
                                 "/api/guardians/signup",
                                 "/api/ocr/**",
                                 "/api/policies/latest/**",
-                                "/", // 주의: requestMatchers("/")는 “정확히 루트만” 열어주는 거고, /**는 아님.
+                                "/uploads/**",
+                                "/api/files/download", // 파일 다운로드 허용
+                                "/", // 주의: requestMatchers("/")는 "정확히 루트만" 열어주는 거고, /**는 아님.
                                 "/health",
                                 "/error",
                                 "/api/data/faqs/all",
