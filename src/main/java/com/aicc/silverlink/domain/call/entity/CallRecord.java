@@ -158,6 +158,20 @@ public class CallRecord {
     }
 
     /**
+     * 통화 시간 설정
+     */
+    public void setCallTimeSec(Integer callTimeSec) {
+        this.callTimeSec = callTimeSec;
+    }
+
+    /**
+     * 통화 상태 변경
+     */
+    public void updateState(CallState state) {
+        this.state = state;
+    }
+
+    /**
      * 일일 상태 설정
      */
     public void setDailyStatus(CallDailyStatus dailyStatus) {
