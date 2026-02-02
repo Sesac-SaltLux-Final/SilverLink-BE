@@ -18,15 +18,15 @@ public class CallBotRealIntegrationTest {
         
         // 주의: Python 서버가 실행 중인 주소여야 합니다.
         // Docker 환경이라면 http://localhost:5000 또는 http://silverlink-worker:5000 등
-        String pythonUrl = "http://localhost:5000"; 
+        String pythonUrl = "http://localhost:5000";
         properties.setUrl(pythonUrl);
         
         CallBotClient client = new CallBotClient(restTemplate, properties);
 
         StartCallRequest request = StartCallRequest.builder()
                 .elderlyId(682L) // 테스트용 ID
-                .elderlyName("김성호")
-                .phone("+821053915653") // 테스트용 번호 (Twilio Verified Number여야 실제 발신됨)
+                .elderlyName("노인")
+                .phone("+821080509357") // 테스트용 번호 (Twilio Verified Number여야 실제 발신됨)
                 .build();
 
         try {
