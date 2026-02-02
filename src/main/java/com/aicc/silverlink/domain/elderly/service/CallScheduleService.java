@@ -202,23 +202,16 @@ public class CallScheduleService {
     // ===== Private Methods =====
 
     private StartCallRequest toStartCallRequest(Elderly elderly) {
-        List<String> chronicDiseases = getChronicDiseases(elderly.getId());
+        String originalPhone = elderly.getUser().getPhone();
+        String formattedPhone = originalPhone;
+        if (originalPhone != null && originalPhone.startsWith("0")) {
+            formattedPhone = "+82" + originalPhone.substring(1); // 한국 국가 코드 +82로 수정 (요청하신 형식)
+        }
 
         return StartCallRequest.builder()
                 .elderlyId(elderly.getId())
                 .elderlyName(elderly.getUser().getName())
-                .phone(elderly.getUser().getPhone())
-                .chronicDiseases(chronicDiseases)
+                .phone(formattedPhone)
                 .build();
-    }
-
-    private List<String> getChronicDiseases(Long elderlyId) {
-        Optional<ElderlyHealthInfo> healthInfoOpt = healthInfoRepository.findById(elderlyId);
-        if (healthInfoOpt.isEmpty()) {
-            return List.of();
-        }
-
-        String chronicDiseases = healthInfoOpt.get().getChronicDiseases();
-        return StartCallRequest.parseChronicDiseases(chronicDiseases);
     }
 }

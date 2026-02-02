@@ -49,6 +49,12 @@ public class CallRecord {
     @Column(name = "recording_url", length = 500)
     private String recordingUrl;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
     // ===== 연관 관계 =====
 
     @OneToMany(mappedBy = "callRecord", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -82,6 +88,18 @@ public class CallRecord {
         this.state = state;
         this.recordingUrl = recordingUrl;
     }
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
 
     // ===== 비즈니스 메서드 =====
 
