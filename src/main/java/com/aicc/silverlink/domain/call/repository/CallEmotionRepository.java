@@ -54,4 +54,7 @@ public interface CallEmotionRepository extends JpaRepository<CallEmotion, Long> 
     long countByElderlyIdAndEmotionLevel(
             @Param("elderlyId") Long elderlyId,
             @Param("level") EmotionLevel level);
+
+    @org.springframework.transaction.annotation.Transactional
+    void deleteByCallRecord(com.aicc.silverlink.domain.call.entity.CallRecord callRecord);
 }

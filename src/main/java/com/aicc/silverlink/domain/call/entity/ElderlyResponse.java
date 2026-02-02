@@ -56,11 +56,24 @@ public class ElderlyResponse {
     @Column(name = "danger_reason", columnDefinition = "TEXT")
     private String dangerReason;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
     @PrePersist
     protected void onCreate() {
         if (this.respondedAt == null) {
             this.respondedAt = LocalDateTime.now();
         }
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
     }
 
     @Builder

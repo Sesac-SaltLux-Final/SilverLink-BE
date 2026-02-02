@@ -36,8 +36,8 @@ public class TemporaryScheduleRunner implements CommandLineRunner {
 
         Elderly target = elderlyList.get(0);
 
-        // 현재 시간 + 1분
-        LocalTime nextMinute = LocalTime.now().plusSeconds(1);
+        // 현재 시간 + 1분 (스케줄러가 다음 분 00초에 실행되므로 맞춤)
+        LocalTime nextMinute = LocalTime.now().plusMinutes(1);
         String timeStr = nextMinute.format(DateTimeFormatter.ofPattern("HH:mm"));
 
         // 모든 요일 (오늘이 무슨 요일이든 실행되도록)

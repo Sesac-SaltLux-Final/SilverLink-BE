@@ -21,7 +21,7 @@ public class WelfareFacilityController {
     // --- 사용자/공통 API ---
 
     /**
-     * 현재 위치 반경 내 사회복지시설 목록을 조회합니다.
+     * 현재 위치 반경 내 사회복지시설 목록을 조회합니다
      *
      * @param latitude  사용자 현재 위도
      * @param longitude 사용자 현재 경도
