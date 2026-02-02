@@ -29,11 +29,13 @@ public class CallReviewService {
     private final CallRecordRepository callRecordRepository;
     private final CounselorCallReviewRepository reviewRepository;
     private final ElderlyResponseRepository elderlyResponseRepository;
+    private final LlmModelRepository llmModelRepository;
     private final CallSummaryRepository summaryRepository;
     private final CallEmotionRepository emotionRepository;
     private final CounselorRepository counselorRepository;
     private final AssignmentRepository assignmentRepository;
     private final GuardianElderlyRepository guardianElderlyRepository;
+    private final com.aicc.silverlink.domain.file.service.FileService fileService;
 
     // ===== 상담사용 메서드 =====
 
@@ -67,17 +69,42 @@ public class CallReviewService {
         // 상담사가 해당 어르신을 담당하는지 확인
         validateCounselorAssignment(counselorId, callRecord.getElderly().getId());
 
-        // 응답 목록 조회 (Fetch Join에서 제외된 경우)
+        // 아래 컬렉션들은 별도 쿼리로 조회 (MultipleBagFetchException 방지)
+
+        // 1. 응답 목록 조회
         if (callRecord.getElderlyResponses().isEmpty()) {
             callRecord.getElderlyResponses().addAll(
-                    elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId)
-            );
+                    elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId));
+        }
+
+        // 2. LLM 모델(AI 발화) 조회
+        if (callRecord.getLlmModels().isEmpty()) {
+            callRecord.getLlmModels().addAll(
+                    llmModelRepository.findByCallIdOrderByCreatedAtAsc(callId));
+        }
+
+        // 3. 요약 조회
+        if (callRecord.getSummaries().isEmpty()) {
+            callRecord.getSummaries().addAll(
+                    summaryRepository.findByCallRecordId(callId));
+        }
+
+        // 4. 감정 분석 조회
+        if (callRecord.getEmotions().isEmpty()) {
+            callRecord.getEmotions().addAll(
+                    emotionRepository.findByCallRecordIdOrderByCreatedAtDesc(callId));
         }
 
         CounselorCallReview review = reviewRepository.findByCallRecordIdAndCounselorId(callId, counselorId)
                 .orElse(null);
 
-        return CallRecordDetailResponse.from(callRecord, review);
+        // 녹음 URL을 Pre-signed URL로 변환
+        String presignedRecordingUrl = null;
+        if (callRecord.getRecordingUrl() != null && !callRecord.getRecordingUrl().isBlank()) {
+            presignedRecordingUrl = fileService.generatePresignedUrl(callRecord.getRecordingUrl());
+        }
+
+        return CallRecordDetailResponse.from(callRecord, review, presignedRecordingUrl);
     }
 
     /**
@@ -99,8 +126,7 @@ public class CallReviewService {
         }
 
         CounselorCallReview review = CounselorCallReview.create(
-                callRecord, counselor, request.getComment(), request.isUrgent()
-        );
+                callRecord, counselor, request.getComment(), request.isUrgent());
 
         CounselorCallReview savedReview = reviewRepository.save(review);
         log.info("상담사 통화 리뷰 생성: counselorId={}, callId={}, urgent={}",
@@ -151,7 +177,8 @@ public class CallReviewService {
     /**
      * 보호자가 어르신의 통화 리뷰 목록 조회
      */
-    public Page<GuardianCallReviewResponse> getCallReviewsForGuardian(Long guardianId, Long elderlyId, Pageable pageable) {
+    public Page<GuardianCallReviewResponse> getCallReviewsForGuardian(Long guardianId, Long elderlyId,
+            Pageable pageable) {
         // 보호자-어르신 관계 확인
         validateGuardianElderlyRelation(guardianId, elderlyId);
 
@@ -190,8 +217,7 @@ public class CallReviewService {
 
     private void validateCounselorAssignment(Long counselorId, Long elderlyId) {
         boolean isAssigned = assignmentRepository.existsByCounselorIdAndElderlyIdAndStatusActive(
-                counselorId, elderlyId
-        );
+                counselorId, elderlyId);
         if (!isAssigned) {
             throw new BusinessException(ErrorCode.NOT_ASSIGNED_ELDERLY);
         }
