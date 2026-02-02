@@ -46,7 +46,7 @@ public class CallBotInternalService {
                 .build();
 
         callRecordRepository.save(callRecord);
-        log.info("✅ [DB 저장] 통화 기록 생성 성공: callId={}, elderlyId={}, name={}", 
+        log.info("✅ [DB 저장] 통화 기록 생성 성공: callId={}, elderlyId={}, name={}",
                 callRecord.getId(), elderly.getId(), elderly.getUser().getName());
 
         return StartCallResponse.builder()
@@ -78,7 +78,7 @@ public class CallBotInternalService {
         CallRecord callRecord = getCallRecord(callId);
 
         LlmModel llmModel = llmModelRepository.findTopByCallRecordOrderByIdDesc(callRecord)
-                .orElseThrow(() -> new IllegalArgumentException("이전 발화(Prompt)를 찾을 수 없습니다. callId=" + callId));
+                .orElse(null);
 
         ElderlyResponse response = ElderlyResponse.builder()
                 .callRecord(callRecord)
@@ -88,7 +88,7 @@ public class CallBotInternalService {
                 .build();
 
         elderlyResponseRepository.save(response);
-        log.info("✅ [DB 저장] 어르신 응답(Reply) 저장 완료: callId={}, responseId={}, danger={}", 
+        log.info("✅ [DB 저장] 어르신 응답(Reply) 저장 완료: callId={}, responseId={}, danger={}",
                 callId, response.getId(), response.isDanger());
 
         sseService.broadcast(callId, "reply", request.getContent());
@@ -128,7 +128,7 @@ public class CallBotInternalService {
 
     private MessageResponse saveElderlyMessage(CallRecord callRecord, MessageRequest request) {
         LlmModel llmModel = llmModelRepository.findFirstByCallRecordOrderByCreatedAtDesc(callRecord)
-                .orElseThrow(() -> new IllegalArgumentException("연결할 CallBot 발화가 없습니다."));
+                .orElse(null);
 
         ElderlyResponse response = ElderlyResponse.builder()
                 .llmModel(llmModel)
@@ -199,7 +199,7 @@ public class CallBotInternalService {
 
         callDailyStatusRepository.save(dailyStatus);
         callRecord.setDailyStatus(dailyStatus);
-        log.info("✅ [DB 저장] 일일 상태 저장 완료: callId={}, meal={}, health={}, sleep={}", 
+        log.info("✅ [DB 저장] 일일 상태 저장 완료: callId={}, meal={}, health={}, sleep={}",
                 callId, request.getMealTaken(), request.getHealthStatus(), request.getSleepStatus());
 
         return SimpleResponse.builder().success(true).message("일일 상태 저장 완료").id(dailyStatus.getId()).build();
@@ -210,13 +210,16 @@ public class CallBotInternalService {
     public SimpleResponse endCall(Long callId, EndCallRequest request) {
         CallRecord callRecord = getCallRecord(callId);
         callRecord.setRecordingUrl(request.getRecordingUrl());
-        
+
         // 상태 변경
         // callRecord.updateState(CallState.COMPLETED); // 엔티티에 메서드 추가 권장
 
-        if (request.getSummary() != null) saveSummary(callId, request.getSummary());
-        if (request.getEmotion() != null) saveEmotion(callId, request.getEmotion());
-        if (request.getDailyStatus() != null) saveDailyStatus(callId, request.getDailyStatus());
+        if (request.getSummary() != null)
+            saveSummary(callId, request.getSummary());
+        if (request.getEmotion() != null)
+            saveEmotion(callId, request.getEmotion());
+        if (request.getDailyStatus() != null)
+            saveDailyStatus(callId, request.getDailyStatus());
 
         callRecordRepository.save(callRecord);
         log.info("🚀 [DB 최종확정] 통화 종료 처리 완료: callId={}, duration={}sec", callId, request.getCallTimeSec());
@@ -230,7 +233,8 @@ public class CallBotInternalService {
     }
 
     private CallDailyStatus.StatusLevel parseStatusLevel(String status) {
-        if (status == null || status.isBlank()) return null;
+        if (status == null || status.isBlank())
+            return null;
         try {
             return CallDailyStatus.StatusLevel.valueOf(status.toUpperCase());
         } catch (IllegalArgumentException e) {
@@ -243,11 +247,13 @@ public class CallBotInternalService {
         List<CallLogResponse> logs = new java.util.ArrayList<>();
         List<LlmModel> prompts = llmModelRepository.findByCallIdOrderByCreatedAtAsc(callId);
         for (LlmModel p : prompts) {
-            logs.add(CallLogResponse.builder().id(p.getId()).type("PROMPT").content(p.getPrompt()).timestamp(p.getCreatedAt()).build());
+            logs.add(CallLogResponse.builder().id(p.getId()).type("PROMPT").content(p.getPrompt())
+                    .timestamp(p.getCreatedAt()).build());
         }
         List<ElderlyResponse> replies = elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId);
         for (ElderlyResponse r : replies) {
-            logs.add(CallLogResponse.builder().id(r.getId()).type("REPLY").content(r.getContent()).timestamp(r.getRespondedAt()).build());
+            logs.add(CallLogResponse.builder().id(r.getId()).type("REPLY").content(r.getContent())
+                    .timestamp(r.getRespondedAt()).build());
         }
         logs.sort(java.util.Comparator.comparing(CallLogResponse::getTimestamp));
         return logs;
