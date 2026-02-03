@@ -4,6 +4,7 @@ import com.aicc.silverlink.domain.elderly.dto.CallScheduleDto.*;
 import com.aicc.silverlink.domain.elderly.service.CallScheduleService;
 import com.aicc.silverlink.global.common.response.ApiResponse;
 import com.aicc.silverlink.global.security.principal.UserPrincipal;
+import com.aicc.silverlink.global.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -31,10 +32,9 @@ public class CallScheduleController {
     @Operation(summary = "본인 통화 스케줄 조회", description = "어르신이 본인의 통화 스케줄을 조회합니다")
     @PreAuthorize("hasRole('ELDERLY')")
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<Response>> getMySchedule(
-            @AuthenticationPrincipal UserPrincipal principal) {
+    public ResponseEntity<ApiResponse<Response>> getMySchedule() {
 
-        Long elderlyId = principal.getUserId();
+        Long elderlyId = SecurityUtils.currentUserId();
         Response response = callScheduleService.getSchedule(elderlyId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -43,10 +43,9 @@ public class CallScheduleController {
     @PreAuthorize("hasRole('ELDERLY')")
     @PutMapping("/me")
     public ResponseEntity<ApiResponse<Response>> updateMySchedule(
-            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody UpdateRequest request) {
 
-        Long elderlyId = principal.getUserId();
+        Long elderlyId = SecurityUtils.currentUserId();
         Response response = callScheduleService.updateSchedule(elderlyId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }

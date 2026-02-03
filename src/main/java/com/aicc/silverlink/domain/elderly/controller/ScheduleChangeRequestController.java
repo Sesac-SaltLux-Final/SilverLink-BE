@@ -3,14 +3,13 @@ package com.aicc.silverlink.domain.elderly.controller;
 import com.aicc.silverlink.domain.elderly.dto.ScheduleChangeRequestDto.*;
 import com.aicc.silverlink.domain.elderly.service.ScheduleChangeRequestService;
 import com.aicc.silverlink.global.common.response.ApiResponse;
-import com.aicc.silverlink.global.security.principal.UserPrincipal;
+import com.aicc.silverlink.global.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,20 +31,18 @@ public class ScheduleChangeRequestController {
     @PreAuthorize("hasRole('ELDERLY')")
     @PostMapping
     public ResponseEntity<ApiResponse<Response>> createRequest(
-            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreateRequest request) {
 
-        Response response = changeRequestService.createRequest(principal.getUserId(), request);
+        Response response = changeRequestService.createRequest(SecurityUtils.currentUserId(), request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @Operation(summary = "내 변경 요청 목록", description = "어르신이 본인의 변경 요청 내역을 조회합니다")
     @PreAuthorize("hasRole('ELDERLY')")
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<List<Response>>> getMyRequests(
-            @AuthenticationPrincipal UserPrincipal principal) {
+    public ResponseEntity<ApiResponse<List<Response>>> getMyRequests() {
 
-        List<Response> requests = changeRequestService.getMyRequests(principal.getUserId());
+        List<Response> requests = changeRequestService.getMyRequests(SecurityUtils.currentUserId());
         return ResponseEntity.ok(ApiResponse.success(requests));
     }
 
@@ -64,10 +61,9 @@ public class ScheduleChangeRequestController {
     @PreAuthorize("hasRole('COUNSELOR')")
     @PutMapping("/{requestId}/approve")
     public ResponseEntity<ApiResponse<Response>> approveRequest(
-            @PathVariable Long requestId,
-            @AuthenticationPrincipal UserPrincipal principal) {
+            @PathVariable Long requestId) {
 
-        Response response = changeRequestService.approveRequest(requestId, principal.getUserId());
+        Response response = changeRequestService.approveRequest(requestId, SecurityUtils.currentUserId());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -76,12 +72,11 @@ public class ScheduleChangeRequestController {
     @PutMapping("/{requestId}/reject")
     public ResponseEntity<ApiResponse<Response>> rejectRequest(
             @PathVariable Long requestId,
-            @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody(required = false) RejectRequest rejectRequest) {
 
         Response response = changeRequestService.rejectRequest(
                 requestId,
-                principal.getUserId(),
+                SecurityUtils.currentUserId(),
                 rejectRequest != null ? rejectRequest : new RejectRequest());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
