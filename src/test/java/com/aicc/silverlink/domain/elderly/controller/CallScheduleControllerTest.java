@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -21,8 +23,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -40,6 +41,22 @@ class CallScheduleControllerTest {
 
     @MockitoBean
     private CallScheduleService callScheduleService;
+
+    // Helper method to create authentication with Long userId as principal
+    private UsernamePasswordAuthenticationToken elderlyAuth(Long userId) {
+        return new UsernamePasswordAuthenticationToken(
+                userId, null, List.of(new SimpleGrantedAuthority("ROLE_ELDERLY")));
+    }
+
+    private UsernamePasswordAuthenticationToken counselorAuth(Long userId) {
+        return new UsernamePasswordAuthenticationToken(
+                userId, null, List.of(new SimpleGrantedAuthority("ROLE_COUNSELOR")));
+    }
+
+    private UsernamePasswordAuthenticationToken adminAuth(Long userId) {
+        return new UsernamePasswordAuthenticationToken(
+                userId, null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+    }
 
     @Nested
     @DisplayName("어르신 API")
@@ -59,11 +76,9 @@ class CallScheduleControllerTest {
 
             given(callScheduleService.getSchedule(anyLong())).willReturn(response);
 
-            UserPrincipal principal = UserPrincipal.of(1L, "elderly1", Role.ELDERLY);
-
             // when & then
             mockMvc.perform(get("/api/call-schedules/me")
-                    .with(user(principal)))
+                            .with(authentication(elderlyAuth(1L))))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.elderlyId").value(1))
                     .andExpect(jsonPath("$.data.preferredCallTime").value("09:00"));
@@ -89,14 +104,12 @@ class CallScheduleControllerTest {
             given(callScheduleService.updateSchedule(anyLong(), any(UpdateRequest.class)))
                     .willReturn(response);
 
-            UserPrincipal principal = UserPrincipal.of(1L, "elderly1", Role.ELDERLY);
-
             // when & then
             mockMvc.perform(put("/api/call-schedules/me")
-                    .with(user(principal))
-                    .with(csrf())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
+                            .with(authentication(elderlyAuth(1L)))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.preferredCallTime").value("10:00"));
         }
@@ -124,7 +137,7 @@ class CallScheduleControllerTest {
 
             // when & then
             mockMvc.perform(get("/api/call-schedules/counselor/elderly/1")
-                    .with(user(principal)))
+                            .with(user(principal)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.elderlyName").value("홍길동"));
         }
@@ -147,17 +160,18 @@ class CallScheduleControllerTest {
                     .callScheduleEnabled(true)
                     .build();
 
-            given(callScheduleService.directUpdateSchedule(anyLong(), anyLong(), any(DirectUpdateRequest.class)))
+            given(callScheduleService.directUpdateSchedule(anyLong(), anyLong(),
+                    any(DirectUpdateRequest.class)))
                     .willReturn(response);
 
             UserPrincipal principal = UserPrincipal.of(100L, "counselor1", Role.COUNSELOR);
 
             // when & then
             mockMvc.perform(put("/api/call-schedules/counselor/elderly/1")
-                    .with(user(principal))
-                    .with(csrf())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
+                            .with(user(principal))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.preferredCallTime").value("14:00"));
         }
@@ -172,7 +186,7 @@ class CallScheduleControllerTest {
 
             // when & then
             mockMvc.perform(get("/api/call-schedules/counselor/history")
-                    .with(user(principal)))
+                            .with(user(principal)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data").isArray());
         }
@@ -192,7 +206,7 @@ class CallScheduleControllerTest {
 
             // when & then
             mockMvc.perform(get("/api/call-schedules/admin/history")
-                    .with(user(principal)))
+                            .with(user(principal)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data").isArray());
         }
@@ -207,7 +221,7 @@ class CallScheduleControllerTest {
 
             // when & then
             mockMvc.perform(get("/api/call-schedules/elderly/1/history")
-                    .with(user(principal)))
+                            .with(user(principal)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data").isArray());
         }
@@ -222,7 +236,7 @@ class CallScheduleControllerTest {
 
             // when & then
             mockMvc.perform(get("/api/call-schedules")
-                    .with(user(principal)))
+                            .with(user(principal)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data").isArray());
         }
