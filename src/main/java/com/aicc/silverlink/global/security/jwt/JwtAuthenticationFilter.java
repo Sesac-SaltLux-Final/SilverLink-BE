@@ -42,7 +42,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = resolveBearer(request);
-
+        
         if (token != null) {
             try {
                 Jws<Claims> jws = jwt.parseAndValidate(token); // 토큰 서명 검증 + 만료 체크
@@ -65,11 +65,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // idle 연장
                 sessionService.touch(sid);
 
-                // ✅ UserPrincipal 생성
-                var userPrincipal = com.aicc.silverlink.global.security.principal.UserPrincipal.of(userId, "", role);
-
                 var auth = new UsernamePasswordAuthenticationToken(
-                        userPrincipal, // ✅ UserPrincipal 객체를 principal로 설정
+                        userId,
                         null,
                         List.of(new SimpleGrantedAuthority("ROLE_" + role.name())));
 
