@@ -119,6 +119,7 @@ public class CallBotInternalService {
                 .build();
 
         llmModelRepository.save(llmModel);
+        sseService.broadcast(callRecord.getId(), "prompt", request.getContent());
         return MessageResponse.builder()
                 .messageId(llmModel.getId())
                 .speaker("CALLBOT")
@@ -140,6 +141,7 @@ public class CallBotInternalService {
                 .build();
 
         elderlyResponseRepository.save(response);
+        sseService.broadcast(callRecord.getId(), "reply", request.getContent());
         return MessageResponse.builder()
                 .messageId(response.getId())
                 .speaker("ELDERLY")
@@ -211,7 +213,7 @@ public class CallBotInternalService {
         CallRecord callRecord = getCallRecord(callId);
         callRecord.setRecordingUrl(request.getRecordingUrl());
         callRecord.setCallTimeSec(request.getCallTimeSec());
-        
+
         // 상태 변경
         callRecord.updateState(CallState.COMPLETED);
 

@@ -2,6 +2,7 @@ package com.aicc.silverlink.domain.call.service;
 
 import com.aicc.silverlink.domain.assignment.repository.AssignmentRepository;
 import com.aicc.silverlink.domain.call.dto.CallReviewDto.*;
+import com.aicc.silverlink.domain.call.entity.CallDailyStatus;
 import com.aicc.silverlink.domain.call.entity.CallRecord;
 import com.aicc.silverlink.domain.call.entity.CounselorCallReview;
 import com.aicc.silverlink.domain.call.repository.*;
@@ -32,6 +33,7 @@ public class CallReviewService {
     private final LlmModelRepository llmModelRepository;
     private final CallSummaryRepository summaryRepository;
     private final CallEmotionRepository emotionRepository;
+    private final CallDailyStatusRepository dailyStatusRepository;
     private final CounselorRepository counselorRepository;
     private final AssignmentRepository assignmentRepository;
     private final GuardianElderlyRepository guardianElderlyRepository;
@@ -104,7 +106,10 @@ public class CallReviewService {
             presignedRecordingUrl = fileService.generatePresignedUrl(callRecord.getRecordingUrl());
         }
 
-        return CallRecordDetailResponse.from(callRecord, review, presignedRecordingUrl);
+        // 오늘의 상태 (식사, 건강, 수면) 조회
+        CallDailyStatus dailyStatus = dailyStatusRepository.findByCallRecordId(callId).orElse(null);
+
+        return CallRecordDetailResponse.from(callRecord, review, presignedRecordingUrl, dailyStatus);
     }
 
     /**
@@ -185,7 +190,11 @@ public class CallReviewService {
         Page<CounselorCallReview> reviews = reviewRepository.findReviewsByElderlyId(elderlyId, pageable);
 
         List<GuardianCallReviewResponse> responses = reviews.getContent().stream()
-                .map(r -> GuardianCallReviewResponse.from(r.getCallRecord(), r))
+                .map(r -> {
+                    CallDailyStatus dailyStatus = dailyStatusRepository
+                            .findByCallRecordId(r.getCallRecord().getId()).orElse(null);
+                    return GuardianCallReviewResponse.from(r.getCallRecord(), r, dailyStatus);
+                })
                 .toList();
 
         return new PageImpl<>(responses, pageable, reviews.getTotalElements());
@@ -201,11 +210,24 @@ public class CallReviewService {
         // 보호자-어르신 관계 확인
         validateGuardianElderlyRelation(guardianId, callRecord.getElderly().getId());
 
+        // 대화 데이터 로드 (prompts, responses)
+        if (callRecord.getElderlyResponses().isEmpty()) {
+            callRecord.getElderlyResponses().addAll(
+                    elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId));
+        }
+        if (callRecord.getLlmModels().isEmpty()) {
+            callRecord.getLlmModels().addAll(
+                    llmModelRepository.findByCallIdOrderByCreatedAtAsc(callId));
+        }
+
         // 리뷰가 있으면 함께 반환
         List<CounselorCallReview> reviews = reviewRepository.findByCallRecordIdOrderByReviewedAtDesc(callId);
         CounselorCallReview latestReview = reviews.isEmpty() ? null : reviews.get(0);
 
-        return GuardianCallReviewResponse.from(callRecord, latestReview);
+        // 오늘의 상태 (식사, 건강, 수면) 조회
+        CallDailyStatus dailyStatus = dailyStatusRepository.findByCallRecordId(callId).orElse(null);
+
+        return GuardianCallReviewResponse.from(callRecord, latestReview, dailyStatus);
     }
 
     // ===== Private Helper Methods =====

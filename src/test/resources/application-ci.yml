@@ -43,3 +43,39 @@ solapi:
   api-key: "ci_dummy_api_key"
   api-secret: "ci_dummy_api_secret"
   sender-number: "01000000000"
+
+# Twilio 설정 (CI 더미 값)
+twilio:
+  account-sid: "ci_dummy_account_sid"
+  auth-token: "ci_dummy_auth_token"
+  verify-service-sid: "ci_dummy_verify_sid"
+  messaging-service-sid: "ci_dummy_messaging_sid"
+
+# LUXIA 설정 (CI 더미 값)
+luxia:
+  api-key: "ci_dummy_luxia_key"
+
+# Chatbot 설정 (CI 더미 값)
+chatbot:
+  python:
+    url: "http://localhost:5000"
+  secret:
+    key: "ci_dummy_chatbot_key"
+
+# Callbot 설정 (CI 더미 값)
+callbot:
+  api:
+    url: "http://localhost:5000"
+
+# AWS 설정 (CI에서는 S3 비활성화)
+cloud:
+  aws:
+    credentials:
+      access-key: "ci_dummy_access_key"
+      secret-key: "ci_dummy_secret_key"
+    region:
+      static: "ap-northeast-2"
+    s3:
+      bucket: "ci-test-bucket"
+    stack:
+      auto: false

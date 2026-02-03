@@ -59,6 +59,12 @@ class CallReviewServiceTest {
     private AssignmentRepository assignmentRepository;
     @Mock
     private GuardianElderlyRepository guardianElderlyRepository;
+    @Mock
+    private LlmModelRepository llmModelRepository;
+    @Mock
+    private CallDailyStatusRepository dailyStatusRepository;
+    @Mock
+    private com.aicc.silverlink.domain.file.service.FileService fileService;
 
     // ===== Helper Methods =====
 
@@ -147,7 +153,8 @@ class CallReviewServiceTest {
             given(reviewRepository.existsByCallRecordIdAndCounselorId(callId, counselorId)).willReturn(true);
 
             // when
-            Page<CallRecordSummaryResponse> result = callReviewService.getCallRecordsForCounselor(counselorId, pageable);
+            Page<CallRecordSummaryResponse> result = callReviewService.getCallRecordsForCounselor(counselorId,
+                    pageable);
 
             // then
             assertThat(result.getContent()).hasSize(1);
@@ -194,7 +201,8 @@ class CallReviewServiceTest {
 
             given(counselorRepository.findById(counselorId)).willReturn(Optional.of(counselor));
             given(callRecordRepository.findById(callId)).willReturn(Optional.of(callRecord));
-            given(assignmentRepository.existsByCounselorIdAndElderlyIdAndStatusActive(counselorId, elderlyId)).willReturn(true);
+            given(assignmentRepository.existsByCounselorIdAndElderlyIdAndStatusActive(counselorId, elderlyId))
+                    .willReturn(true);
             given(reviewRepository.existsByCallRecordIdAndCounselorId(callId, counselorId)).willReturn(false);
             given(reviewRepository.save(any(CounselorCallReview.class))).willReturn(savedReview);
 
@@ -226,7 +234,8 @@ class CallReviewServiceTest {
 
             given(counselorRepository.findById(counselorId)).willReturn(Optional.of(counselor));
             given(callRecordRepository.findById(callId)).willReturn(Optional.of(callRecord));
-            given(assignmentRepository.existsByCounselorIdAndElderlyIdAndStatusActive(counselorId, elderlyId)).willReturn(true);
+            given(assignmentRepository.existsByCounselorIdAndElderlyIdAndStatusActive(counselorId, elderlyId))
+                    .willReturn(true);
             given(reviewRepository.existsByCallRecordIdAndCounselorId(callId, counselorId)).willReturn(true);
 
             // when & then
@@ -253,7 +262,8 @@ class CallReviewServiceTest {
 
             given(counselorRepository.findById(counselorId)).willReturn(Optional.of(counselor));
             given(callRecordRepository.findById(callId)).willReturn(Optional.of(callRecord));
-            given(assignmentRepository.existsByCounselorIdAndElderlyIdAndStatusActive(counselorId, elderlyId)).willReturn(false);
+            given(assignmentRepository.existsByCounselorIdAndElderlyIdAndStatusActive(counselorId, elderlyId))
+                    .willReturn(false);
 
             // when & then
             assertThatThrownBy(() -> callReviewService.createReview(counselorId, request))
@@ -349,7 +359,8 @@ class CallReviewServiceTest {
             given(reviewRepository.findReviewsByElderlyId(elderlyId, pageable)).willReturn(reviewPage);
 
             // when
-            Page<GuardianCallReviewResponse> result = callReviewService.getCallReviewsForGuardian(guardianId, elderlyId, pageable);
+            Page<GuardianCallReviewResponse> result = callReviewService.getCallReviewsForGuardian(guardianId, elderlyId,
+                    pageable);
 
             // then
             assertThat(result.getContent()).hasSize(1);
