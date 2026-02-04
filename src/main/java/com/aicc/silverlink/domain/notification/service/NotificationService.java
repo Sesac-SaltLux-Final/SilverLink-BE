@@ -30,8 +30,8 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
-    private final UnifiedSseService unifiedSseService;  // 통합 SSE 서비스
-    private final NotificationSmsService notificationSmsService;  // 알림 SMS 서비스
+    private final UnifiedSseService unifiedSseService; // 통합 SSE 서비스
+    private final NotificationSmsService notificationSmsService; // 알림 SMS 서비스
 
     // ========== 알림 생성 ==========
 
@@ -64,7 +64,8 @@ public class NotificationService {
     public Notification createComplaintReplyNotification(Long receiverUserId, Long complaintId, String complaintTitle) {
         User receiver = findUserById(receiverUserId);
 
-        Notification notification = Notification.createComplaintReplyNotification(receiver, complaintId, complaintTitle);
+        Notification notification = Notification.createComplaintReplyNotification(receiver, complaintId,
+                complaintTitle);
         Notification saved = notificationRepository.save(notification);
 
         sendRealtimeNotification(receiverUserId, saved);
@@ -101,10 +102,12 @@ public class NotificationService {
      * 접근권한 거절 알림 생성 및 발송
      */
     @Transactional
-    public Notification createAccessRejectedNotification(Long receiverUserId, Long requestId, String elderlyName, String reason) {
+    public Notification createAccessRejectedNotification(Long receiverUserId, Long requestId, String elderlyName,
+            String reason) {
         User receiver = findUserById(receiverUserId);
 
-        Notification notification = Notification.createAccessRejectedNotification(receiver, requestId, elderlyName, reason);
+        Notification notification = Notification.createAccessRejectedNotification(receiver, requestId, elderlyName,
+                reason);
         Notification saved = notificationRepository.save(notification);
 
         sendRealtimeNotification(receiverUserId, saved);
@@ -121,10 +124,12 @@ public class NotificationService {
      * 새 접근권한 요청 알림 (관리자에게)
      */
     @Transactional
-    public Notification createAccessRequestNotification(Long adminUserId, Long requestId, String requesterName, String elderlyName) {
+    public Notification createAccessRequestNotification(Long adminUserId, Long requestId, String requesterName,
+            String elderlyName) {
         User receiver = findUserById(adminUserId);
 
-        Notification notification = Notification.createAccessRequestNotification(receiver, requestId, requesterName, elderlyName);
+        Notification notification = Notification.createAccessRequestNotification(receiver, requestId, requesterName,
+                elderlyName);
         Notification saved = notificationRepository.save(notification);
 
         sendRealtimeNotification(adminUserId, saved);
@@ -154,33 +159,43 @@ public class NotificationService {
      */
     @Transactional
     public List<Notification> createNoticeNotifications(Long noticeId, String noticeTitle, List<Long> receiverUserIds) {
-        List<Notification> notifications = new ArrayList<>();
-
-        for (Long userId : receiverUserIds) {
-            try {
-                User receiver = findUserById(userId);
-                Notification notification = Notification.createNoticeNotification(receiver, noticeId, noticeTitle);
-                Notification saved = notificationRepository.save(notification);
-                notifications.add(saved);
-
-                sendRealtimeNotification(userId, saved);
-            } catch (Exception e) {
-                log.warn("[NotificationService] 공지 알림 생성 실패. userId={}, noticeId={}", userId, noticeId, e);
-            }
-        }
-
-        log.info("[NotificationService] 공지사항 알림 생성 완료. noticeId={}, 발송 수={}", noticeId, notifications.size());
-        return notifications;
+        // [수정] 공지사항 알림 비활성화 요청으로 인한 로직 주석 처리 (팝업만 유지)
+        /*
+         * List<Notification> notifications = new ArrayList<>();
+         * 
+         * for (Long userId : receiverUserIds) {
+         * try {
+         * User receiver = findUserById(userId);
+         * Notification notification = Notification.createNoticeNotification(receiver,
+         * noticeId, noticeTitle);
+         * Notification saved = notificationRepository.save(notification);
+         * notifications.add(saved);
+         * 
+         * sendRealtimeNotification(userId, saved);
+         * } catch (Exception e) {
+         * log.warn("[NotificationService] 공지 알림 생성 실패. userId={}, noticeId={}", userId,
+         * noticeId, e);
+         * }
+         * }
+         * 
+         * log.info("[NotificationService] 공지사항 알림 생성 완료. noticeId={}, 발송 수={}",
+         * noticeId, notifications.size());
+         * return notifications;
+         */
+        log.info("[NotificationService] 공지사항 알림 생성 건너뜀 (비활성화됨). noticeId={}", noticeId);
+        return java.util.Collections.emptyList();
     }
 
     /**
      * 새 문의 알림 (관리자에게)
      */
     @Transactional
-    public Notification createInquiryNewNotification(Long adminUserId, Long inquiryId, String writerName, String inquiryTitle) {
+    public Notification createInquiryNewNotification(Long adminUserId, Long inquiryId, String writerName,
+            String inquiryTitle) {
         User receiver = findUserById(adminUserId);
 
-        Notification notification = Notification.createInquiryNewNotification(receiver, inquiryId, writerName, inquiryTitle);
+        Notification notification = Notification.createInquiryNewNotification(receiver, inquiryId, writerName,
+                inquiryTitle);
         Notification saved = notificationRepository.save(notification);
 
         sendRealtimeNotification(adminUserId, saved);
@@ -193,10 +208,12 @@ public class NotificationService {
      * 새 민원 알림 (관리자에게)
      */
     @Transactional
-    public Notification createComplaintNewNotification(Long adminUserId, Long complaintId, String writerName, String complaintTitle) {
+    public Notification createComplaintNewNotification(Long adminUserId, Long complaintId, String writerName,
+            String complaintTitle) {
         User receiver = findUserById(adminUserId);
 
-        Notification notification = Notification.createComplaintNewNotification(receiver, complaintId, writerName, complaintTitle);
+        Notification notification = Notification.createComplaintNewNotification(receiver, complaintId, writerName,
+                complaintTitle);
         Notification saved = notificationRepository.save(notification);
 
         sendRealtimeNotification(adminUserId, saved);
@@ -223,7 +240,8 @@ public class NotificationService {
         for (Long userId : receiverIds) {
             try {
                 User receiver = findUserById(userId);
-                Notification notification = Notification.createSystemNotification(receiver, request.getTitle(), request.getContent());
+                Notification notification = Notification.createSystemNotification(receiver, request.getTitle(),
+                        request.getContent());
                 Notification saved = notificationRepository.save(notification);
                 notifications.add(saved);
 

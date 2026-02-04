@@ -127,6 +127,10 @@ public class CallBotInternalService {
                 .build();
 
         llmModelRepository.save(llmModel);
+
+        // SSE 실시간 브로드캐스트
+        sseService.broadcast(callRecord.getId(), "prompt", request.getContent());
+
         return MessageResponse.builder()
                 .messageId(llmModel.getId())
                 .speaker("CALLBOT")
@@ -148,6 +152,9 @@ public class CallBotInternalService {
                 .build();
 
         elderlyResponseRepository.save(response);
+
+        // SSE 실시간 브로드캐스트
+        sseService.broadcast(callRecord.getId(), "reply", request.getContent());
 
         // 📍 긴급 상황(danger=true) 시 긴급 알림 생성
         if (Boolean.TRUE.equals(request.getDanger())) {
