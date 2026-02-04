@@ -195,4 +195,11 @@ public interface EmergencyAlertRepository extends JpaRepository<EmergencyAlert, 
                         "AND r.isRead = false " +
                         "ORDER BY ea.severity DESC, ea.createdAt DESC")
         List<EmergencyAlert> findUnreadByReceiverId(@Param("userId") Long userId);
+
+        // ========== 중복 체크 ==========
+
+        /**
+         * 특정 통화에서 이미 긴급 알림이 생성되었는지 확인
+         */
+        boolean existsByCallRecordId(Long callRecordId);
 }
