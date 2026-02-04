@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,8 +26,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -46,6 +47,17 @@ class ScheduleChangeRequestControllerTest {
 
     @MockitoBean
     private ScheduleChangeRequestService changeRequestService;
+
+    // Helper method to create authentication with Long userId as principal
+    private UsernamePasswordAuthenticationToken elderlyAuth(Long userId) {
+        return new UsernamePasswordAuthenticationToken(
+                userId, null, List.of(new SimpleGrantedAuthority("ROLE_ELDERLY")));
+    }
+
+    private UsernamePasswordAuthenticationToken counselorAuth(Long userId) {
+        return new UsernamePasswordAuthenticationToken(
+                userId, null, List.of(new SimpleGrantedAuthority("ROLE_COUNSELOR")));
+    }
 
     // ===== 어르신 API 테스트 =====
 
@@ -74,14 +86,12 @@ class ScheduleChangeRequestControllerTest {
             given(changeRequestService.createRequest(anyLong(), any(CreateRequest.class)))
                     .willReturn(response);
 
-            UserPrincipal principal = UserPrincipal.of(1L, "elderly1", Role.ELDERLY);
-
             // when & then
             mockMvc.perform(post("/api/schedule-change-requests")
-                    .with(user(principal))
-                    .with(csrf())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
+                            .with(authentication(elderlyAuth(1L)))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.id").value(1))
                     .andExpect(jsonPath("$.data.requestedCallTime").value("14:00"))
@@ -97,16 +107,15 @@ class ScheduleChangeRequestControllerTest {
             request.setPreferredCallDays(List.of("TUE", "THU"));
 
             given(changeRequestService.createRequest(anyLong(), any(CreateRequest.class)))
-                    .willThrow(new BusinessException(ErrorCode.DUPLICATE_RESOURCE, "이미 대기 중인 변경 요청이 있습니다."));
-
-            UserPrincipal principal = UserPrincipal.of(1L, "elderly1", Role.ELDERLY);
+                    .willThrow(new BusinessException(ErrorCode.DUPLICATE_RESOURCE,
+                            "이미 대기 중인 변경 요청이 있습니다."));
 
             // when & then
             mockMvc.perform(post("/api/schedule-change-requests")
-                    .with(user(principal))
-                    .with(csrf())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
+                            .with(authentication(elderlyAuth(1L)))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().is4xxClientError());
         }
 
@@ -127,11 +136,9 @@ class ScheduleChangeRequestControllerTest {
             given(changeRequestService.getMyRequests(anyLong()))
                     .willReturn(List.of(response));
 
-            UserPrincipal principal = UserPrincipal.of(1L, "elderly1", Role.ELDERLY);
-
             // when & then
             mockMvc.perform(get("/api/schedule-change-requests/me")
-                    .with(user(principal)))
+                            .with(authentication(elderlyAuth(1L))))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data").isArray())
                     .andExpect(jsonPath("$.data[0].requestedCallTime").value("14:00"))
@@ -145,11 +152,9 @@ class ScheduleChangeRequestControllerTest {
             given(changeRequestService.getMyRequests(anyLong()))
                     .willReturn(List.of());
 
-            UserPrincipal principal = UserPrincipal.of(1L, "elderly1", Role.ELDERLY);
-
             // when & then
             mockMvc.perform(get("/api/schedule-change-requests/me")
-                    .with(user(principal)))
+                            .with(authentication(elderlyAuth(1L))))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data").isArray())
                     .andExpect(jsonPath("$.data").isEmpty());
@@ -183,7 +188,7 @@ class ScheduleChangeRequestControllerTest {
 
             // when & then
             mockMvc.perform(get("/api/schedule-change-requests/pending")
-                    .with(user(principal)))
+                            .with(user(principal)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data").isArray())
                     .andExpect(jsonPath("$.data[0].status").value("PENDING"));
@@ -207,12 +212,10 @@ class ScheduleChangeRequestControllerTest {
             given(changeRequestService.approveRequest(eq(1L), anyLong()))
                     .willReturn(response);
 
-            UserPrincipal principal = UserPrincipal.of(100L, "counselor1", Role.COUNSELOR);
-
             // when & then
             mockMvc.perform(put("/api/schedule-change-requests/1/approve")
-                    .with(user(principal))
-                    .with(csrf()))
+                            .with(authentication(counselorAuth(100L)))
+                            .with(csrf()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.status").value("APPROVED"))
                     .andExpect(jsonPath("$.data.processedByName").value("상담사"));
@@ -223,14 +226,13 @@ class ScheduleChangeRequestControllerTest {
         void approveRequest_alreadyProcessed_throwsError() throws Exception {
             // given
             given(changeRequestService.approveRequest(eq(1L), anyLong()))
-                    .willThrow(new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "이미 처리된 요청입니다."));
-
-            UserPrincipal principal = UserPrincipal.of(100L, "counselor1", Role.COUNSELOR);
+                    .willThrow(new BusinessException(ErrorCode.INVALID_INPUT_VALUE,
+                            "이미 처리된 요청입니다."));
 
             // when & then
             mockMvc.perform(put("/api/schedule-change-requests/1/approve")
-                    .with(user(principal))
-                    .with(csrf()))
+                            .with(authentication(counselorAuth(100L)))
+                            .with(csrf()))
                     .andExpect(status().is4xxClientError());
         }
 
@@ -256,14 +258,12 @@ class ScheduleChangeRequestControllerTest {
             given(changeRequestService.rejectRequest(eq(1L), anyLong(), any(RejectRequest.class)))
                     .willReturn(response);
 
-            UserPrincipal principal = UserPrincipal.of(100L, "counselor1", Role.COUNSELOR);
-
             // when & then
             mockMvc.perform(put("/api/schedule-change-requests/1/reject")
-                    .with(user(principal))
-                    .with(csrf())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(rejectRequest)))
+                            .with(authentication(counselorAuth(100L)))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(rejectRequest)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.status").value("REJECTED"))
                     .andExpect(jsonPath("$.data.rejectReason").value("업무 시간 외 통화 요청"));
@@ -287,12 +287,10 @@ class ScheduleChangeRequestControllerTest {
             given(changeRequestService.rejectRequest(eq(1L), anyLong(), any()))
                     .willReturn(response);
 
-            UserPrincipal principal = UserPrincipal.of(100L, "counselor1", Role.COUNSELOR);
-
             // when & then
             mockMvc.perform(put("/api/schedule-change-requests/1/reject")
-                    .with(user(principal))
-                    .with(csrf()))
+                            .with(authentication(counselorAuth(100L)))
+                            .with(csrf()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.status").value("REJECTED"));
         }
@@ -312,52 +310,41 @@ class ScheduleChangeRequestControllerTest {
             request.setPreferredCallTime("14:00");
             request.setPreferredCallDays(List.of("TUE", "THU"));
 
-            UserPrincipal principal = UserPrincipal.of(100L, "counselor1", Role.COUNSELOR);
-
             // when & then
             mockMvc.perform(post("/api/schedule-change-requests")
-                    .with(user(principal))
-                    .with(csrf())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
+                            .with(authentication(counselorAuth(100L)))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isForbidden());
         }
 
         @Test
         @DisplayName("상담사가 아닌 사용자가 대기 요청 조회 시 403 에러")
         void getPendingRequests_notCounselor_forbidden() throws Exception {
-            // given
-            UserPrincipal principal = UserPrincipal.of(1L, "elderly1", Role.ELDERLY);
-
             // when & then
             mockMvc.perform(get("/api/schedule-change-requests/pending")
-                    .with(user(principal)))
+                            .with(authentication(elderlyAuth(1L))))
                     .andExpect(status().isForbidden());
         }
 
         @Test
         @DisplayName("상담사가 아닌 사용자가 승인 시도 시 403 에러")
         void approveRequest_notCounselor_forbidden() throws Exception {
-            // given
-            UserPrincipal principal = UserPrincipal.of(1L, "elderly1", Role.ELDERLY);
-
             // when & then
             mockMvc.perform(put("/api/schedule-change-requests/1/approve")
-                    .with(user(principal))
-                    .with(csrf()))
+                            .with(authentication(elderlyAuth(1L)))
+                            .with(csrf()))
                     .andExpect(status().isForbidden());
         }
 
         @Test
         @DisplayName("상담사가 아닌 사용자가 거절 시도 시 403 에러")
         void rejectRequest_notCounselor_forbidden() throws Exception {
-            // given
-            UserPrincipal principal = UserPrincipal.of(1L, "elderly1", Role.ELDERLY);
-
             // when & then
             mockMvc.perform(put("/api/schedule-change-requests/1/reject")
-                    .with(user(principal))
-                    .with(csrf()))
+                            .with(authentication(elderlyAuth(1L)))
+                            .with(csrf()))
                     .andExpect(status().isForbidden());
         }
 
@@ -384,14 +371,12 @@ class ScheduleChangeRequestControllerTest {
             request.setPreferredCallDays(List.of("TUE", "THU"));
             // preferredCallTime 없음
 
-            UserPrincipal principal = UserPrincipal.of(1L, "elderly1", Role.ELDERLY);
-
             // when & then
             mockMvc.perform(post("/api/schedule-change-requests")
-                    .with(user(principal))
-                    .with(csrf())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
+                            .with(authentication(elderlyAuth(1L)))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
         }
 
@@ -403,14 +388,12 @@ class ScheduleChangeRequestControllerTest {
             request.setPreferredCallTime("14:00");
             // preferredCallDays 없음
 
-            UserPrincipal principal = UserPrincipal.of(1L, "elderly1", Role.ELDERLY);
-
             // when & then
             mockMvc.perform(post("/api/schedule-change-requests")
-                    .with(user(principal))
-                    .with(csrf())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(request)))
+                            .with(authentication(elderlyAuth(1L)))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
         }
     }

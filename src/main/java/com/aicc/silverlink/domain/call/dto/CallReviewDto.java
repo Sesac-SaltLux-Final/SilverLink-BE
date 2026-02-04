@@ -116,6 +116,7 @@ public class CallReviewDto {
         private List<SummaryItem> summaries;
         private List<EmotionItem> emotions;
         private ReviewInfo review;
+        private DailyStatusInfo dailyStatus; // 오늘의 상태 (식사, 건강, 수면)
 
         @Getter
         @Builder
@@ -174,7 +175,7 @@ public class CallReviewDto {
         }
 
         public static CallRecordDetailResponse from(CallRecord callRecord, CounselorCallReview review,
-                String presignedRecordingUrl) {
+                String presignedRecordingUrl, CallDailyStatus dailyStatus) {
             List<ResponseItem> responseItems = callRecord.getElderlyResponses().stream()
                     .map(r -> ResponseItem.builder()
                             .responseId(r.getId())
@@ -243,6 +244,7 @@ public class CallReviewDto {
                     .summaries(summaryItems)
                     .emotions(emotionItems)
                     .review(reviewInfo)
+                    .dailyStatus(DailyStatusInfo.from(dailyStatus))
                     .build();
         }
     }
@@ -288,6 +290,8 @@ public class CallReviewDto {
         private String elderlyName;
         private LocalDateTime callAt;
         private String duration;
+        private String state;
+        private String stateKorean;
         private String summary;
         private String emotionLevel;
         private String emotionLevelKorean;
@@ -297,16 +301,43 @@ public class CallReviewDto {
         private boolean urgent;
         private LocalDateTime reviewedAt;
 
-        public static GuardianCallReviewResponse from(CallRecord callRecord, CounselorCallReview review) {
+        // 대화 내용
+        private List<CallRecordDetailResponse.PromptItem> prompts;
+        private List<CallRecordDetailResponse.ResponseItem> responses;
+
+        // 오늘의 상태 (식사, 건강, 수면)
+        private DailyStatusInfo dailyStatus;
+
+        public static GuardianCallReviewResponse from(CallRecord callRecord, CounselorCallReview review, CallDailyStatus dailyStatus) {
             CallEmotion latestEmotion = callRecord.getEmotions().isEmpty() ? null
                     : callRecord.getEmotions().get(callRecord.getEmotions().size() - 1);
             String summary = callRecord.getSummaries().isEmpty() ? null : callRecord.getSummaries().get(0).getContent();
+
+            List<CallRecordDetailResponse.PromptItem> promptItems = callRecord.getLlmModels().stream()
+                    .map(p -> CallRecordDetailResponse.PromptItem.builder()
+                            .promptId(p.getId())
+                            .content(p.getPrompt())
+                            .createdAt(p.getCreatedAt())
+                            .build())
+                    .toList();
+
+            List<CallRecordDetailResponse.ResponseItem> responseItems = callRecord.getElderlyResponses().stream()
+                    .map(r -> CallRecordDetailResponse.ResponseItem.builder()
+                            .responseId(r.getId())
+                            .content(r.getContent())
+                            .respondedAt(r.getRespondedAt())
+                            .danger(r.isDanger())
+                            .dangerReason(r.getDangerReason())
+                            .build())
+                    .toList();
 
             return GuardianCallReviewResponse.builder()
                     .callId(callRecord.getId())
                     .elderlyName(callRecord.getElderly().getUser().getName())
                     .callAt(callRecord.getCallAt())
                     .duration(callRecord.getFormattedDuration())
+                    .state(callRecord.getState().name())
+                    .stateKorean(callRecord.getState().getKorean())
                     .summary(summary)
                     .emotionLevel(latestEmotion != null ? latestEmotion.getEmotionLevel().name() : null)
                     .emotionLevelKorean(latestEmotion != null ? latestEmotion.getEmotionLevelKorean() : null)
@@ -315,6 +346,9 @@ public class CallReviewDto {
                     .counselorComment(review != null ? review.getComment() : null)
                     .urgent(review != null && review.isUrgent())
                     .reviewedAt(review != null ? review.getReviewedAt() : null)
+                    .prompts(promptItems)
+                    .responses(responseItems)
+                    .dailyStatus(DailyStatusInfo.from(dailyStatus))
                     .build();
         }
     }
@@ -327,5 +361,103 @@ public class CallReviewDto {
     public static class UnreviewedCountResponse {
         private long unreviewedCount;
         private long totalCount;
+    }
+
+    // ===== 오늘의 상태 (Daily Status) DTOs =====
+
+    /**
+     * 오늘의 상태 응답 (식사, 건강, 수면)
+     */
+    @Getter
+    @Builder
+    public static class DailyStatusInfo {
+        private MealInfo meal;
+        private HealthInfo health;
+        private SleepInfo sleep;
+
+        public static DailyStatusInfo from(CallDailyStatus dailyStatus) {
+            if (dailyStatus == null) {
+                return DailyStatusInfo.builder()
+                        .meal(MealInfo.unknown())
+                        .health(HealthInfo.unknown())
+                        .sleep(SleepInfo.unknown())
+                        .build();
+            }
+
+            return DailyStatusInfo.builder()
+                    .meal(MealInfo.from(dailyStatus))
+                    .health(HealthInfo.from(dailyStatus))
+                    .sleep(SleepInfo.from(dailyStatus))
+                    .build();
+        }
+    }
+
+    @Getter
+    @Builder
+    public static class MealInfo {
+        private Boolean taken;
+        private String status;  // "식사함", "식사 안함", "미확인"
+
+        public static MealInfo from(CallDailyStatus dailyStatus) {
+            return MealInfo.builder()
+                    .taken(dailyStatus.getMealTaken())
+                    .status(dailyStatus.getMealStatusKorean())
+                    .build();
+        }
+
+        public static MealInfo unknown() {
+            return MealInfo.builder()
+                    .taken(null)
+                    .status("미확인")
+                    .build();
+        }
+    }
+
+    @Getter
+    @Builder
+    public static class HealthInfo {
+        private String level;        // GOOD, NORMAL, BAD, or null
+        private String levelKorean;  // 좋음, 보통, 나쁨, 미확인
+        private String detail;
+
+        public static HealthInfo from(CallDailyStatus dailyStatus) {
+            return HealthInfo.builder()
+                    .level(dailyStatus.getHealthStatus() != null ? dailyStatus.getHealthStatus().name() : null)
+                    .levelKorean(dailyStatus.getHealthStatusKorean())
+                    .detail(dailyStatus.getHealthDetail())
+                    .build();
+        }
+
+        public static HealthInfo unknown() {
+            return HealthInfo.builder()
+                    .level(null)
+                    .levelKorean("미확인")
+                    .detail(null)
+                    .build();
+        }
+    }
+
+    @Getter
+    @Builder
+    public static class SleepInfo {
+        private String level;        // GOOD, NORMAL, BAD, or null
+        private String levelKorean;  // 좋음, 보통, 나쁨, 미확인
+        private String detail;
+
+        public static SleepInfo from(CallDailyStatus dailyStatus) {
+            return SleepInfo.builder()
+                    .level(dailyStatus.getSleepStatus() != null ? dailyStatus.getSleepStatus().name() : null)
+                    .levelKorean(dailyStatus.getSleepStatusKorean())
+                    .detail(dailyStatus.getSleepDetail())
+                    .build();
+        }
+
+        public static SleepInfo unknown() {
+            return SleepInfo.builder()
+                    .level(null)
+                    .levelKorean("미확인")
+                    .detail(null)
+                    .build();
+        }
     }
 }
