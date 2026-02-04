@@ -3,11 +3,10 @@ package com.aicc.silverlink.domain.assignment.repository;
 import com.aicc.silverlink.domain.assignment.entity.Assignment;
 import com.aicc.silverlink.domain.assignment.entity.AssignmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -76,4 +75,18 @@ public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
      */
     @Query("SELECT a FROM Assignment a JOIN FETCH a.counselor c JOIN FETCH c.user JOIN FETCH a.elderly e WHERE a.status = com.aicc.silverlink.domain.assignment.entity.AssignmentStatus.ACTIVE")
     List<Assignment> findAllActiveWithDetails();
+
+    /**
+     * ✅ 회원 탈퇴 시 호출: 상담사 기준 배정 데이터 삭제
+     */
+    @Modifying
+    @Query("DELETE FROM Assignment a WHERE a.counselor.id = :counselorId")
+    void deleteByCounselorId(@Param("counselorId") Long counselorId);
+
+    /**
+     * ✅ 회원 탈퇴 시 호출: 어르신 기준 배정 데이터 삭제
+     */
+    @Modifying
+    @Query("DELETE FROM Assignment a WHERE a.elderly.id = :elderlyId")
+    void deleteByElderlyId(@Param("elderlyId") Long elderlyId);
 }
