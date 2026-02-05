@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
-@Tag(name = "어르신 관리 (관리자)", description = "어르신 등록/수정 API (관리자 전용)")
 
+@Tag(name = "어르신 관리 (관리자)", description = "어르신 등록/수정 API (관리자 전용)")
 
 @RestController
 @RequiredArgsConstructor
@@ -35,6 +35,12 @@ public class AdminElderlyController {
     @GetMapping("/{elderlyUserId}/detail")
     public ElderlyAdminDetailResponse detail(@PathVariable Long elderlyUserId) {
         return elderlyService.getElderlyDetailForAdmin(elderlyUserId);
+    }
+
+    // 관리자: 어르신 이름 검색
+    @GetMapping("/search")
+    public List<ElderlySummaryResponse> searchByName(@RequestParam String name) {
+        return elderlyService.searchElderlyByName(name);
     }
 
     @PostMapping
