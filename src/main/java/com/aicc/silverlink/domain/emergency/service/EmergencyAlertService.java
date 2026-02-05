@@ -20,6 +20,7 @@ import com.aicc.silverlink.domain.emergency.repository.EmergencyAlertRepository;
 import com.aicc.silverlink.domain.guardian.entity.Guardian;
 import com.aicc.silverlink.domain.guardian.entity.GuardianElderly;
 import com.aicc.silverlink.domain.guardian.repository.GuardianElderlyRepository;
+import com.aicc.silverlink.domain.emergency.event.EmergencyAlertCreatedEvent;
 import com.aicc.silverlink.domain.notification.service.UnifiedSseService;
 import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.repository.UserRepository;
@@ -27,6 +28,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -57,6 +59,7 @@ public class EmergencyAlertService {
     private final SmsService smsService;
     private final UnifiedSseService unifiedSseService; // 통합 SSE 서비스로 변경
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ========== 긴급 알림 생성 (CallBot → Backend) ==========
 
@@ -112,11 +115,14 @@ public class EmergencyAlertService {
         EmergencyAlert savedAlert = alertRepository.save(alert);
         log.info("[EmergencyAlertService] 긴급 알림 저장 완료. alertId={}", savedAlert.getId());
 
-        // 6. 수신자 등록 및 알림 발송
+        // 6. 수신자 등록 및 SMS 알림 발송
         List<EmergencyAlertRecipient> recipients = createAndNotifyRecipients(savedAlert, elderly, assignedCounselor);
 
-        // 7. SSE 실시간 알림 발송
-        sendSseNotifications(savedAlert, recipients);
+        // 7. SSE 실시간 알림 발송 (트랜잭션 커밋 후 실행되도록 이벤트 발행)
+        List<Long> recipientUserIds = recipients.stream()
+                .map(r -> r.getReceiver().getId())
+                .collect(Collectors.toList());
+        eventPublisher.publishEvent(new EmergencyAlertCreatedEvent(this, savedAlert, recipientUserIds));
 
         return savedAlert;
     }
@@ -181,25 +187,6 @@ public class EmergencyAlertService {
         }
 
         return recipients;
-    }
-
-    /**
-     * SSE 실시간 알림 발송
-     */
-    private void sendSseNotifications(EmergencyAlert alert, List<EmergencyAlertRecipient> recipients) {
-        List<Long> userIds = recipients.stream()
-                .map(r -> r.getReceiver().getId())
-                .collect(Collectors.toList());
-
-        // 통합 SSE 서비스 사용
-        try {
-            unifiedSseService.sendEmergencyAlertToUsers(userIds, alert);
-            log.info("[EmergencyAlertService] SSE 알림 발송 완료. alertId={}, 수신자 수={}",
-                    alert.getId(), userIds.size());
-        } catch (Exception e) {
-            log.error("[EmergencyAlertService] SSE 알림 발송 중 오류 발생 (알림 저장은 완료됨). alertId={}, error={}",
-                    alert.getId(), e.getMessage(), e);
-        }
     }
 
     /**

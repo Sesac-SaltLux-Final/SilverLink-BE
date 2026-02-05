@@ -75,6 +75,9 @@ public class SmsService {
                     shortUrl);
             smsLogRepository.save(smsLog);
 
+            log.info("[SmsService] 긴급 알림 SMS 발송 시작. alertId={}, phone={}, messageLength={}",
+                    alert.getId(), maskPhone(phone), message.length());
+
             // SMS 발송
             sendSms(phone, message, smsLog, recipient);
 
@@ -86,6 +89,8 @@ public class SmsService {
 
     /**
      * 긴급 알림 메시지 생성
+     * UCS-2 SMS 세그먼트(67자) 경계에서 한글/URL 바이트가 깨지지 않도록
+     * 메시지를 간결하게 유지하고, URL은 별도 줄에 배치
      */
     private String buildEmergencyAlertMessage(EmergencyAlert alert, EmergencyAlertRecipient recipient) {
         var elderly = alert.getElderly();
@@ -96,33 +101,30 @@ public class SmsService {
 
         // 보호자용 메시지
         if (recipient.getReceiverRole() == EmergencyAlertRecipient.ReceiverRole.GUARDIAN) {
-            return String.format(
-                    "%s\n%s(%d세) 어르신의 긴급 위험이 감지되었습니다.\n담당 생활지원사님이 확인 중이며, 확인 후 연락드리겠습니다.\n상세: %s",
-                    prefix,
-                    elderlyName,
-                    age,
-                    buildShortUrl("guardian", null));
+            String url = buildShortUrl("guardian", null);
+            return prefix + "\n"
+                    + elderlyName + "(" + age + "세) 어르신의 긴급 위험이 감지되었습니다.\n"
+                    + "담당 생활지원사님이 확인 중이며, 확인 후 연락드리겠습니다.\n"
+                    + "상세:\n" + url;
         }
 
         // 상담사용 메시지
         if (recipient.getReceiverRole() == EmergencyAlertRecipient.ReceiverRole.COUNSELOR) {
-            return String.format(
-                    "%s\n담당 어르신 %s(%d세)님\n긴급 위험 감지\n내용: %s\n확인: %s",
-                    prefix,
-                    elderlyName,
-                    age,
-                    truncate(alert.getTitle(), 30),
-                    buildShortUrl("counselor", "alerts"));
+            String url = buildShortUrl("counselor", "alerts");
+            return prefix + "\n"
+                    + "담당 어르신 " + elderlyName + "(" + age + "세)님\n"
+                    + "긴급 위험 감지\n"
+                    + "내용: " + truncate(alert.getTitle(), 30) + "\n"
+                    + "확인:\n" + url;
         }
 
         // 관리자용 메시지
-        return String.format(
-                "%s\n담당 어르신 %s(%d세)님\n긴급 위험 감지\n내용: %s\n확인: %s",
-                prefix,
-                elderlyName,
-                age,
-                truncate(alert.getTitle(), 30),
-                buildShortUrl("admin", null));
+        String url = buildShortUrl("admin", null);
+        return prefix + "\n"
+                + "담당 어르신 " + elderlyName + "(" + age + "세)님\n"
+                + "긴급 위험 감지\n"
+                + "내용: " + truncate(alert.getTitle(), 30) + "\n"
+                + "확인:\n" + url;
     }
 
     // ========== 일반 알림 SMS ==========
@@ -225,6 +227,8 @@ public class SmsService {
 
     /**
      * SMS 발송 (Twilio)
+     * 한글(UCS-2) 메시지가 SMS 세그먼트 경계에서 깨지지 않도록
+     * 명시적으로 unicode 인코딩을 지정하여 발송
      */
     private void sendSms(String toPhone, String messageContent, SmsLog smsLog, EmergencyAlertRecipient recipient) {
         try {
@@ -284,13 +288,14 @@ public class SmsService {
 
     /**
      * 단축 URL 생성
+     * SMS 세그먼트 경계에서 URL이 깨지지 않도록 가능한 짧게 유지
      */
     private String buildShortUrl(String role, String page) {
         String baseUrl = "https://d1y2piyw58z1m3.cloudfront.net";
         if (page != null) {
-            return String.format("%s/%s/%s", baseUrl, role, page);
+            return baseUrl + "/" + role + "/" + page;
         }
-        return String.format("%s/%s", baseUrl, role);
+        return baseUrl + "/" + role;
     }
 
     /**
