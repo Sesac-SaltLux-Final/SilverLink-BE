@@ -310,7 +310,7 @@ class SmsServiceTest {
             String result = invokeBuildEmergencyAlertMessage(alert, recipient);
 
             // then
-            assertThat(result).contains("[마음돌봄 긴급]");
+            assertThat(result).contains("[실버링크 긴급]");
             assertThat(result).contains("김순자");
         }
 
@@ -326,7 +326,7 @@ class SmsServiceTest {
             String result = invokeBuildEmergencyAlertMessage(alert, recipient);
 
             // then
-            assertThat(result).contains("[마음돌봄 알림]");
+            assertThat(result).contains("[실버링크 알림]");
             assertThat(result).contains("담당 어르신");
         }
 

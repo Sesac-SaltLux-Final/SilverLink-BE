@@ -286,13 +286,27 @@ public class EmergencyAlertDto {
         private String timeAgo;
 
         public static RealtimeResponse from(EmergencyAlert alert) {
+            String elderlyName = "알 수 없음";
+            Integer elderlyAge = 0;
+
+            if (alert.getElderly() != null) {
+                if (alert.getElderly().getUser() != null) {
+                    elderlyName = alert.getElderly().getUser().getName();
+                }
+                try {
+                    elderlyAge = alert.getElderly().age();
+                } catch (Exception e) {
+                    // age logic failure (e.g. birthDate null)
+                }
+            }
+
             return RealtimeResponse.builder()
                     .alertId(alert.getId())
                     .severity(alert.getSeverity())
                     .alertType(alert.getAlertType())
                     .title(alert.getTitle())
-                    .elderlyName(alert.getElderly().getUser().getName())
-                    .elderlyAge(alert.getElderly().age())
+                    .elderlyName(elderlyName)
+                    .elderlyAge(elderlyAge)
                     .createdAt(alert.getCreatedAt())
                     .timeAgo(calculateTimeAgo(alert.getCreatedAt()))
                     .build();

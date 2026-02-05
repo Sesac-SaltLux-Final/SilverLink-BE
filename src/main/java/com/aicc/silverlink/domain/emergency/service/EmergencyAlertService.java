@@ -192,9 +192,14 @@ public class EmergencyAlertService {
                 .collect(Collectors.toList());
 
         // 통합 SSE 서비스 사용
-        unifiedSseService.sendEmergencyAlertToUsers(userIds, alert);
-        log.info("[EmergencyAlertService] SSE 알림 발송 완료. alertId={}, 수신자 수={}",
-                alert.getId(), userIds.size());
+        try {
+            unifiedSseService.sendEmergencyAlertToUsers(userIds, alert);
+            log.info("[EmergencyAlertService] SSE 알림 발송 완료. alertId={}, 수신자 수={}",
+                    alert.getId(), userIds.size());
+        } catch (Exception e) {
+            log.error("[EmergencyAlertService] SSE 알림 발송 중 오류 발생 (알림 저장은 완료됨). alertId={}, error={}",
+                    alert.getId(), e.getMessage(), e);
+        }
     }
 
     /**

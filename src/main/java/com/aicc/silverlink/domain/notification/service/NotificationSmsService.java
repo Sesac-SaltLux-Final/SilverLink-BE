@@ -54,9 +54,9 @@ public class NotificationSmsService {
             return;
         }
 
-        String shortUrl = buildShortUrl("i", inquiryId);
+        String shortUrl = buildShortUrl("guardian", "inquiry");
         String message = String.format(
-                "[마음돌봄]\n등록하신 문의에 답변이 등록되었습니다.\n확인▶ %s",
+                "[실버링크]\n등록하신 문의에 답변이 등록되었습니다.\n확인: %s",
                 shortUrl);
 
         SmsLog smsLog = SmsLog.createForInquiryReply(receiver, phone, inquiryId, message, shortUrl);
@@ -82,9 +82,9 @@ public class NotificationSmsService {
             return;
         }
 
-        String shortUrl = buildShortUrl("c", complaintId);
+        String shortUrl = buildShortUrl("guardian", "complaint");
         String message = String.format(
-                "[마음돌봄]\n등록하신 민원에 답변이 등록되었습니다.\n확인▶ %s",
+                "[실버링크]\n등록하신 민원에 답변이 등록되었습니다.\n확인: %s",
                 shortUrl);
 
         SmsLog smsLog = SmsLog.createForComplaintReply(receiver, phone, complaintId, message, shortUrl);
@@ -110,9 +110,9 @@ public class NotificationSmsService {
             return;
         }
 
-        String shortUrl = buildShortUrl("r", requestId);
+        String shortUrl = buildShortUrl("guardian", "sensitive-info");
         String message = String.format(
-                "[마음돌봄]\n%s 어르신의 민감정보 열람 권한이 승인되었습니다.\n확인▶ %s",
+                "[실버링크]\n%s 어르신의 민감정보 열람 권한이 승인되었습니다.\n확인: %s",
                 elderlyName, shortUrl);
 
         SmsLog smsLog = SmsLog.createForAccessRequest(
@@ -139,13 +139,13 @@ public class NotificationSmsService {
             return;
         }
 
-        String shortUrl = buildShortUrl("r", requestId);
+        String shortUrl = buildShortUrl("guardian", "sensitive-info");
         String reasonSummary = reason != null && reason.length() > 20
                 ? reason.substring(0, 20) + "..."
                 : reason;
 
         String message = String.format(
-                "[마음돌봄]\n%s 어르신의 민감정보 열람 권한 요청이 거절되었습니다.\n사유: %s\n확인▶ %s",
+                "[실버링크]\n%s 어르신의 민감정보 열람 권한 요청이 거절되었습니다.\n사유: %s\n확인: %s",
                 elderlyName, reasonSummary != null ? reasonSummary : "사유 미기재", shortUrl);
 
         SmsLog smsLog = SmsLog.createForAccessRequest(
@@ -213,10 +213,12 @@ public class NotificationSmsService {
     /**
      * 단축 URL 생성
      */
-    private String buildShortUrl(String type, Long id) {
-        // 실제 구현 시 URL 단축 서비스 연동
-        // 예: https://slnk.kr/i/123 (문의), https://slnk.kr/c/456 (민원)
-        return String.format("https://slnk.kr/%s/%d", type, id);
+    private String buildShortUrl(String role, String page) {
+        String baseUrl = "https://d1y2piyw58z1m3.cloudfront.net";
+        if (page != null) {
+            return String.format("%s/%s/%s", baseUrl, role, page);
+        }
+        return String.format("%s/%s", baseUrl, role);
     }
 
     /**

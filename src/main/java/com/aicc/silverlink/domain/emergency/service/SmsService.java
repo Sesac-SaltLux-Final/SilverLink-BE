@@ -63,7 +63,7 @@ public class SmsService {
 
             // 메시지 생성
             String message = buildEmergencyAlertMessage(alert, recipient);
-            String shortUrl = buildShortUrl("a", alert.getId());
+            String shortUrl = buildShortUrl("counselor", "alerts");
 
             // SMS 로그 생성
             SmsLog smsLog = SmsLog.createForEmergencyAlert(
@@ -91,30 +91,38 @@ public class SmsService {
         var elderly = alert.getElderly();
         String elderlyName = elderly.getUser().getName();
         int age = elderly.age();
-        String alertTypeText = alert.getAlertType().getDescription();
 
-        String prefix = alert.isCritical() ? "[마음돌봄 긴급]" : "[마음돌봄 알림]";
+        String prefix = alert.isCritical() ? "[실버링크 긴급]" : "[실버링크 알림]";
 
-        // 보호자용 메시지는 약간 다르게
+        // 보호자용 메시지
         if (recipient.getReceiverRole() == EmergencyAlertRecipient.ReceiverRole.GUARDIAN) {
             return String.format(
-                    "%s\n%s(%d세) 어르신의 %s이 감지되었습니다.\n담당자가 확인 중이며, 필요시 연락드리겠습니다.\n상세▶ %s",
+                    "%s\n%s(%d세) 어르신의 긴급 위험이 감지되었습니다.\n담당 생활지원사님이 확인 중이며, 확인 후 연락드리겠습니다.\n상세: %s",
                     prefix,
                     elderlyName,
                     age,
-                    alertTypeText,
-                    buildShortUrl("a", alert.getId()));
+                    buildShortUrl("guardian", null));
         }
 
-        // 상담사/관리자용 메시지
+        // 상담사용 메시지
+        if (recipient.getReceiverRole() == EmergencyAlertRecipient.ReceiverRole.COUNSELOR) {
+            return String.format(
+                    "%s\n담당 어르신 %s(%d세)님\n긴급 위험 감지\n내용: %s\n확인: %s",
+                    prefix,
+                    elderlyName,
+                    age,
+                    truncate(alert.getTitle(), 30),
+                    buildShortUrl("counselor", "alerts"));
+        }
+
+        // 관리자용 메시지
         return String.format(
-                "%s\n담당 어르신 %s(%d세)님\n%s 감지\n내용: %s\n확인▶ %s",
+                "%s\n담당 어르신 %s(%d세)님\n긴급 위험 감지\n내용: %s\n확인: %s",
                 prefix,
                 elderlyName,
                 age,
-                alertTypeText,
                 truncate(alert.getTitle(), 30),
-                buildShortUrl("a", alert.getId()));
+                buildShortUrl("admin", null));
     }
 
     // ========== 일반 알림 SMS ==========
@@ -127,8 +135,8 @@ public class SmsService {
     public void sendInquiryReplySms(User receiver, Long inquiryId) {
         try {
             String phone = formatPhoneNumber(receiver.getPhone());
-            String message = "[마음돌봄]\n등록하신 문의에 답변이 등록되었습니다.\n확인▶ " + buildShortUrl("i", inquiryId);
-            String shortUrl = buildShortUrl("i", inquiryId);
+            String shortUrl = buildShortUrl("guardian", "inquiry");
+            String message = "[실버링크]\n등록하신 문의에 답변이 등록되었습니다.\n확인: " + shortUrl;
 
             SmsLog smsLog = SmsLog.createForInquiryReply(receiver, phone, inquiryId, message, shortUrl);
             smsLogRepository.save(smsLog);
@@ -149,8 +157,8 @@ public class SmsService {
     public void sendComplaintReplySms(User receiver, Long complaintId) {
         try {
             String phone = formatPhoneNumber(receiver.getPhone());
-            String message = "[마음돌봄]\n등록하신 민원에 답변이 등록되었습니다.\n확인▶ " + buildShortUrl("c", complaintId);
-            String shortUrl = buildShortUrl("c", complaintId);
+            String shortUrl = buildShortUrl("guardian", "complaint");
+            String message = "[실버링크]\n등록하신 민원에 답변이 등록되었습니다.\n확인: " + shortUrl;
 
             SmsLog smsLog = SmsLog.createForComplaintReply(receiver, phone, complaintId, message, shortUrl);
             smsLogRepository.save(smsLog);
@@ -171,11 +179,11 @@ public class SmsService {
     public void sendAccessApprovedSms(User receiver, Long requestId, String elderlyName) {
         try {
             String phone = formatPhoneNumber(receiver.getPhone());
+            String shortUrl = buildShortUrl("guardian", "sensitive-info");
             String message = String.format(
-                    "[마음돌봄]\n%s 어르신의 민감정보 열람 권한이 승인되었습니다.\n확인▶ %s",
+                    "[실버링크]\n%s 어르신의 민감정보 열람 권한이 승인되었습니다.\n확인: %s",
                     elderlyName,
-                    buildShortUrl("r", requestId));
-            String shortUrl = buildShortUrl("r", requestId);
+                    shortUrl);
 
             SmsLog smsLog = SmsLog.createForAccessRequest(receiver, phone, true, requestId, message, shortUrl);
             smsLogRepository.save(smsLog);
@@ -196,11 +204,11 @@ public class SmsService {
     public void sendAccessRejectedSms(User receiver, Long requestId, String elderlyName) {
         try {
             String phone = formatPhoneNumber(receiver.getPhone());
+            String shortUrl = buildShortUrl("guardian", "sensitive-info");
             String message = String.format(
-                    "[마음돌봄]\n%s 어르신의 민감정보 열람 권한 요청이 거절되었습니다.\n사유 확인▶ %s",
+                    "[실버링크]\n%s 어르신의 민감정보 열람 권한 요청이 거절되었습니다.\n사유 확인: %s",
                     elderlyName,
-                    buildShortUrl("r", requestId));
-            String shortUrl = buildShortUrl("r", requestId);
+                    shortUrl);
 
             SmsLog smsLog = SmsLog.createForAccessRequest(receiver, phone, false, requestId, message, shortUrl);
             smsLogRepository.save(smsLog);
@@ -277,10 +285,12 @@ public class SmsService {
     /**
      * 단축 URL 생성
      */
-    private String buildShortUrl(String type, Long id) {
-        // 실제 구현에서는 URL 단축 서비스 사용 또는 자체 구현
-        // 예: https://slnk.kr/a/123
-        return String.format("https://slnk.kr/%s/%d", type, id);
+    private String buildShortUrl(String role, String page) {
+        String baseUrl = "https://d1y2piyw58z1m3.cloudfront.net";
+        if (page != null) {
+            return String.format("%s/%s/%s", baseUrl, role, page);
+        }
+        return String.format("%s/%s", baseUrl, role);
     }
 
     /**
