@@ -35,6 +35,9 @@ public class SmsService {
 
     private String messagingServiceSid;
 
+    // UCS-2 인코딩 SMS 세그먼트 제한 (한글 사용 시)
+    private static final int UCS2_SINGLE_SEGMENT_LIMIT = 67;
+
     @PostConstruct
     public void init() {
         Twilio.init(twilioProperties.getAccountSid(), twilioProperties.getAuthToken());
@@ -47,12 +50,13 @@ public class SmsService {
         log.info("Messaging Service SID: {}", twilioProperties.getMessagingServiceSid());
     }
 
-
-
     // ========== 긴급 알림 SMS ==========
 
     /**
      * 긴급 알림 SMS 발송 (비동기)
+     * 한글 SMS 인코딩 깨짐 방지를 위해 2건으로 분할 발송:
+     * - 1차: 본문 메시지 (67자 이내)
+     * - 2차: URL (67자 이내)
      */
     @Async
     @Transactional
@@ -61,25 +65,31 @@ public class SmsService {
             User receiver = recipient.getReceiver();
             String phone = formatPhoneNumber(receiver.getPhone());
 
-            // 메시지 생성
-            String message = buildEmergencyAlertMessage(alert, recipient);
-            String shortUrl = buildShortUrl("counselor", "alerts");
+            // 본문 메시지 생성 (67자 이내)
+            String bodyMessage = buildEmergencyAlertBodyMessage(alert, recipient);
+            // URL 메시지 생성
+            String urlMessage = buildEmergencyAlertUrlMessage(recipient);
+            String shortUrl = getUrlForRecipient(recipient);
 
-            // SMS 로그 생성
+            // SMS 로그 생성 (본문 + URL 합쳐서 기록)
+            String fullMessage = bodyMessage + "\n" + urlMessage;
             SmsLog smsLog = SmsLog.createForEmergencyAlert(
                     receiver,
                     phone,
                     alert.getSeverity(),
                     alert.getId(),
-                    message,
+                    fullMessage,
                     shortUrl);
             smsLogRepository.save(smsLog);
 
-            log.info("[SmsService] 긴급 알림 SMS 발송 시작. alertId={}, phone={}, messageLength={}",
-                    alert.getId(), maskPhone(phone), message.length());
+            log.info("[SmsService] 긴급 알림 SMS 2건 분할 발송 시작. alertId={}, phone={}, bodyLen={}, urlLen={}",
+                    alert.getId(), maskPhone(phone), bodyMessage.length(), urlMessage.length());
 
-            // SMS 발송
-            sendSms(phone, message, smsLog, recipient);
+            // 1차 SMS: 본문 발송
+            sendSmsWithoutLog(phone, bodyMessage);
+
+            // 2차 SMS: URL 발송 (수신자 상태 업데이트는 여기서)
+            sendSms(phone, urlMessage, smsLog, recipient);
 
         } catch (Exception e) {
             log.error("[SmsService] 긴급 알림 SMS 발송 실패. alertId={}, recipientId={}, error={}",
@@ -88,43 +98,62 @@ public class SmsService {
     }
 
     /**
-     * 긴급 알림 메시지 생성
-     * UCS-2 SMS 세그먼트(67자) 경계에서 한글/URL 바이트가 깨지지 않도록
-     * 메시지를 간결하게 유지하고, URL은 별도 줄에 배치
+     * 긴급 알림 본문 메시지 생성 (67자 이내)
+     * UCS-2 SMS 세그먼트 분할 방지를 위해 간결하게 유지
      */
-    private String buildEmergencyAlertMessage(EmergencyAlert alert, EmergencyAlertRecipient recipient) {
+    private String buildEmergencyAlertBodyMessage(EmergencyAlert alert, EmergencyAlertRecipient recipient) {
         var elderly = alert.getElderly();
-        String elderlyName = elderly.getUser().getName();
+        String elderlyName = truncate(elderly.getUser().getName(), 10);
         int age = elderly.age();
 
-        String prefix = alert.isCritical() ? "[실버링크 긴급]" : "[실버링크 알림]";
+        String prefix = alert.isCritical() ? "[긴급]" : "[알림]";
 
-        // 보호자용 메시지
+        // 보호자용 메시지 (67자 이내)
         if (recipient.getReceiverRole() == EmergencyAlertRecipient.ReceiverRole.GUARDIAN) {
-            String url = buildShortUrl("guardian", null);
-            return prefix + "\n"
-                    + elderlyName + "(" + age + "세) 어르신의 긴급 위험이 감지되었습니다.\n"
-                    + "담당 생활지원사님이 확인 중이며, 확인 후 연락드리겠습니다.\n"
-                    + "상세:\n" + url;
+            return prefix + " " + elderlyName + "(" + age + "세)\n"
+                    + "어르신 위험 감지됨\n"
+                    + "담당 생활지원사님이 확인 후 연락 드릴 예정입니다.";
         }
 
-        // 상담사용 메시지
+        // 상담사용 메시지 (67자 이내)
         if (recipient.getReceiverRole() == EmergencyAlertRecipient.ReceiverRole.COUNSELOR) {
-            String url = buildShortUrl("counselor", "alerts");
-            return prefix + "\n"
-                    + "담당 어르신 " + elderlyName + "(" + age + "세)님\n"
-                    + "긴급 위험 감지\n"
-                    + "내용: " + truncate(alert.getTitle(), 30) + "\n"
-                    + "확인:\n" + url;
+            return prefix + " 담당 어르신\n"
+                    + elderlyName + "(" + age + "세) 위험 감지\n"
+                    + truncate(alert.getTitle(), 20);
         }
 
-        // 관리자용 메시지
-        String url = buildShortUrl("admin", null);
-        return prefix + "\n"
-                + "담당 어르신 " + elderlyName + "(" + age + "세)님\n"
-                + "긴급 위험 감지\n"
-                + "내용: " + truncate(alert.getTitle(), 30) + "\n"
-                + "확인:\n" + url;
+        // 관리자용 메시지 (67자 이내)
+        return prefix + " 담당 어르신\n"
+                + elderlyName + "(" + age + "세) 위험 감지\n"
+                + truncate(alert.getTitle(), 20);
+    }
+
+    /**
+     * 긴급 알림 URL 메시지 생성 (67자 이내)
+     */
+    private String buildEmergencyAlertUrlMessage(EmergencyAlertRecipient recipient) {
+        String url = getUrlForRecipient(recipient);
+        return "상세 확인:\n" + url;
+    }
+
+    /**
+     * 수신자 역할에 따른 URL 반환
+     */
+    private String getUrlForRecipient(EmergencyAlertRecipient recipient) {
+        if (recipient.getReceiverRole() == EmergencyAlertRecipient.ReceiverRole.GUARDIAN) {
+            return buildShortUrl("guardian", null);
+        }
+        if (recipient.getReceiverRole() == EmergencyAlertRecipient.ReceiverRole.COUNSELOR) {
+            return buildShortUrl("counselor", "alerts");
+        }
+        return buildShortUrl("admin", null);
+    }
+
+    // 하위 호환성을 위한 기존 메서드 유지 (deprecated)
+    @Deprecated
+    private String buildEmergencyAlertMessage(EmergencyAlert alert, EmergencyAlertRecipient recipient) {
+        return buildEmergencyAlertBodyMessage(alert, recipient) + "\n"
+                + buildEmergencyAlertUrlMessage(recipient);
     }
 
     // ========== 일반 알림 SMS ==========
@@ -262,6 +291,27 @@ public class SmsService {
                 recipientRepository.save(recipient);
             }
 
+            throw new RuntimeException("SMS 발송 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * SMS 발송 (Twilio) - 로그 없이 발송
+     * 분할 발송 시 첫 번째 메시지에 사용
+     */
+    private void sendSmsWithoutLog(String toPhone, String messageContent) {
+        try {
+            Message message = Message.creator(
+                    new PhoneNumber(toPhone),
+                    messagingServiceSid,
+                    messageContent).create();
+
+            log.info("[SmsService] SMS 발송 성공 (분할 1차). to={}, sid={}",
+                    maskPhone(toPhone), message.getSid());
+
+        } catch (Exception e) {
+            log.error("[SmsService] SMS 발송 실패 (분할 1차). to={}, error={}",
+                    maskPhone(toPhone), e.getMessage());
             throw new RuntimeException("SMS 발송 실패: " + e.getMessage(), e);
         }
     }
