@@ -74,4 +74,15 @@ public interface CallRecordRepository extends JpaRepository<CallRecord, Long> {
          * 특정 기간 내 완료된 통화 수
          */
         long countByStateAndCallAtBetween(CallState state, LocalDateTime start, LocalDateTime end);
+
+        /**
+         * 어르신 ID로 완료된 통화 기록 조회 (보호자 통화 목록용)
+         * 리뷰 여부와 관계없이 COMPLETED 상태인 모든 통화를 반환
+         */
+        @Query("SELECT c FROM CallRecord c " +
+                        "LEFT JOIN FETCH c.elderly e " +
+                        "LEFT JOIN FETCH e.user " +
+                        "WHERE c.elderly.id = :elderlyId AND c.state = 'COMPLETED' " +
+                        "ORDER BY c.callAt DESC")
+        Page<CallRecord> findCompletedByElderlyId(@Param("elderlyId") Long elderlyId, Pageable pageable);
 }

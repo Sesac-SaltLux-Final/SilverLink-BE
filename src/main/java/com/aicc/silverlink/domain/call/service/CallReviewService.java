@@ -180,24 +180,31 @@ public class CallReviewService {
     // ===== 보호자용 메서드 =====
 
     /**
-     * 보호자가 어르신의 통화 리뷰 목록 조회
+     * 보호자가 어르신의 통화 기록 목록 조회
+     * 상담사 리뷰 여부와 관계없이 완료된 모든 통화를 반환
      */
     public Page<GuardianCallReviewResponse> getCallReviewsForGuardian(Long guardianId, Long elderlyId,
             Pageable pageable) {
         // 보호자-어르신 관계 확인
         validateGuardianElderlyRelation(guardianId, elderlyId);
 
-        Page<CounselorCallReview> reviews = reviewRepository.findReviewsByElderlyId(elderlyId, pageable);
+        // CallRecord를 직접 조회 (리뷰 여부와 무관하게 모든 완료된 통화 포함)
+        Page<CallRecord> callRecords = callRecordRepository.findCompletedByElderlyId(elderlyId, pageable);
 
-        List<GuardianCallReviewResponse> responses = reviews.getContent().stream()
-                .map(r -> {
+        List<GuardianCallReviewResponse> responses = callRecords.getContent().stream()
+                .map(callRecord -> {
+                    // 리뷰가 있으면 최신 리뷰를 가져옴 (없으면 null)
+                    List<CounselorCallReview> reviews = reviewRepository
+                            .findByCallRecordIdOrderByReviewedAtDesc(callRecord.getId());
+                    CounselorCallReview latestReview = reviews.isEmpty() ? null : reviews.get(0);
+
                     CallDailyStatus dailyStatus = dailyStatusRepository
-                            .findByCallRecordId(r.getCallRecord().getId()).orElse(null);
-                    return GuardianCallReviewResponse.from(r.getCallRecord(), r, dailyStatus);
+                            .findByCallRecordId(callRecord.getId()).orElse(null);
+                    return GuardianCallReviewResponse.from(callRecord, latestReview, dailyStatus);
                 })
                 .toList();
 
-        return new PageImpl<>(responses, pageable, reviews.getTotalElements());
+        return new PageImpl<>(responses, pageable, callRecords.getTotalElements());
     }
 
     /**

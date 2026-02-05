@@ -353,10 +353,11 @@ class CallReviewServiceTest {
             CallRecord callRecord = createMockCallRecord(callId, elderly);
             CounselorCallReview review = createMockReview(1L, callRecord, counselor);
 
-            Page<CounselorCallReview> reviewPage = new PageImpl<>(List.of(review));
+            Page<CallRecord> callRecordPage = new PageImpl<>(List.of(callRecord));
 
             given(guardianElderlyRepository.existsByGuardianIdAndElderlyId(guardianId, elderlyId)).willReturn(true);
-            given(reviewRepository.findReviewsByElderlyId(elderlyId, pageable)).willReturn(reviewPage);
+            given(callRecordRepository.findCompletedByElderlyId(elderlyId, pageable)).willReturn(callRecordPage);
+            given(reviewRepository.findByCallRecordIdOrderByReviewedAtDesc(callId)).willReturn(List.of(review));
 
             // when
             Page<GuardianCallReviewResponse> result = callReviewService.getCallReviewsForGuardian(guardianId, elderlyId,

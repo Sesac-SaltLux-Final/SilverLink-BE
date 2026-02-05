@@ -100,13 +100,13 @@ public class CallReviewController {
 
         // ===== 보호자용 API =====
 
-        @Operation(summary = "어르신 통화 리뷰 목록 조회 (보호자)", description = "보호자가 연결된 어르신의 통화 기록 및 상담사 코멘트를 조회합니다.")
+        @Operation(summary = "어르신 통화 기록 목록 조회 (보호자)", description = "보호자가 연결된 어르신의 통화 기록 및 상담사 코멘트를 조회합니다.")
         @GetMapping("/guardian/elderly/{elderlyId}")
         @PreAuthorize("hasRole('GUARDIAN')")
         public ResponseEntity<ApiResponse<PageResponse<GuardianCallReviewResponse>>> getCallReviewsForGuardian(
                         @AuthenticationPrincipal Long userId,
                         @Parameter(description = "어르신 ID") @PathVariable Long elderlyId,
-                        @PageableDefault(size = 20, sort = "reviewedAt", direction = Sort.Direction.DESC) Pageable pageable) {
+                        @PageableDefault(size = 20, sort = "callAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
                 Page<GuardianCallReviewResponse> page = callReviewService.getCallReviewsForGuardian(
                                 userId, elderlyId, pageable);

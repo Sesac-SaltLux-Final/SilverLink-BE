@@ -223,29 +223,37 @@ class SmsServiceTest {
     class BuildShortUrlTest {
 
         @Test
-        @DisplayName("알림 URL 생성")
-        void buildAlertUrl() {
+        @DisplayName("상담사 알림 URL 생성")
+        void buildCounselorAlertUrl() {
             // when
-            String result = invokeBuildShortUrl("a", 123L);
+            String result = invokeBuildShortUrl("counselor", "alerts");
 
             // then
-            assertThat(result).contains("123");
-            assertThat(result).contains("a");
+            assertThat(result).isEqualTo("https://d1y2piyw58z1m3.cloudfront.net/counselor/alerts");
         }
 
         @Test
-        @DisplayName("문의 URL 생성")
-        void buildInquiryUrl() {
+        @DisplayName("보호자 URL 생성 (page 없음)")
+        void buildGuardianUrl() {
             // when
-            String result = invokeBuildShortUrl("i", 456L);
+            String result = invokeBuildShortUrl("guardian", null);
 
             // then
-            assertThat(result).contains("456");
-            assertThat(result).contains("i");
+            assertThat(result).isEqualTo("https://d1y2piyw58z1m3.cloudfront.net/guardian");
         }
 
-        private String invokeBuildShortUrl(String type, Long id) {
-            return ReflectionTestUtils.invokeMethod(smsService, "buildShortUrl", type, id);
+        @Test
+        @DisplayName("보호자 문의 URL 생성")
+        void buildGuardianInquiryUrl() {
+            // when
+            String result = invokeBuildShortUrl("guardian", "inquiry");
+
+            // then
+            assertThat(result).isEqualTo("https://d1y2piyw58z1m3.cloudfront.net/guardian/inquiry");
+        }
+
+        private String invokeBuildShortUrl(String role, String page) {
+            return ReflectionTestUtils.invokeMethod(smsService, "buildShortUrl", role, page);
         }
     }
 
@@ -310,7 +318,7 @@ class SmsServiceTest {
             String result = invokeBuildEmergencyAlertMessage(alert, recipient);
 
             // then
-            assertThat(result).contains("[마음돌봄 긴급]");
+            assertThat(result).contains("[실버링크 긴급]");
             assertThat(result).contains("김순자");
         }
 
@@ -326,7 +334,7 @@ class SmsServiceTest {
             String result = invokeBuildEmergencyAlertMessage(alert, recipient);
 
             // then
-            assertThat(result).contains("[마음돌봄 알림]");
+            assertThat(result).contains("[실버링크 알림]");
             assertThat(result).contains("담당 어르신");
         }
 
