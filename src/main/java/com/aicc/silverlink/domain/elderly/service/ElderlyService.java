@@ -76,7 +76,8 @@ public class ElderlyService {
         }
 
         AdministrativeDivision division = divisionRepository.findById(req.admCode())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 행정구역 코드입니다: " + req.admCode()));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "존재하지 않는 행정구역 코드입니다: " + req.admCode()));
 
         Elderly elderly = Elderly.create(user, division, req.birthDate(), req.gender());
         elderly.updateAddress(req.addressLine1(), req.addressLine2(), req.zipcode());
@@ -145,6 +146,14 @@ public class ElderlyService {
     }
 
     @Transactional(readOnly = true)
+    public List<ElderlySummaryResponse> searchElderlyByName(String name) {
+        List<Elderly> elderlyList = elderlyRepo.findAllByUser_NameContaining(name);
+        return elderlyList.stream()
+                .map(ElderlySummaryResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public ElderlySummaryResponse getSummary(Long elderlyUserId) {
         Elderly elderly = elderlyRepo.findWithUserById(elderlyUserId)
                 .orElseThrow(() -> new IllegalArgumentException("ELDERLY_NOT_FOUND"));
@@ -196,7 +205,8 @@ public class ElderlyService {
      * 건강정보 등록/수정 (민감정보 - 권한 체크 필수)
      */
     @Transactional
-    public HealthInfoResponse upsertHealthInfo(Long requesterUserId, Long elderlyUserId, HealthInfoUpdateRequest req) {
+    public HealthInfoResponse upsertHealthInfo(Long requesterUserId, Long elderlyUserId,
+                                               HealthInfoUpdateRequest req) {
         // 민감정보 쓰기 권한 확인
         assertCanWriteHealthInfo(requesterUserId, elderlyUserId);
 
@@ -221,17 +231,21 @@ public class ElderlyService {
         // 행정구역 변경
         if (req.admCode() != null && !req.admCode().equals(elderly.getAdministrativeDivision().getAdmCode())) {
             AdministrativeDivision newDivision = divisionRepository.findById(req.admCode())
-                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 행정구역 코드입니다: " + req.admCode()));
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "존재하지 않는 행정구역 코드입니다: " + req.admCode()));
             elderly.changeAdministrativeDivision(newDivision);
         }
 
         // 통화 스케줄 수정
-        if (req.preferredCallTime() != null || req.preferredCallDays() != null || req.callScheduleEnabled() != null) {
+        if (req.preferredCallTime() != null || req.preferredCallDays() != null
+                || req.callScheduleEnabled() != null) {
             elderly.updateCallSchedule(
-                    req.preferredCallTime() != null ? req.preferredCallTime() : elderly.getPreferredCallTime(),
+                    req.preferredCallTime() != null ? req.preferredCallTime()
+                            : elderly.getPreferredCallTime(),
                     req.getPreferredCallDaysAsString() != null ? req.getPreferredCallDaysAsString()
                             : elderly.getPreferredCallDays(),
-                    req.callScheduleEnabled() != null ? req.callScheduleEnabled() : elderly.getCallScheduleEnabled());
+                    req.callScheduleEnabled() != null ? req.callScheduleEnabled()
+                            : elderly.getCallScheduleEnabled());
         }
 
         return ElderlySummaryResponse.from(elderly);
