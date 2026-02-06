@@ -30,6 +30,7 @@ public class CallDetailService {
     private final CallDailyStatusRepository dailyStatusRepository;
     private final AssignmentRepository assignmentRepository;
     private final GuardianElderlyRepository guardianElderlyRepository;
+    private final com.aicc.silverlink.domain.consent.service.AccessRequestService accessRequestService;
 
     /**
      * 상담사용 - 통화 상세 조회
@@ -45,7 +46,7 @@ public class CallDetailService {
             throw new BusinessException(ErrorCode.NOT_ASSIGNED_ELDERLY);
         }
 
-        return buildCallDetailResponse(callRecord);
+        return buildCallDetailResponse(callRecord, true);
     }
 
     /**
@@ -62,7 +63,13 @@ public class CallDetailService {
             throw new BusinessException(ErrorCode.NOT_RELATED_ELDERLY);
         }
 
-        return buildCallDetailResponse(callRecord);
+        // 민감 정보 조회 권한 확인
+        boolean hasAccess = accessRequestService.hasAccess(
+                guardianId,
+                elderlyId,
+                com.aicc.silverlink.domain.consent.entity.AccessRequest.AccessScope.CALL_RECORDS);
+
+        return buildCallDetailResponse(callRecord, hasAccess);
     }
 
     /**
@@ -72,7 +79,7 @@ public class CallDetailService {
         log.info("관리자 통화 상세 조회: callId={}", callId);
 
         CallRecord callRecord = findCallRecordById(callId);
-        return buildCallDetailResponse(callRecord);
+        return buildCallDetailResponse(callRecord, true);
     }
 
     /**
@@ -82,7 +89,8 @@ public class CallDetailService {
         CallRecord callRecord = findCallRecordById(callId);
 
         List<LlmModel> llmModels = llmModelRepository.findByCallIdOrderByCreatedAtAsc(callId);
-        List<ElderlyResponse> elderlyResponses = elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId);
+        List<ElderlyResponse> elderlyResponses = elderlyResponseRepository
+                .findByCallRecordIdOrderByRespondedAtAsc(callId);
 
         return mergeConversations(llmModels, elderlyResponses, callRecord.getCallAt());
     }
@@ -102,17 +110,28 @@ public class CallDetailService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.CALL_RECORD_NOT_FOUND));
     }
 
-    private CallDetailResponse buildCallDetailResponse(CallRecord callRecord) {
+    private CallDetailResponse buildCallDetailResponse(CallRecord callRecord, boolean hasAccess) {
         Long callId = callRecord.getId();
 
-        // 1. 통화 요약
+        // 1. 통화 요약 (항상 제공)
         String summary = summaryRepository.findLatestByCallId(callId)
                 .map(CallSummary::getContent)
                 .orElse(null);
 
+        if (!hasAccess) {
+            return CallDetailResponse.from(
+                    callRecord,
+                    summary,
+                    List.of(), // 대화 내용 숨김
+                    null, // 상태 정보 숨김
+                    null, // AI 분석 숨김
+                    false);
+        }
+
         // 2. 대화 내용
         List<LlmModel> llmModels = llmModelRepository.findByCallIdOrderByCreatedAtAsc(callId);
-        List<ElderlyResponse> elderlyResponses = elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId);
+        List<ElderlyResponse> elderlyResponses = elderlyResponseRepository
+                .findByCallRecordIdOrderByRespondedAtAsc(callId);
         List<ConversationMessage> conversations = mergeConversations(
                 llmModels, elderlyResponses, callRecord.getCallAt());
 
@@ -122,7 +141,7 @@ public class CallDetailService {
         // 4. AI 분석 결과
         AiAnalysisResponse aiAnalysis = buildAiAnalysis(callId, elderlyResponses);
 
-        return CallDetailResponse.from(callRecord, summary, conversations, dailyStatus, aiAnalysis);
+        return CallDetailResponse.from(callRecord, summary, conversations, dailyStatus, aiAnalysis, true);
     }
 
     private DailyStatusResponse buildDailyStatus(Long callId) {

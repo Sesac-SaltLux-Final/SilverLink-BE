@@ -28,7 +28,7 @@ public class CallDetailDto {
     public static class CallDetailResponse {
         private Long callId;
         private LocalDateTime callAt;
-        private String duration;              // "15분 32초" 형식
+        private String duration; // "15분 32초" 형식
         private int durationSeconds;
         private String state;
         private String stateKorean;
@@ -52,11 +52,15 @@ public class CallDetailDto {
         // AI 분석 결과
         private AiAnalysisResponse aiAnalysis;
 
+        // 접근 권한 여부 (true: 전체 공개, false: 요약만 공개)
+        private boolean isAccessGranted;
+
         public static CallDetailResponse from(CallRecord callRecord,
-                                              String summary,
-                                              List<ConversationMessage> conversations,
-                                              DailyStatusResponse dailyStatus,
-                                              AiAnalysisResponse aiAnalysis) {
+                String summary,
+                List<ConversationMessage> conversations,
+                DailyStatusResponse dailyStatus,
+                AiAnalysisResponse aiAnalysis,
+                boolean isAccessGranted) {
             return CallDetailResponse.builder()
                     .callId(callRecord.getId())
                     .callAt(callRecord.getCallAt())
@@ -71,7 +75,17 @@ public class CallDetailDto {
                     .conversations(conversations)
                     .dailyStatus(dailyStatus)
                     .aiAnalysis(aiAnalysis)
+                    .isAccessGranted(isAccessGranted)
                     .build();
+        }
+
+        // 기존 코드 호환용 (기본값 true)
+        public static CallDetailResponse from(CallRecord callRecord,
+                String summary,
+                List<ConversationMessage> conversations,
+                DailyStatusResponse dailyStatus,
+                AiAnalysisResponse aiAnalysis) {
+            return from(callRecord, summary, conversations, dailyStatus, aiAnalysis, true);
         }
     }
 
@@ -84,10 +98,10 @@ public class CallDetailDto {
     @AllArgsConstructor
     public static class ConversationMessage {
         private Long id;
-        private Speaker speaker;          // CALLBOT or ELDERLY
+        private Speaker speaker; // CALLBOT or ELDERLY
         private String content;
         private LocalDateTime timestamp;
-        private int offsetSeconds;        // 통화 시작부터 경과 시간 (00:08 표시용)
+        private int offsetSeconds; // 통화 시작부터 경과 시간 (00:08 표시용)
 
         // 어르신 응답의 경우 위험 감지 여부
         private Boolean isDanger;
@@ -187,9 +201,9 @@ public class CallDetailDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class EmotionStatus {
-        private String level;         // GOOD, NORMAL, BAD, DEPRESSED
-        private String levelKorean;   // 좋음, 보통, 나쁨, 우울
-        private Integer score;        // 0-100 점수 (nullable)
+        private String level; // GOOD, NORMAL, BAD, DEPRESSED
+        private String levelKorean; // 좋음, 보통, 나쁨, 우울
+        private Integer score; // 0-100 점수 (nullable)
 
         public static EmotionStatus from(CallEmotion emotion) {
             if (emotion == null) {
@@ -226,8 +240,8 @@ public class CallDetailDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class MealStatus {
-        private Boolean taken;        // 식사 여부 (null: 미확인)
-        private String status;        // "식사함", "식사 안함", "미확인"
+        private Boolean taken; // 식사 여부 (null: 미확인)
+        private String status; // "식사함", "식사 안함", "미확인"
 
         public static MealStatus from(CallDailyStatus dailyStatus) {
             if (dailyStatus == null || dailyStatus.getMealTaken() == null) {
@@ -253,9 +267,9 @@ public class CallDetailDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class HealthStatus {
-        private String level;         // GOOD, NORMAL, BAD
-        private String levelKorean;   // 좋음, 보통, 나쁨
-        private String detail;        // 상세 내용
+        private String level; // GOOD, NORMAL, BAD
+        private String levelKorean; // 좋음, 보통, 나쁨
+        private String detail; // 상세 내용
 
         public static HealthStatus from(CallDailyStatus dailyStatus) {
             if (dailyStatus == null || dailyStatus.getHealthStatus() == null) {
@@ -281,9 +295,9 @@ public class CallDetailDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class SleepStatus {
-        private String level;         // GOOD, NORMAL, BAD
-        private String levelKorean;   // 좋음, 보통, 나쁨
-        private String detail;        // 상세 내용
+        private String level; // GOOD, NORMAL, BAD
+        private String levelKorean; // 좋음, 보통, 나쁨
+        private String detail; // 상세 내용
 
         public static SleepStatus from(CallDailyStatus dailyStatus) {
             if (dailyStatus == null || dailyStatus.getSleepStatus() == null) {
@@ -310,13 +324,13 @@ public class CallDetailDto {
     @AllArgsConstructor
     public static class AiAnalysisResponse {
         private EmotionStatus emotion;
-        private boolean hasDangerSignal;      // 위험 신호 감지 여부
-        private List<String> dangerReasons;   // 위험 신호 사유들
-        private List<String> keywords;        // 주요 키워드
-        private String overallAssessment;     // 종합 평가
+        private boolean hasDangerSignal; // 위험 신호 감지 여부
+        private List<String> dangerReasons; // 위험 신호 사유들
+        private List<String> keywords; // 주요 키워드
+        private String overallAssessment; // 종합 평가
 
         public static AiAnalysisResponse from(CallEmotion emotion,
-                                              List<ElderlyResponse> responses) {
+                List<ElderlyResponse> responses) {
             // 위험 신호 수집
             List<String> dangerReasons = responses.stream()
                     .filter(ElderlyResponse::isDanger)

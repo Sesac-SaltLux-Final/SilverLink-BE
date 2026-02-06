@@ -40,6 +40,8 @@ public class OfflineRegistrationService {
     private final ConsentHistoryRepository consentRepository;
     private final PhoneVerificationRepository phoneVerificationRepository;
     private final PasswordEncoder passwordEncoder;
+    private final com.aicc.silverlink.domain.admin.repository.AdminRepository adminRepository;
+    private final com.aicc.silverlink.domain.consent.repository.AccessRequestRepository accessRequestRepository;
 
     @Transactional
     public Long registerElderly(AdminMemberDtos.RegisterElderlyRequest req) {
@@ -136,7 +138,51 @@ public class OfflineRegistrationService {
         saveConsent(user, "PRIVACY", "AGREE");
         saveConsent(user, "THIRD_PARTY", "AGREE");
 
+        // 5. 민감 정보 접근 권한 자동 승인 (오프라인 가입 혜택)
+        createApprovedAccessRequests(adminId, user, elderly);
+
         return user.getId();
+    }
+
+    private void createApprovedAccessRequests(Long adminId, User guardian, Elderly elderly) {
+        // 관리자 정보 조회 (승인자)
+        com.aicc.silverlink.domain.admin.entity.Admin admin = adminRepository.findByUserId(adminId)
+                .orElseThrow(() -> new IllegalArgumentException("ADMIN_NOT_FOUND"));
+
+        createApprovedAccessRequest(admin, guardian, elderly,
+                com.aicc.silverlink.domain.consent.entity.AccessRequest.AccessScope.CALL_RECORDS);
+        createApprovedAccessRequest(admin, guardian, elderly,
+                com.aicc.silverlink.domain.consent.entity.AccessRequest.AccessScope.HEALTH_INFO);
+        createApprovedAccessRequest(admin, guardian, elderly,
+                com.aicc.silverlink.domain.consent.entity.AccessRequest.AccessScope.MEDICATION);
+    }
+
+    private void createApprovedAccessRequest(com.aicc.silverlink.domain.admin.entity.Admin admin,
+            User guardian,
+            Elderly elderly,
+            com.aicc.silverlink.domain.consent.entity.AccessRequest.AccessScope scope) {
+        // 이미 존재하는지 확인
+        if (accessRequestRepository.findActiveRequest(guardian.getId(), elderly.getId(), scope).isPresent()) {
+            return;
+        }
+
+        com.aicc.silverlink.domain.consent.entity.AccessRequest request = com.aicc.silverlink.domain.consent.entity.AccessRequest
+                .builder()
+                .requester(guardian)
+                .elderly(elderly)
+                .scope(scope) // status, verified, etc are set via builder if possible, or set after?
+                // Builder in AccessRequest is private all args? No, it's public class builder.
+                // But does it let me set status? Yes.
+                .status(com.aicc.silverlink.domain.consent.entity.AccessRequest.AccessRequestStatus.APPROVED)
+                .documentVerified(true)
+                .reviewedByAdmin(admin)
+                .requestedAt(LocalDateTime.now())
+                .decidedAt(LocalDateTime.now())
+                .expiresAt(LocalDateTime.now().plusYears(1)) // 1년 유효
+                .decisionNote("오프라인 가입 자동 승인")
+                .build();
+
+        accessRequestRepository.save(request);
     }
 
     private void validateDuplicate(String loginId, String phone) {

@@ -53,6 +53,8 @@ class CallDetailServiceTest {
     private AssignmentRepository assignmentRepository;
     @Mock
     private GuardianElderlyRepository guardianElderlyRepository;
+    @Mock
+    private com.aicc.silverlink.domain.consent.service.AccessRequestService accessRequestService;
 
     // ===== Helper Methods =====
 
@@ -80,7 +82,8 @@ class CallDetailServiceTest {
         lenient().doReturn(932).when(callRecord).getCallTimeSec();
         lenient().doReturn(CallState.COMPLETED).when(callRecord).getState();
         lenient().doReturn("15분 32초").when(callRecord).getFormattedDuration();
-        lenient().doReturn("https://s3.amazonaws.com/bucket/recordings/" + id + ".mp3").when(callRecord).getRecordingUrl();
+        lenient().doReturn("https://s3.amazonaws.com/bucket/recordings/" + id + ".mp3").when(callRecord)
+                .getRecordingUrl();
         lenient().doReturn(false).when(callRecord).hasDangerResponse();
         return callRecord;
     }
@@ -95,7 +98,7 @@ class CallDetailServiceTest {
     }
 
     private ElderlyResponse createMockElderlyResponse(Long id, CallRecord callRecord, String content,
-                                                      LocalDateTime respondedAt, boolean danger) {
+            LocalDateTime respondedAt, boolean danger) {
         ElderlyResponse response = mock(ElderlyResponse.class);
         lenient().doReturn(id).when(response).getId();
         lenient().doReturn(callRecord).when(response).getCallRecord();
@@ -126,14 +129,15 @@ class CallDetailServiceTest {
     }
 
     private CallDailyStatus createMockDailyStatus(Long id, CallRecord callRecord, Boolean mealTaken,
-                                                  CallDailyStatus.StatusLevel healthStatus,
-                                                  CallDailyStatus.StatusLevel sleepStatus) {
+            CallDailyStatus.StatusLevel healthStatus,
+            CallDailyStatus.StatusLevel sleepStatus) {
         CallDailyStatus status = mock(CallDailyStatus.class);
         lenient().doReturn(id).when(status).getId();
         lenient().doReturn(callRecord).when(status).getCallRecord();
         lenient().doReturn(mealTaken).when(status).getMealTaken();
         lenient().doReturn(healthStatus).when(status).getHealthStatus();
-        lenient().doReturn(healthStatus != null ? healthStatus.getKorean() : "미확인").when(status).getHealthStatusKorean();
+        lenient().doReturn(healthStatus != null ? healthStatus.getKorean() : "미확인").when(status)
+                .getHealthStatusKorean();
         lenient().doReturn("오늘 몸이 가뿐해요").when(status).getHealthDetail();
         lenient().doReturn(sleepStatus).when(status).getSleepStatus();
         lenient().doReturn(sleepStatus != null ? sleepStatus.getKorean() : "미확인").when(status).getSleepStatusKorean();
@@ -185,9 +189,11 @@ class CallDetailServiceTest {
 
             // Stubbing
             given(callRecordRepository.findById(callId)).willReturn(Optional.of(callRecord));
-            given(assignmentRepository.existsByCounselorIdAndElderlyIdAndStatusActive(counselorId, elderlyId)).willReturn(true);
+            given(assignmentRepository.existsByCounselorIdAndElderlyIdAndStatusActive(counselorId, elderlyId))
+                    .willReturn(true);
             given(llmModelRepository.findByCallIdOrderByCreatedAtAsc(callId)).willReturn(List.of(llm1, llm2));
-            given(elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId)).willReturn(List.of(resp1, resp2));
+            given(elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId))
+                    .willReturn(List.of(resp1, resp2));
             given(summaryRepository.findLatestByCallId(callId)).willReturn(Optional.of(summary));
             given(emotionRepository.findLatestByCallId(callId)).willReturn(Optional.of(emotion));
             given(dailyStatusRepository.findByCallRecordId(callId)).willReturn(Optional.of(dailyStatus));
@@ -229,7 +235,8 @@ class CallDetailServiceTest {
             CallRecord callRecord = createMockCallRecord(callId, elderly);
 
             given(callRecordRepository.findById(callId)).willReturn(Optional.of(callRecord));
-            given(assignmentRepository.existsByCounselorIdAndElderlyIdAndStatusActive(counselorId, elderlyId)).willReturn(false);
+            given(assignmentRepository.existsByCounselorIdAndElderlyIdAndStatusActive(counselorId, elderlyId))
+                    .willReturn(false);
 
             // when & then
             assertThatThrownBy(() -> callDetailService.getCallDetailForCounselor(counselorId, callId))
@@ -256,7 +263,7 @@ class CallDetailServiceTest {
     class GetCallDetailForGuardian {
 
         @Test
-        @DisplayName("보호자가 어르신의 통화 상세를 조회한다")
+        @DisplayName("보호자가 어르신의 통화 상세를 조회한다 (권한 있음)")
         void success() {
             // given
             Long guardianId = 50L;
@@ -271,6 +278,8 @@ class CallDetailServiceTest {
 
             given(callRecordRepository.findById(callId)).willReturn(Optional.of(callRecord));
             given(guardianElderlyRepository.existsByGuardianIdAndElderlyId(guardianId, elderlyId)).willReturn(true);
+            given(accessRequestService.hasAccess(any(), any(), any())).willReturn(true); // 권한 있음
+
             given(llmModelRepository.findByCallIdOrderByCreatedAtAsc(callId)).willReturn(List.of());
             given(elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId)).willReturn(List.of());
             given(summaryRepository.findLatestByCallId(callId)).willReturn(Optional.empty());
@@ -282,9 +291,41 @@ class CallDetailServiceTest {
 
             // then
             assertThat(result.getCallId()).isEqualTo(callId);
+            assertThat(result.isAccessGranted()).isTrue();
             assertThat(result.getDailyStatus().getMeal().getTaken()).isFalse();
             assertThat(result.getDailyStatus().getMeal().getStatus()).isEqualTo("식사 안함");
             assertThat(result.getDailyStatus().getSleep().getLevelKorean()).isEqualTo("나쁨");
+        }
+
+        @Test
+        @DisplayName("보호자가 어르신의 통화 상세를 조회한다 (권한 없음 - 마스킹 처리)")
+        void successWithPartialAccess() {
+            // given
+            Long guardianId = 50L;
+            Long elderlyId = 100L;
+            Long callId = 1001L;
+
+            Elderly elderly = createMockElderly(elderlyId);
+            CallRecord callRecord = createMockCallRecord(callId, elderly);
+            // mock data that would exist if accessed
+            CallSummary summary = createMockCallSummary(1L, callRecord, "요약 내용");
+
+            given(callRecordRepository.findById(callId)).willReturn(Optional.of(callRecord));
+            given(guardianElderlyRepository.existsByGuardianIdAndElderlyId(guardianId, elderlyId)).willReturn(true);
+            given(accessRequestService.hasAccess(any(), any(), any())).willReturn(false); // 권한 없음
+
+            given(summaryRepository.findLatestByCallId(callId)).willReturn(Optional.of(summary));
+
+            // when
+            CallDetailResponse result = callDetailService.getCallDetailForGuardian(guardianId, callId);
+
+            // then
+            assertThat(result.getCallId()).isEqualTo(callId);
+            assertThat(result.isAccessGranted()).isFalse();
+            assertThat(result.getSummary()).isEqualTo("요약 내용");
+            assertThat(result.getConversations()).isEmpty();
+            assertThat(result.getDailyStatus()).isNull();
+            assertThat(result.getAiAnalysis()).isNull();
         }
 
         @Test
@@ -363,7 +404,8 @@ class CallDetailServiceTest {
 
             given(callRecordRepository.findById(callId)).willReturn(Optional.of(callRecord));
             given(llmModelRepository.findByCallIdOrderByCreatedAtAsc(callId)).willReturn(List.of(llm1, llm2));
-            given(elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId)).willReturn(List.of(resp1, resp2));
+            given(elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId))
+                    .willReturn(List.of(resp1, resp2));
 
             // when
             List<ConversationMessage> result = callDetailService.getConversations(callId);
@@ -405,7 +447,8 @@ class CallDetailServiceTest {
 
             given(callRecordRepository.findById(callId)).willReturn(Optional.of(callRecord));
             given(llmModelRepository.findByCallIdOrderByCreatedAtAsc(callId)).willReturn(List.of());
-            given(elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId)).willReturn(List.of(dangerResponse));
+            given(elderlyResponseRepository.findByCallRecordIdOrderByRespondedAtAsc(callId))
+                    .willReturn(List.of(dangerResponse));
             given(summaryRepository.findLatestByCallId(callId)).willReturn(Optional.empty());
             given(emotionRepository.findLatestByCallId(callId)).willReturn(Optional.of(emotion));
             given(dailyStatusRepository.findByCallRecordId(callId)).willReturn(Optional.empty());
