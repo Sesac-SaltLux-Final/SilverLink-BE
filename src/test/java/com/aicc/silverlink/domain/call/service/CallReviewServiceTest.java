@@ -356,7 +356,7 @@ class CallReviewServiceTest {
             Page<CallRecord> callRecordPage = new PageImpl<>(List.of(callRecord));
 
             given(guardianElderlyRepository.existsByGuardianIdAndElderlyId(guardianId, elderlyId)).willReturn(true);
-            given(callRecordRepository.findCompletedByElderlyId(elderlyId, pageable)).willReturn(callRecordPage);
+            given(callRecordRepository.findAllByElderlyId(elderlyId, pageable)).willReturn(callRecordPage);
             given(reviewRepository.findByCallRecordIdOrderByReviewedAtDesc(callId)).willReturn(List.of(review));
 
             // when
