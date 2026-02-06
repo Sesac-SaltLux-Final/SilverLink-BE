@@ -38,7 +38,7 @@ public interface CallRecordRepository extends JpaRepository<CallRecord, Long> {
                         "JOIN Assignment a ON c.elderly.id = a.elderly.id " +
                         "LEFT JOIN CounselorCallReview r ON c.id = r.callRecord.id AND r.counselor.id = :counselorId " +
                         "WHERE a.counselor.id = :counselorId AND a.status = 'ACTIVE' " +
-                        "ORDER BY CASE WHEN r.id IS NULL THEN 0 ELSE 1 END, c.callAt DESC")
+                        "ORDER BY c.callAt DESC")
         Page<CallRecord> findCallRecordsForCounselor(@Param("counselorId") Long counselorId, Pageable pageable);
 
         /**
@@ -85,4 +85,15 @@ public interface CallRecordRepository extends JpaRepository<CallRecord, Long> {
                         "WHERE c.elderly.id = :elderlyId AND c.state = 'COMPLETED' " +
                         "ORDER BY c.callAt DESC")
         Page<CallRecord> findCompletedByElderlyId(@Param("elderlyId") Long elderlyId, Pageable pageable);
+
+        /**
+         * 어르신 ID로 모든 통화 기록 조회 (보호자 통화 목록용 - 진행중 포함)
+         * 리뷰 여부와 관계없이 모든 상태의 통화를 반환 (ANSWERED, COMPLETED, FAILED)
+         */
+        @Query("SELECT c FROM CallRecord c " +
+                        "LEFT JOIN FETCH c.elderly e " +
+                        "LEFT JOIN FETCH e.user " +
+                        "WHERE c.elderly.id = :elderlyId " +
+                        "ORDER BY c.callAt DESC")
+        Page<CallRecord> findAllByElderlyId(@Param("elderlyId") Long elderlyId, Pageable pageable);
 }

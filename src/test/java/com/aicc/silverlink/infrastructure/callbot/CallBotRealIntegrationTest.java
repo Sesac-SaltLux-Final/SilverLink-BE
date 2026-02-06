@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 실제 Python CallBot 서버 연동 테스트
  * 이 테스트는 Python 서버가 실행 중일 때만 수동으로 실행합니다.
  */
-@Disabled("수동 실행 전용 - 실제 Python CallBot 서버 연동 테스트")
+// @Disabled("수동 실행 전용 - 실제 Python CallBot 서버 연동 테스트")
 public class CallBotRealIntegrationTest {
 
     @Test

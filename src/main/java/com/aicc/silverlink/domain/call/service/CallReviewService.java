@@ -188,8 +188,8 @@ public class CallReviewService {
         // 보호자-어르신 관계 확인
         validateGuardianElderlyRelation(guardianId, elderlyId);
 
-        // CallRecord를 직접 조회 (리뷰 여부와 무관하게 모든 완료된 통화 포함)
-        Page<CallRecord> callRecords = callRecordRepository.findCompletedByElderlyId(elderlyId, pageable);
+        // CallRecord를 직접 조회 (리뷰 여부와 무관하게 모든 통화 포함 - 진행중인 통화 포함)
+        Page<CallRecord> callRecords = callRecordRepository.findAllByElderlyId(elderlyId, pageable);
 
         List<GuardianCallReviewResponse> responses = callRecords.getContent().stream()
                 .map(callRecord -> {
