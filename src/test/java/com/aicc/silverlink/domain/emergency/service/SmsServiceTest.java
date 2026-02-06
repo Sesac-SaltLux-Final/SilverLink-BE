@@ -318,8 +318,9 @@ class SmsServiceTest {
             String result = invokeBuildEmergencyAlertMessage(alert, recipient);
 
             // then
-            assertThat(result).contains("[실버링크 긴급]");
+            assertThat(result).contains("[긴급]");
             assertThat(result).contains("김순자");
+            assertThat(result).contains("위험 감지");
         }
 
         @Test
@@ -334,8 +335,9 @@ class SmsServiceTest {
             String result = invokeBuildEmergencyAlertMessage(alert, recipient);
 
             // then
-            assertThat(result).contains("[실버링크 알림]");
+            assertThat(result).contains("[알림]");
             assertThat(result).contains("담당 어르신");
+            assertThat(result).contains("위험 감지");
         }
 
         private EmergencyAlert createMockAlert(EmergencyAlert.Severity severity) {
