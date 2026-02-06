@@ -55,7 +55,7 @@ security:
     concurrent-policy: KICK_OLD
     refresh-cookie-name: REFRESH_TOKEN
     refresh-cookie-path: /api/auth
-    refresh-cookie-secure: false
+    refresh-cookie-secure: ${AUTH_COOKIE_SECURE:false}
     refresh-cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
     webauthn:
       rp:
@@ -103,14 +103,14 @@ luxia:
 
 chatbot:
   python:
-    url: ${CHATBOT_PYTHON_URL:http://localhost:5000}
+    url: ${CHATBOT_PYTHON_URL:http://localhost:8000}
   secret:
     header: "X-SilverLink-Secret"
     key: ${CHATBOT_SECRET_KEY:X-SilverLink-Key!}
 
 callbot:
   api:
-    url: ${CALLBOT_API_URL:http://localhost:5000}
+    url: ${CALLBOT_API_URL:http://localhost:8000}
     connect-timeout: 5000
     read-timeout: 10000
 
