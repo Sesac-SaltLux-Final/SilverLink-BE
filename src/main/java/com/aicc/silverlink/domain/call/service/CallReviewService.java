@@ -38,6 +38,7 @@ public class CallReviewService {
     private final AssignmentRepository assignmentRepository;
     private final GuardianElderlyRepository guardianElderlyRepository;
     private final com.aicc.silverlink.domain.file.service.FileService fileService;
+    private final com.aicc.silverlink.domain.notification.service.NotificationService notificationService;
 
     // ===== 상담사용 메서드 =====
 
@@ -136,6 +137,23 @@ public class CallReviewService {
         CounselorCallReview savedReview = reviewRepository.save(review);
         log.info("상담사 통화 리뷰 생성: counselorId={}, callId={}, urgent={}",
                 counselorId, request.getCallId(), request.isUrgent());
+
+        // [Notification] 보호자에게 알림 전송
+        try {
+            Long elderlyId = callRecord.getElderly().getId();
+            String elderlyName = callRecord.getElderly().getUser().getName();
+
+            // 어르신과 연결된 보호자 찾기
+            guardianElderlyRepository.findByElderlyId(elderlyId).ifPresent(ge -> {
+                Long guardianUserId = ge.getGuardian().getUser().getId();
+                notificationService.createCounselorCommentNotification(guardianUserId, request.getCallId(),
+                        elderlyName);
+            });
+
+        } catch (Exception e) {
+            log.error("상담사 리뷰 알림 전송 실패: ", e);
+            // 알림 실패가 리뷰 생성을 막지 않도록 예외 처리
+        }
 
         return ReviewResponse.from(savedReview);
     }

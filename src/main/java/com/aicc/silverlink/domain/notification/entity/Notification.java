@@ -125,6 +125,9 @@ public class Notification extends BaseTimeEntity {
         // 긴급 알림 연계 (긴급 알림 처리 완료 시)
         EMERGENCY_RESOLVED("긴급 알림 처리 완료", false),
 
+        // 상담사 코멘트
+        COUNSELOR_COMMENT("상담사 코멘트", false),
+
         // 시스템 알림
         SYSTEM("시스템 알림", false);
 
@@ -310,6 +313,21 @@ public class Notification extends BaseTimeEntity {
                 .notificationType(NotificationType.SYSTEM)
                 .title(title)
                 .content(content)
+                .build();
+    }
+
+    /**
+     * 상담사 코멘트 알림 생성
+     */
+    public static Notification createCounselorCommentNotification(User receiver, Long callId, String elderlyName) {
+        return Notification.builder()
+                .receiver(receiver)
+                .notificationType(NotificationType.COUNSELOR_COMMENT)
+                .title("새로운 상담사 코멘트")
+                .content(elderlyName + " 어르신의 통화 기록에 새로운 코멘트가 등록되었습니다.")
+                .referenceType("call_records")
+                .referenceId(callId)
+                .linkUrl("/guardian/calls/" + callId)
                 .build();
     }
 

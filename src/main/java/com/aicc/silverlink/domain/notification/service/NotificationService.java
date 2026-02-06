@@ -36,6 +36,22 @@ public class NotificationService {
     // ========== 알림 생성 ==========
 
     /**
+     * 상담사 코멘트 알림 생성 및 발송
+     */
+    @Transactional
+    public Notification createCounselorCommentNotification(Long receiverUserId, Long callId, String elderlyName) {
+        User receiver = findUserById(receiverUserId);
+
+        Notification notification = Notification.createCounselorCommentNotification(receiver, callId, elderlyName);
+        Notification saved = notificationRepository.save(notification);
+
+        sendRealtimeNotification(receiverUserId, saved);
+
+        log.info("[NotificationService] 상담사 코멘트 알림 생성. receiverId={}, callId={}", receiverUserId, callId);
+        return saved;
+    }
+
+    /**
      * 문의 답변 알림 생성 및 발송
      */
     @Transactional

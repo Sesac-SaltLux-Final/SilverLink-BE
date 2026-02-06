@@ -65,6 +65,10 @@ class CallReviewServiceTest {
     private CallDailyStatusRepository dailyStatusRepository;
     @Mock
     private com.aicc.silverlink.domain.file.service.FileService fileService;
+    @Mock
+    private com.aicc.silverlink.domain.notification.service.NotificationService notificationService;
+
+    // ===== Helper Methods =====
 
     // ===== Helper Methods =====
 
@@ -213,6 +217,62 @@ class CallReviewServiceTest {
             assertThat(result.getReviewId()).isEqualTo(1L);
             assertThat(result.getCallId()).isEqualTo(callId);
             verify(reviewRepository).save(any(CounselorCallReview.class));
+
+            // Verify notification trigger (indirectly via log or mock interaction if set
+            // up)
+            // Note: Since we didn't mock guardianElderlyRepository.findByElderlyId in this
+            // specific test yet,
+            // the notification part silently passes (due to optional).
+            // We should add a specific test for notification below.
+        }
+
+        @Test
+        @DisplayName("리뷰 생성 시 보호자에게 알림이 전송된다")
+        void successWithNotification() {
+            // given
+            Long counselorId = 1L;
+            Long elderlyId = 100L;
+            Long callId = 1000L;
+            Long guardianId = 50L;
+            Long guardianUserId = 500L;
+
+            Counselor counselor = createMockCounselor(counselorId);
+            Elderly elderly = createMockElderly(elderlyId);
+            CallRecord callRecord = createMockCallRecord(callId, elderly);
+            CounselorCallReview savedReview = createMockReview(1L, callRecord, counselor);
+
+            // Mock Guardian & User
+            com.aicc.silverlink.domain.guardian.entity.Guardian guardian = mock(
+                    com.aicc.silverlink.domain.guardian.entity.Guardian.class);
+            User guardianUser = mock(User.class);
+            when(guardianUser.getId()).thenReturn(guardianUserId);
+            when(guardian.getUser()).thenReturn(guardianUser);
+
+            com.aicc.silverlink.domain.guardian.entity.GuardianElderly guardianElderly = mock(
+                    com.aicc.silverlink.domain.guardian.entity.GuardianElderly.class);
+            when(guardianElderly.getGuardian()).thenReturn(guardian);
+
+            ReviewRequest request = ReviewRequest.builder()
+                    .callId(callId)
+                    .comment("알림 테스트")
+                    .urgent(false)
+                    .build();
+
+            given(counselorRepository.findById(counselorId)).willReturn(Optional.of(counselor));
+            given(callRecordRepository.findById(callId)).willReturn(Optional.of(callRecord));
+            given(assignmentRepository.existsByCounselorIdAndElderlyIdAndStatusActive(counselorId, elderlyId))
+                    .willReturn(true);
+            given(reviewRepository.existsByCallRecordIdAndCounselorId(callId, counselorId)).willReturn(false);
+            given(reviewRepository.save(any(CounselorCallReview.class))).willReturn(savedReview);
+
+            // Mock finding guardian
+            given(guardianElderlyRepository.findByElderlyId(elderlyId)).willReturn(Optional.of(guardianElderly));
+
+            // when
+            callReviewService.createReview(counselorId, request);
+
+            // then
+            verify(notificationService).createCounselorCommentNotification(eq(guardianUserId), eq(callId), any());
         }
 
         @Test
