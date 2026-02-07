@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -193,6 +194,19 @@ public class CallReviewService {
                 .unreviewedCount(unreviewedCount)
                 .totalCount(totalCount)
                 .build();
+    }
+
+    /**
+     * 오늘의 통화 건수 조회
+     */
+    public long getTodayCallCount(Long counselorId) {
+        validateCounselor(counselorId);
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startOfDay = now.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = now.toLocalDate().atTime(23, 59, 59);
+
+        return callRecordRepository.countCallsForCounselorByDateRange(counselorId, startOfDay, endOfDay);
     }
 
     // ===== 보호자용 메서드 =====
