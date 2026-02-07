@@ -122,7 +122,8 @@ public class Notification extends BaseTimeEntity {
         // 공지사항
         NOTICE_NEW("새 공지사항", false),
 
-        // 긴급 알림 연계 (긴급 알림 처리 완료 시)
+        // 긴급 알림 연계
+        EMERGENCY_NEW("긴급 알림 발생", true),
         EMERGENCY_RESOLVED("긴급 알림 처리 완료", false),
 
         // 상담사 코멘트
@@ -301,6 +302,22 @@ public class Notification extends BaseTimeEntity {
                 .referenceType("complaints")
                 .referenceId(complaintId)
                 .linkUrl("/admin/complaints/" + complaintId)
+                .build();
+    }
+
+    /**
+     * 긴급 알림 생성 (수신자용)
+     */
+    public static Notification createEmergencyNewNotification(User receiver, Long alertId, String elderlyName,
+            String severityDescription, String linkUrl) {
+        return Notification.builder()
+                .receiver(receiver)
+                .notificationType(NotificationType.EMERGENCY_NEW)
+                .title("긴급 알림: " + elderlyName)
+                .content(elderlyName + " 어르신에게 " + severityDescription + " 상황이 감지되었습니다.")
+                .referenceType("emergency_alerts")
+                .referenceId(alertId)
+                .linkUrl(linkUrl)
                 .build();
     }
 
