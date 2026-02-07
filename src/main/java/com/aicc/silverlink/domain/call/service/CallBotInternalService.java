@@ -250,6 +250,9 @@ public class CallBotInternalService {
         if (request.getDailyStatus() != null)
             saveDailyStatus(callId, request.getDailyStatus());
 
+        // SSE 통화 종료 이벤트 전송
+        sseService.broadcast(callId, "callEnded", "ended");
+
         callRecordRepository.save(callRecord);
         log.info("🚀 [DB 최종확정] 통화 종료 처리 완료: callId={}, state={}, duration={}sec",
                 callId, callRecord.getState(), request.getCallTimeSec());

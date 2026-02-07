@@ -98,6 +98,17 @@ public class CallReviewController {
                 return ResponseEntity.ok(ApiResponse.success(response));
         }
 
+        @Operation(summary = "오늘의 통화 건수 조회", description = "상담사가 담당하는 어르신들의 오늘 통화 건수를 조회합니다.")
+        @GetMapping("/counselor/today-count")
+        @PreAuthorize("hasRole('COUNSELOR')")
+        public ResponseEntity<ApiResponse<Long>> getTodayCallCount(
+                        @AuthenticationPrincipal Long userId) {
+
+                long todayCount = callReviewService.getTodayCallCount(userId);
+
+                return ResponseEntity.ok(ApiResponse.success(todayCount));
+        }
+
         // ===== 보호자용 API =====
 
         @Operation(summary = "어르신 통화 기록 목록 조회 (보호자)", description = "보호자가 연결된 어르신의 통화 기록 및 상담사 코멘트를 조회합니다.")

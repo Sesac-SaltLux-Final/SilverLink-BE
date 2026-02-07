@@ -96,4 +96,16 @@ public interface CallRecordRepository extends JpaRepository<CallRecord, Long> {
                         "WHERE c.elderly.id = :elderlyId " +
                         "ORDER BY c.callAt DESC")
         Page<CallRecord> findAllByElderlyId(@Param("elderlyId") Long elderlyId, Pageable pageable);
+
+        /**
+         * 상담사의 기간별 통화 수 조회 (오늘 통화 수 계산용)
+         */
+        @Query("SELECT COUNT(c) FROM CallRecord c " +
+                        "JOIN Assignment a ON c.elderly.id = a.elderly.id " +
+                        "WHERE a.counselor.id = :counselorId AND a.status = 'ACTIVE' " +
+                        "AND c.callAt BETWEEN :startDate AND :endDate")
+        long countCallsForCounselorByDateRange(
+                        @Param("counselorId") Long counselorId,
+                        @Param("startDate") LocalDateTime startDate,
+                        @Param("endDate") LocalDateTime endDate);
 }
