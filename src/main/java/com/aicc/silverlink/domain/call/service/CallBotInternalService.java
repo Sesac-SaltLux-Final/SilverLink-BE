@@ -301,10 +301,10 @@ public class CallBotInternalService {
     private void triggerEmergencyAlert(CallRecord callRecord, MessageRequest request) {
         try {
             // 📍 중복 알림 방지: 해당 통화에서 이미 알림이 생성되었는지 확인
-            if (emergencyAlertRepository.existsByCallRecordId(callRecord.getId())) {
-                log.info("⏭️ [긴급 알림] 이미 생성된 알림 있음, 건너뜀: callId={}", callRecord.getId());
-                return;
-            }
+            // if (emergencyAlertRepository.existsByCallRecordId(callRecord.getId())) {
+            // log.info("⏭️ [긴급 알림] 이미 생성된 알림 있음, 건너뜀: callId={}", callRecord.getId());
+            // return;
+            // }
 
             Elderly elderly = callRecord.getElderly();
 
@@ -325,6 +325,8 @@ public class CallBotInternalService {
             emergencyAlertService.createAlert(alertRequest);
             log.warn("🚨 [긴급 알림 생성] callId={}, elderlyId={}, keywords={}",
                     callRecord.getId(), elderly.getId(), dangerKeywords);
+
+            // (제거됨) 리스너에서 처리함
 
         } catch (Exception e) {
             log.error("❌ [긴급 알림 생성 실패] callId={}, error={}",
