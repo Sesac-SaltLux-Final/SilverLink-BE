@@ -165,7 +165,7 @@ public interface EmergencyAlertRepository extends JpaRepository<EmergencyAlert, 
                         @Param("endDate") LocalDateTime endDate);
 
         /**
-         * 상담사별 통계 조회
+         * 상담사별 상태 통계 조회
          */
         @Query("SELECT ea.status, COUNT(ea) FROM EmergencyAlert ea " +
                         "JOIN ea.elderly e " +
@@ -174,6 +174,17 @@ public interface EmergencyAlertRepository extends JpaRepository<EmergencyAlert, 
                         "AND a.status = com.aicc.silverlink.domain.assignment.entity.AssignmentStatus.ACTIVE " +
                         "GROUP BY ea.status")
         List<Object[]> countByStatusForCounselor(@Param("counselorId") Long counselorId);
+
+        /**
+         * 상담사별 위험도 통계 조회
+         */
+        @Query("SELECT ea.severity, COUNT(ea) FROM EmergencyAlert ea " +
+                        "JOIN ea.elderly e " +
+                        "JOIN Assignment a ON a.elderly.id = e.id " +
+                        "WHERE a.counselor.id = :counselorId " +
+                        "AND a.status = com.aicc.silverlink.domain.assignment.entity.AssignmentStatus.ACTIVE " +
+                        "GROUP BY ea.severity")
+        List<Object[]> countBySeverityForCounselor(@Param("counselorId") Long counselorId);
 
         // ========== 실시간 알림용 ==========
 

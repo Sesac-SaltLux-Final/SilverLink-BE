@@ -315,7 +315,7 @@ public class CallBotInternalService {
                     .elderlyUserId(elderly.getId())
                     .callId(callRecord.getId())
                     .severity(Severity.CRITICAL) // danger=true는 항상 CRITICAL
-                    .alertType(AlertType.MENTAL) // 기본값: 정서위험 (키워드 기반으로 분류 가능)
+                    .alertType(AlertType.HEALTH) // 기본값: 신체위험 (AI 분류 미지원으로 신체위험 고정)
                     .title("긴급 상황 감지")
                     .description("통화 중 위험 키워드가 감지되었습니다: " + request.getContent())
                     .dangerKeywords(dangerKeywords)
