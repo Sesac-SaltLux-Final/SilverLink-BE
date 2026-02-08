@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -38,6 +39,7 @@ public class CallReviewService {
     private final AssignmentRepository assignmentRepository;
     private final GuardianElderlyRepository guardianElderlyRepository;
     private final com.aicc.silverlink.domain.file.service.FileService fileService;
+    private final com.aicc.silverlink.domain.notification.service.NotificationService notificationService;
 
     // ===== 상담사용 메서드 =====
 
@@ -137,6 +139,23 @@ public class CallReviewService {
         log.info("상담사 통화 리뷰 생성: counselorId={}, callId={}, urgent={}",
                 counselorId, request.getCallId(), request.isUrgent());
 
+        // [Notification] 보호자에게 알림 전송
+        try {
+            Long elderlyId = callRecord.getElderly().getId();
+            String elderlyName = callRecord.getElderly().getUser().getName();
+
+            // 어르신과 연결된 보호자 찾기
+            guardianElderlyRepository.findByElderlyId(elderlyId).ifPresent(ge -> {
+                Long guardianUserId = ge.getGuardian().getUser().getId();
+                notificationService.createCounselorCommentNotification(guardianUserId, request.getCallId(),
+                        elderlyName);
+            });
+
+        } catch (Exception e) {
+            log.error("상담사 리뷰 알림 전송 실패: ", e);
+            // 알림 실패가 리뷰 생성을 막지 않도록 예외 처리
+        }
+
         return ReviewResponse.from(savedReview);
     }
 
@@ -177,6 +196,19 @@ public class CallReviewService {
                 .build();
     }
 
+    /**
+     * 오늘의 통화 건수 조회
+     */
+    public long getTodayCallCount(Long counselorId) {
+        validateCounselor(counselorId);
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startOfDay = now.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = now.toLocalDate().atTime(23, 59, 59);
+
+        return callRecordRepository.countCallsForCounselorByDateRange(counselorId, startOfDay, endOfDay);
+    }
+
     // ===== 보호자용 메서드 =====
 
     /**
@@ -188,8 +220,8 @@ public class CallReviewService {
         // 보호자-어르신 관계 확인
         validateGuardianElderlyRelation(guardianId, elderlyId);
 
-        // CallRecord를 직접 조회 (리뷰 여부와 무관하게 모든 완료된 통화 포함)
-        Page<CallRecord> callRecords = callRecordRepository.findCompletedByElderlyId(elderlyId, pageable);
+        // CallRecord를 직접 조회 (리뷰 여부와 무관하게 모든 통화 포함 - 진행중인 통화 포함)
+        Page<CallRecord> callRecords = callRecordRepository.findAllByElderlyId(elderlyId, pageable);
 
         List<GuardianCallReviewResponse> responses = callRecords.getContent().stream()
                 .map(callRecord -> {
