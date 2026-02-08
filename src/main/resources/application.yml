@@ -39,7 +39,7 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:update}
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -55,7 +55,7 @@ security:
     concurrent-policy: KICK_OLD
     refresh-cookie-name: REFRESH_TOKEN
     refresh-cookie-path: /api/auth
-    refresh-cookie-secure: false
+    refresh-cookie-secure: ${REFRESH_COOKIE_SECURE_TRUE:false}
     refresh-cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
     webauthn:
       rp:
@@ -80,7 +80,7 @@ api:
 
 logging:
   level:
-    com.aicc.silverlink: debug
+    com.aicc.silverlink: info
     org.hibernate.SQL: debug
     net.ttddyy.dsproxy: error  # datasource-proxy 쿼리 로그 비활성화
 
