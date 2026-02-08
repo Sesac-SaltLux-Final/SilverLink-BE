@@ -4,6 +4,7 @@ import com.aicc.silverlink.domain.notification.dto.NotificationDto.*;
 import com.aicc.silverlink.domain.notification.entity.Notification;
 import com.aicc.silverlink.domain.notification.entity.Notification.NotificationType;
 import com.aicc.silverlink.domain.notification.repository.NotificationRepository;
+import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -239,6 +240,47 @@ public class NotificationService {
     }
 
     /**
+     * 긴급 알림 (수신자용)
+     */
+    @Transactional
+    public Notification createEmergencyNewNotification(Long receiverUserId, Long alertId, String elderlyName,
+            String severityDescription, String linkUrl) {
+        User receiver = findUserById(receiverUserId);
+
+        // linkUrl이 null이면 역할에 따라 자동 생성
+        if (linkUrl == null || linkUrl.isEmpty()) {
+            switch (receiver.getRole()) {
+                case GUARDIAN:
+                    linkUrl = "/guardian/alerts";
+                    break;
+                case COUNSELOR:
+                    linkUrl = "/counselor/alerts";
+                    break;
+                case ADMIN:
+                    linkUrl = "/admin"; // 관리자는 별도 알림 페이지가 없으므로 대시보드로
+                    break;
+                default:
+                    // 기본값 또는 처리 안함
+                    break;
+            }
+        }
+
+        Notification notification = Notification.createEmergencyNewNotification(
+                receiver,
+                alertId,
+                elderlyName,
+                severityDescription,
+                linkUrl);
+        Notification saved = notificationRepository.save(notification);
+
+        sendRealtimeNotification(receiverUserId, saved);
+
+        log.info("[NotificationService] 긴급 알림(Notification) 생성. receiverId={}, role={}, alertId={}",
+                receiverUserId, receiver.getRole(), alertId);
+        return saved;
+    }
+
+    /**
      * 시스템 알림 (관리자가 직접 생성)
      */
     @Transactional
@@ -327,7 +369,9 @@ public class NotificationService {
      * 최근 알림 조회 (상단 알림 팝업용)
      */
     public List<SummaryResponse> getRecentNotifications(Long userId, int limit) {
-        return notificationRepository.findRecentByReceiverId(userId, limit).stream()
+        return notificationRepository
+                .findRecentByReceiverId(userId, org.springframework.data.domain.PageRequest.of(0, limit))
+                .stream()
                 .map(SummaryResponse::from)
                 .collect(Collectors.toList());
     }

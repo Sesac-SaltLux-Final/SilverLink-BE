@@ -141,7 +141,7 @@ public class SmsService {
      */
     private String getUrlForRecipient(EmergencyAlertRecipient recipient) {
         if (recipient.getReceiverRole() == EmergencyAlertRecipient.ReceiverRole.GUARDIAN) {
-            return buildShortUrl("guardian", null);
+            return buildShortUrl("guardian", "alerts");
         }
         if (recipient.getReceiverRole() == EmergencyAlertRecipient.ReceiverRole.COUNSELOR) {
             return buildShortUrl("counselor", "alerts");
