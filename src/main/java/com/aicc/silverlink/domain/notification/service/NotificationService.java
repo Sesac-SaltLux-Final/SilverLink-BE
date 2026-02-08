@@ -369,7 +369,9 @@ public class NotificationService {
      * 최근 알림 조회 (상단 알림 팝업용)
      */
     public List<SummaryResponse> getRecentNotifications(Long userId, int limit) {
-        return notificationRepository.findRecentByReceiverId(userId, limit).stream()
+        return notificationRepository
+                .findRecentByReceiverId(userId, org.springframework.data.domain.PageRequest.of(0, limit))
+                .stream()
                 .map(SummaryResponse::from)
                 .collect(Collectors.toList());
     }

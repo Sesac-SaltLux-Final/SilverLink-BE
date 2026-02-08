@@ -28,6 +28,8 @@ public class NotificationDto {
         private String notificationTypeText;
         private String title;
         private String content;
+        private String referenceType;
+        private Long referenceId;
         private String linkUrl;
         private Boolean isRead;
         private LocalDateTime createdAt;
@@ -40,6 +42,8 @@ public class NotificationDto {
                     .notificationTypeText(notification.getNotificationType().getDescription())
                     .title(notification.getTitle())
                     .content(notification.getContent())
+                    .referenceType(notification.getReferenceType())
+                    .referenceId(notification.getReferenceId())
                     .linkUrl(notification.getLinkUrl())
                     .isRead(notification.getIsRead())
                     .createdAt(notification.getCreatedAt())
@@ -48,21 +52,27 @@ public class NotificationDto {
         }
 
         private static String calculateTimeAgo(LocalDateTime dateTime) {
-            if (dateTime == null) return "";
+            if (dateTime == null)
+                return "";
 
             LocalDateTime now = LocalDateTime.now();
             long minutes = ChronoUnit.MINUTES.between(dateTime, now);
 
-            if (minutes < 1) return "방금 전";
-            if (minutes < 60) return minutes + "분 전";
+            if (minutes < 1)
+                return "방금 전";
+            if (minutes < 60)
+                return minutes + "분 전";
 
             long hours = ChronoUnit.HOURS.between(dateTime, now);
-            if (hours < 24) return hours + "시간 전";
+            if (hours < 24)
+                return hours + "시간 전";
 
             long days = ChronoUnit.DAYS.between(dateTime, now);
-            if (days < 7) return days + "일 전";
+            if (days < 7)
+                return days + "일 전";
 
-            if (days < 30) return (days / 7) + "주 전";
+            if (days < 30)
+                return (days / 7) + "주 전";
 
             return dateTime.toLocalDate().toString();
         }
@@ -120,7 +130,7 @@ public class NotificationDto {
     @AllArgsConstructor
     public static class RealtimeResponse {
         private Long notificationId;
-        private String type;  // "notification" (긴급 알림과 구분)
+        private String type; // "notification" (긴급 알림과 구분)
         private NotificationType notificationType;
         private String notificationTypeText;
         private String title;
@@ -152,9 +162,9 @@ public class NotificationDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class UnreadCountResponse {
-        private long totalUnread;           // 전체 미확인 수
-        private long emergencyUnread;       // 긴급 알림 미확인 수
-        private long notificationUnread;    // 일반 알림 미확인 수
+        private long totalUnread; // 전체 미확인 수
+        private long emergencyUnread; // 긴급 알림 미확인 수
+        private long notificationUnread; // 일반 알림 미확인 수
 
         public static UnreadCountResponse of(long emergencyUnread, long notificationUnread) {
             return UnreadCountResponse.builder()
@@ -199,7 +209,7 @@ public class NotificationDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class SystemNotificationRequest {
-        private List<Long> receiverUserIds;  // 수신자 ID 목록 (null이면 전체)
+        private List<Long> receiverUserIds; // 수신자 ID 목록 (null이면 전체)
         private String title;
         private String content;
         private String linkUrl;
