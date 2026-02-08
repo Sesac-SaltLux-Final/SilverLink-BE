@@ -1,22 +1,29 @@
 package com.aicc.silverlink.infra.external.luxia;
 
 import com.aicc.silverlink.global.exception.LuxiaHttpException;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.util.Base64;
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
 public class LuxiaDocumentAiClient {
 
-    private final org.springframework.web.reactive.function.client.WebClient webClient;
+    private final WebClient webClient;
     private final LuxiaProperties props;
+
+    public LuxiaDocumentAiClient(
+            @Qualifier("luxiaWebClient") WebClient webClient,
+            LuxiaProperties props) {
+        this.webClient = webClient;
+        this.props = props;
+    }
 
     public Map<String, Object> callDocumentAi(MultipartFile file) {
         validateImage(file);
