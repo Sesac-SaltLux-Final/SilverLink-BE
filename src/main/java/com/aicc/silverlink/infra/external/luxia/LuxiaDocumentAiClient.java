@@ -1,6 +1,7 @@
 package com.aicc.silverlink.infra.external.luxia;
 
 import com.aicc.silverlink.global.exception.LuxiaHttpException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
@@ -12,6 +13,7 @@ import reactor.core.publisher.Mono;
 import java.util.Base64;
 import java.util.Map;
 
+@Slf4j
 @Component
 public class LuxiaDocumentAiClient {
 
@@ -37,14 +39,23 @@ public class LuxiaDocumentAiClient {
             throw new RuntimeException("failed to read file bytes", e);
         }
 
+        // 📊 이미지 크기 로깅
+        log.info("[Luxia OCR] Image size: {} bytes ({} KB), contentType: {}",
+                bytes.length, bytes.length / 1024, contentType);
+
         String b64 = Base64.getEncoder().encodeToString(bytes);
         String dataUrl = "data:" + contentType + ";base64," + b64;
 
-        // ✅ curl 성공 케이스와 동일하게 "image"만 보냄
+        // 📊 Base64 크기 로깅
+        log.info("[Luxia OCR] Base64 payload size: {} chars ({} KB)",
+                dataUrl.length(), dataUrl.length() / 1024);
+
         Map<String, String> req = Map.of("image", dataUrl);
 
+        log.info("[Luxia OCR] Calling Luxia API: {}{}", props.baseUrl(), props.documentAi().path());
+
         Map<String, Object> res = webClient.post()
-                .uri(props.documentAi().path()) // /luxia/v1/document-ai
+                .uri(props.documentAi().path())
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(req)
                 .retrieve()
@@ -59,6 +70,8 @@ public class LuxiaDocumentAiClient {
 
         if (res == null)
             throw new LuxiaHttpException(502, "Empty response from LUXIA");
+
+        log.info("[Luxia OCR] Success! Response keys: {}", res.keySet());
         return res;
     }
 
