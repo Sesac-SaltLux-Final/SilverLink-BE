@@ -354,6 +354,7 @@ public class EmergencyAlertService {
     public StatsResponse getStatsForCounselor(Long counselorId) {
         long pending = alertRepository.countPendingByCounselorId(counselorId);
         List<Object[]> statusCounts = alertRepository.countByStatusForCounselor(counselorId);
+        List<Object[]> severityCounts = alertRepository.countBySeverityForCounselor(counselorId);
 
         long total = 0, inProgress = 0, resolved = 0;
 
@@ -374,11 +375,30 @@ public class EmergencyAlertService {
             }
         }
 
+        long critical = 0, warning = 0;
+        for (Object[] row : severityCounts) {
+            Severity severity = (Severity) row[0];
+            long count = (Long) row[1];
+
+            switch (severity) {
+                case CRITICAL:
+                    critical = count;
+                    break;
+                case WARNING:
+                    warning = count;
+                    break;
+                default:
+                    break;
+            }
+        }
+
         return StatsResponse.builder()
                 .totalCount(total)
                 .pendingCount(pending)
                 .inProgressCount(inProgress)
                 .resolvedCount(resolved)
+                .criticalCount(critical)
+                .warningCount(warning)
                 .build();
     }
 
