@@ -6,6 +6,9 @@ AI 서버(FastAPI) 및 프론트엔드(React/TypeScript)와 연동되어 데이�
 
 ---
 
+<img width="2494" height="1326" alt="스크린샷 2026-02-24 175207" src="https://github.com/user-attachments/assets/50378022-167c-404f-bfdc-60521397a6a4" />
+
+
 ## 2. 주요 기능 (Key Features)
 
 - **사용자 인증 및 권한 관리 (Auth/User)**
