@@ -42,7 +42,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = resolveBearer(request);
-        
+
         if (token != null) {
             try {
                 Jws<Claims> jws = jwt.parseAndValidate(token); // 토큰 서명 검증 + 만료 체크
@@ -57,7 +57,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Role role = Role.valueOf(roleStr);
 
                 if (!sessionService.isActive(sid, userId)) {
-                    logger.warn("Session expired or invalid for sid: " + sid);
+                    // 강제 종료된 것인지 vs 만료된 것인지 구분
+                    if (sessionService.wasInvalidated(sid)) {
+                        logger.warn("Session kicked (다른 기기에서 로그인) for sid: " + sid);
+                        response.setHeader("X-Session-Status", "KICKED");
+                    } else {
+                        logger.warn("Session expired or invalid for sid: " + sid);
+                    }
                     SecurityContextHolder.clearContext();
                     throw new UnauthorizedException("세션이 만료되었습니다.");
                 }

@@ -2,6 +2,7 @@ package com.aicc.silverlink.domain.auth.controller;
 
 import com.aicc.silverlink.domain.auth.dto.AuthDtos;
 import com.aicc.silverlink.domain.auth.service.AuthService;
+import com.aicc.silverlink.domain.session.dto.DeviceInfo;
 import com.aicc.silverlink.domain.session.service.SessionService;
 import com.aicc.silverlink.global.config.auth.AuthPolicyProperties;
 import com.aicc.silverlink.global.security.jwt.JwtTokenProvider;
@@ -10,7 +11,6 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.Response;
 import org.springframework.http.ResponseCookie;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,7 +34,8 @@ public class AuthController {
     public AuthDtos.TokenResponse login(@RequestBody AuthDtos.LoginRequest req, HttpServletResponse res,
             HttpServletRequest request) {
 
-        AuthService.AuthResult result = authService.login(req);
+        DeviceInfo deviceInfo = DeviceInfo.from(request);
+        AuthService.AuthResult result = authService.login(req, deviceInfo);
 
         String cookieValue = result.sid() + "." + result.refreshToken();
         setRefreshCookie(res, cookieValue);
@@ -147,13 +148,15 @@ public class AuthController {
     @PostMapping("/login/check")
     public AuthDtos.LoginCheckResponse checkLogin(
             @RequestBody AuthDtos.LoginRequest req,
-            HttpServletResponse res) {
+            HttpServletResponse res,
+            HttpServletRequest request) {
 
-        AuthService.LoginCheckResult result = authService.checkLogin(req);
+        DeviceInfo deviceInfo = DeviceInfo.from(request);
+        AuthService.LoginCheckResult result = authService.checkLogin(req, deviceInfo);
 
         if (result.needsConfirmation()) {
-            // 기존 세션 있음 - 확인 필요
-            return new AuthDtos.LoginCheckResponse(true, result.loginToken(), null);
+            // 기존 세션 있음 - 확인 필요 (충돌 디바이스 정보 포함)
+            return new AuthDtos.LoginCheckResponse(true, result.loginToken(), null, result.conflictDeviceInfo());
         } else {
             // 기존 세션 없음 - 바로 로그인
             AuthService.AuthResult authResult = result.authResult();
@@ -164,7 +167,7 @@ public class AuthController {
                     authResult.accessToken(),
                     authResult.ttl(),
                     authResult.role().name());
-            return new AuthDtos.LoginCheckResponse(false, null, tokenResponse);
+            return new AuthDtos.LoginCheckResponse(false, null, tokenResponse, null);
         }
     }
 
@@ -176,9 +179,11 @@ public class AuthController {
     @PostMapping("/login/force")
     public AuthDtos.TokenResponse forceLogin(
             @jakarta.validation.Valid @RequestBody AuthDtos.ForceLoginRequest req,
-            HttpServletResponse res) {
+            HttpServletResponse res,
+            HttpServletRequest request) {
 
-        AuthService.AuthResult result = authService.forceLogin(req.loginToken());
+        DeviceInfo deviceInfo = DeviceInfo.from(request);
+        AuthService.AuthResult result = authService.forceLogin(req.loginToken(), deviceInfo);
 
         String cookieValue = result.sid() + "." + result.refreshToken();
         setRefreshCookie(res, cookieValue);

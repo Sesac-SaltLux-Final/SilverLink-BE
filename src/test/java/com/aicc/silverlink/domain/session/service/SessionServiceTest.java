@@ -1,7 +1,10 @@
 package com.aicc.silverlink.domain.session.service;
 
+import com.aicc.silverlink.domain.session.dto.DeviceInfo;
+import com.aicc.silverlink.domain.session.event.SessionEventPublisher;
 import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.global.config.auth.AuthPolicyProperties;
+import com.aicc.silverlink.global.config.redis.SessionKickPubSub;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,6 +17,7 @@ import org.mockito.quality.Strictness;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -35,10 +39,19 @@ class SessionServiceTest {
     private AuthPolicyProperties props;
 
     @Mock
+    private SessionEventPublisher eventPublisher;
+
+    @Mock
+    private RedisScript<String> atomicSessionSwapScript;
+
+    @Mock
     private ValueOperations<String, String> valueOps;
 
     @Mock
     private HashOperations<String, Object, Object> hashOps;
+
+    @Mock
+    private SessionKickPubSub sessionKickPubSub;
 
     @InjectMocks
     private SessionService sessionService;
@@ -235,10 +248,10 @@ class SessionServiceTest {
                 .hasMessage("INVALID_LOGIN_TOKEN");
     }
 
-    // ========== 세션 발급 테스트 (중복 로그인 제어) ==========
+    // ========== 세션 발급 테스트 (Lua Script Atomic Swap) ==========
 
     @Test
-    @DisplayName("세션 발급 - 기존 세션 없음 (정상 발급)")
+    @DisplayName("세션 발급 - 기존 세션 없음 (Lua Script로 신규 발급)")
     void issueSession_NoExistingSession() {
         // given
         Long userId = 1L;
@@ -246,6 +259,7 @@ class SessionServiceTest {
         String userKey = "user:1:sid";
 
         given(valueOps.get(userKey)).willReturn(null); // 기존 세션 없음
+        given(redis.execute(any(RedisScript.class), anyList(), any())).willReturn("");
 
         // when
         SessionService.SessionIssue result = sessionService.issueSession(userId, role);
@@ -254,12 +268,33 @@ class SessionServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.sid()).isNotNull();
         assertThat(result.refreshToken()).isNotNull();
-        verify(hashOps).putAll(startsWith("sess:"), anyMap());
-        verify(redis).expire(startsWith("sess:"), eq(3600L), eq(TimeUnit.SECONDS));
+        verify(redis).execute(any(RedisScript.class), anyList(), any());
+        verify(eventPublisher).publishSessionCreated(eq(userId), anyString(), isNull());
     }
 
     @Test
-    @DisplayName("세션 발급 - KICK_OLD 정책 (기존 세션 종료 후 발급)")
+    @DisplayName("세션 발급 - DeviceInfo 포함 발급")
+    void issueSession_WithDeviceInfo() {
+        // given
+        Long userId = 1L;
+        Role role = Role.GUARDIAN;
+        String userKey = "user:1:sid";
+        DeviceInfo deviceInfo = new DeviceInfo("192.168.1.100", "Chrome/120.0", "abc123");
+
+        given(valueOps.get(userKey)).willReturn(null);
+        given(redis.execute(any(RedisScript.class), anyList(), any())).willReturn("");
+
+        // when
+        SessionService.SessionIssue result = sessionService.issueSession(userId, role, deviceInfo);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.sid()).isNotNull();
+        verify(eventPublisher).publishSessionCreated(eq(userId), anyString(), eq(deviceInfo));
+    }
+
+    @Test
+    @DisplayName("세션 발급 - KICK_OLD 정책 (Lua Script가 기존 세션 원자적 교체)")
     void issueSession_KickOld_ExistingSession() {
         // given
         Long userId = 1L;
@@ -271,16 +306,16 @@ class SessionServiceTest {
         given(props.getConcurrentPolicy()).willReturn("KICK_OLD");
         given(valueOps.get(userKey)).willReturn(existingSid);
         given(redis.hasKey(sessKey)).willReturn(true);
-        given(hashOps.get(sessKey, "userId")).willReturn("1");
+        // Lua Script가 기존 SID 반환
+        given(redis.execute(any(RedisScript.class), anyList(), any())).willReturn(existingSid);
 
         // when
         SessionService.SessionIssue result = sessionService.issueSession(userId, role);
 
         // then
         assertThat(result).isNotNull();
-        verify(redis).delete(sessKey); // 기존 세션 삭제
-        verify(redis).delete(userKey); // 기존 매핑 삭제
-        verify(hashOps).putAll(startsWith("sess:"), anyMap()); // 새 세션 생성
+        verify(eventPublisher).publishSessionInvalidated(eq(userId), eq(existingSid), isNull());
+        verify(eventPublisher).publishSessionCreated(eq(userId), anyString(), isNull());
     }
 
     @Test
@@ -302,8 +337,7 @@ class SessionServiceTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("ALREADY_LOGGED_IN");
 
-        verify(redis, never()).delete(anyString()); // 기존 세션 유지
-        verify(hashOps, never()).putAll(anyString(), anyMap()); // 새 세션 생성 안 함
+        verify(redis, never()).execute(any(RedisScript.class), anyList(), any());
     }
 
     // ========== 세션 활성 확인 테스트 ==========
@@ -358,6 +392,94 @@ class SessionServiceTest {
 
         // when
         boolean result = sessionService.isActive(sid, userId);
+
+        // then
+        assertThat(result).isFalse();
+    }
+
+    // ========== 충돌 디바이스 정보 테스트 ==========
+
+    @Test
+    @DisplayName("충돌 디바이스 정보 조회 - 디바이스 정보 있음")
+    void getConflictingDeviceInfo_WithDeviceInfo() {
+        // given
+        String existingSid = "existing-sid-123";
+        String sessKey = "sess:existing-sid-123";
+
+        given(redis.hasKey(sessKey)).willReturn(true);
+        given(hashOps.get(sessKey, "ip")).willReturn("192.168.1.100");
+        given(hashOps.get(sessKey, "ua")).willReturn("Chrome/120.0 Windows");
+        given(hashOps.get(sessKey, "deviceId")).willReturn("device-hash-abc");
+
+        // when
+        DeviceInfo result = sessionService.getConflictingDeviceInfo(existingSid);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.ipAddress()).isEqualTo("192.168.1.100");
+        assertThat(result.userAgent()).isEqualTo("Chrome/120.0 Windows");
+        assertThat(result.deviceId()).isEqualTo("device-hash-abc");
+    }
+
+    @Test
+    @DisplayName("충돌 디바이스 정보 조회 - 디바이스 정보 없음")
+    void getConflictingDeviceInfo_NoDeviceInfo() {
+        // given
+        String existingSid = "existing-sid-456";
+        String sessKey = "sess:existing-sid-456";
+
+        given(redis.hasKey(sessKey)).willReturn(true);
+        given(hashOps.get(sessKey, "ip")).willReturn(null);
+        given(hashOps.get(sessKey, "ua")).willReturn(null);
+
+        // when
+        DeviceInfo result = sessionService.getConflictingDeviceInfo(existingSid);
+
+        // then
+        assertThat(result).isNull();
+    }
+
+    @Test
+    @DisplayName("충돌 디바이스 정보 조회 - 세션 만료됨")
+    void getConflictingDeviceInfo_SessionExpired() {
+        // given
+        String existingSid = "expired-sid-789";
+        String sessKey = "sess:expired-sid-789";
+
+        given(redis.hasKey(sessKey)).willReturn(false);
+
+        // when
+        DeviceInfo result = sessionService.getConflictingDeviceInfo(existingSid);
+
+        // then
+        assertThat(result).isNull();
+    }
+
+    // ========== 세션 무효화 확인 테스트 ==========
+
+    @Test
+    @DisplayName("세션 강제 종료 여부 확인 - 강제 종료됨")
+    void wasInvalidated_True() {
+        // given
+        String sid = "invalidated-sid-123";
+        given(redis.hasKey("sess:invalidated:invalidated-sid-123")).willReturn(true);
+
+        // when
+        boolean result = sessionService.wasInvalidated(sid);
+
+        // then
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("세션 강제 종료 여부 확인 - 강제 종료 안 됨")
+    void wasInvalidated_False() {
+        // given
+        String sid = "normal-sid-456";
+        given(redis.hasKey("sess:invalidated:normal-sid-456")).willReturn(false);
+
+        // when
+        boolean result = sessionService.wasInvalidated(sid);
 
         // then
         assertThat(result).isFalse();

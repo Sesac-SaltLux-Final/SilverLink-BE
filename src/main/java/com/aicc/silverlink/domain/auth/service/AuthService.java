@@ -1,6 +1,8 @@
 package com.aicc.silverlink.domain.auth.service;
 
 import com.aicc.silverlink.domain.auth.dto.AuthDtos;
+import com.aicc.silverlink.domain.session.dto.DeviceInfo;
+import com.aicc.silverlink.domain.session.event.SessionEventPublisher;
 import com.aicc.silverlink.domain.session.service.SessionService;
 import com.aicc.silverlink.domain.user.entity.Role;
 import com.aicc.silverlink.domain.user.entity.User;
@@ -28,6 +30,7 @@ public class AuthService {
     private final SessionService sessionService;
     private final AuthPolicyProperties props;
     private final StringRedisTemplate redis;
+    private final SessionEventPublisher eventPublisher;
 
     private String failKey(String loginId) {
         return "loginfail: " + loginId;
@@ -39,6 +42,11 @@ public class AuthService {
 
     @Transactional
     public AuthResult login(AuthDtos.LoginRequest req) {
+        return login(req, null);
+    }
+
+    @Transactional
+    public AuthResult login(AuthDtos.LoginRequest req, DeviceInfo deviceInfo) {
         // Brute-force 방어
         String fk = failKey(req.loginId());
         String failCntStr = redis.opsForValue().get(fk);
@@ -60,8 +68,8 @@ public class AuthService {
 
         redis.delete(fk);
 
-        // 세션 발급 ( Redis에 저장 )
-        var issued = sessionService.issueSession(user.getId(), user.getRole());
+        // 세션 발급 ( Redis에 저장 ) — DeviceInfo 포함
+        var issued = sessionService.issueSession(user.getId(), user.getRole(), deviceInfo);
 
         String access = jwt.createAccessToken(user.getId(), user.getRole(), issued.sid(), props.getAccessTtlSeconds());
 
@@ -93,7 +101,9 @@ public class AuthService {
             throw new IllegalStateException("USER_INACTIVE");
         }
 
-        var issued = sessionService.issueSession(user.getId(), user.getRole());
+        // DeviceInfo 추출
+        DeviceInfo deviceInfo = request != null ? DeviceInfo.from(request) : null;
+        var issued = sessionService.issueSession(user.getId(), user.getRole(), deviceInfo);
 
         String accessToken = jwt.createAccessToken(
                 user.getId(),
@@ -253,9 +263,10 @@ public class AuthService {
     /**
      * 로그인 확인 (기존 세션 체크)
      * 기존 세션이 있으면 임시 토큰 반환, 없으면 바로 로그인
+     * DeviceInfo를 통해 기존 세션의 디바이스 정보도 함께 반환합니다.
      */
     @Transactional
-    public LoginCheckResult checkLogin(AuthDtos.LoginRequest req) {
+    public LoginCheckResult checkLogin(AuthDtos.LoginRequest req, DeviceInfo deviceInfo) {
         // Brute-force 방어
         String fk = failKey(req.loginId());
         String failCntStr = redis.opsForValue().get(fk);
@@ -281,26 +292,51 @@ public class AuthService {
         String existingSid = sessionService.hasExistingSession(user.getId());
 
         if (existingSid != null) {
-            // 기존 세션 있음 - 임시 토큰 발급
+            // 중복 로그인 감지 이벤트 발행
+            eventPublisher.publishDuplicateLoginDetected(user.getId(), existingSid, deviceInfo);
+
+            // 기존 세션의 디바이스 정보 조회
+            DeviceInfo conflictDevice = sessionService.getConflictingDeviceInfo(existingSid);
+            AuthDtos.ConflictDeviceInfo conflictInfo = null;
+            if (conflictDevice != null) {
+                Map<String, String> sessionMeta = sessionService.getSessionMeta(existingSid);
+                String loginAtStr = sessionMeta.get("loginAt");
+                long loginAt = loginAtStr != null ? Long.parseLong(loginAtStr) : 0;
+
+                conflictInfo = new AuthDtos.ConflictDeviceInfo(
+                        conflictDevice.maskedIp(),
+                        conflictDevice.deviceSummary(),
+                        loginAt);
+            }
+
+            // 임시 토큰 발급
             String loginToken = sessionService.createLoginToken(user.getId());
-            return new LoginCheckResult(true, loginToken, null);
+            return new LoginCheckResult(true, loginToken, null, conflictInfo);
         }
 
         // 기존 세션 없음 - 바로 로그인
-        var issued = sessionService.issueSession(user.getId(), user.getRole());
+        var issued = sessionService.issueSession(user.getId(), user.getRole(), deviceInfo);
         String access = jwt.createAccessToken(user.getId(), user.getRole(), issued.sid(), props.getAccessTtlSeconds());
         user.updateLastLogin();
 
         AuthResult authResult = new AuthResult(access, issued.refreshToken(), issued.sid(), props.getAccessTtlSeconds(),
                 user.getRole(), user.getId());
-        return new LoginCheckResult(false, null, authResult);
+        return new LoginCheckResult(false, null, authResult, null);
+    }
+
+    /**
+     * 기존 호환: DeviceInfo 없이 호출 가능
+     */
+    @Transactional
+    public LoginCheckResult checkLogin(AuthDtos.LoginRequest req) {
+        return checkLogin(req, null);
     }
 
     /**
      * 강제 로그인 (기존 세션 종료 후 로그인)
      */
     @Transactional
-    public AuthResult forceLogin(String loginToken) {
+    public AuthResult forceLogin(String loginToken, DeviceInfo deviceInfo) {
         Long userId = sessionService.validateLoginToken(loginToken);
 
         User user = userRepository.findById(userId)
@@ -312,22 +348,34 @@ public class AuthService {
         // 기존 세션 강제 종료
         sessionService.forceKickExistingSession(userId);
 
-        // 새 세션 발급
-        var issued = sessionService.issueSession(user.getId(), user.getRole());
+        // 새 세션 발급 (DeviceInfo 포함)
+        var issued = sessionService.issueSession(user.getId(), user.getRole(), deviceInfo);
         String access = jwt.createAccessToken(user.getId(), user.getRole(), issued.sid(), props.getAccessTtlSeconds());
         user.updateLastLogin();
+
+        // 강제 로그인 이벤트 발행
+        eventPublisher.publishForceLoginExecuted(userId, issued.sid(), deviceInfo);
 
         return new AuthResult(access, issued.refreshToken(), issued.sid(), props.getAccessTtlSeconds(), user.getRole(),
                 user.getId());
     }
 
     /**
-     * 로그인 확인 결과
+     * 기존 호환: DeviceInfo 없이 호출 가능
+     */
+    @Transactional
+    public AuthResult forceLogin(String loginToken) {
+        return forceLogin(loginToken, null);
+    }
+
+    /**
+     * 로그인 확인 결과 — ConflictDeviceInfo 추가
      */
     public record LoginCheckResult(
             boolean needsConfirmation,
             String loginToken,
-            AuthResult authResult) {
+            AuthResult authResult,
+            AuthDtos.ConflictDeviceInfo conflictDeviceInfo) {
     }
 
 }

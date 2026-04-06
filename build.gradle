@@ -65,6 +65,15 @@ dependencies {
     implementation 'software.amazon.awssdk:s3'
     implementation 'net.ttddyy:datasource-proxy:1.10'
 
+    // ===== Redis 고도화 의존성 =====
+    // Resilience4j: Circuit Breaker, Rate Limiter 등 장애 복원력 패턴
+    implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
+    // Micrometer: Redis 및 Circuit Breaker 메트릭 수집
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    // Testcontainers: Redis 통합 테스트용
+    testImplementation 'org.testcontainers:testcontainers:1.20.4'
+    testImplementation 'org.testcontainers:junit-jupiter:1.20.4'
+
 }
 
 

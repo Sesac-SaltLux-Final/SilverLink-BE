@@ -33,5 +33,6 @@ public class OcrValidationResponse {
         private List<String> times;
         private String instructions;
         private Double confidence;
+        private String category;
     }
 }

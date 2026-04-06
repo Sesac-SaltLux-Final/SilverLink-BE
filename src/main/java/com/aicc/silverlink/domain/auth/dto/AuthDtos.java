@@ -49,11 +49,19 @@ public class AuthDtos {
                         @Schema(description = "마스킹된 로그인 ID", example = "user***") String maskedLoginId) {
         }
 
+        // 충돌하는 기존 세션의 디바이스 정보 (마스킹된 IP, 기기 요약, 로그인 시간)
+        public record ConflictDeviceInfo(
+                        @Schema(description = "마스킹된 IP 주소", example = "192.168.1.***") String maskedIp,
+                        @Schema(description = "기기 요약 (브라우저 + OS)", example = "Chrome/120.0 (Windows)") String deviceSummary,
+                        @Schema(description = "로그인 시간 (Unix timestamp, 초)") long loginAt) {
+        }
+
         // 로그인 확인 응답 (기존 세션 체크)
         public record LoginCheckResponse(
                         @Schema(description = "기존 세션 존재 여부 (true면 확인 필요)") boolean needsConfirmation,
                         @Schema(description = "임시 로그인 토큰 (needsConfirmation=true일 때만)") String loginToken,
-                        @Schema(description = "토큰 정보 (needsConfirmation=false일 때만)") TokenResponse tokenResponse) {
+                        @Schema(description = "토큰 정보 (needsConfirmation=false일 때만)") TokenResponse tokenResponse,
+                        @Schema(description = "충돌하는 기존 세션의 디바이스 정보 (needsConfirmation=true일 때만)") ConflictDeviceInfo conflictDevice) {
         }
 
         // 강제 로그인 요청

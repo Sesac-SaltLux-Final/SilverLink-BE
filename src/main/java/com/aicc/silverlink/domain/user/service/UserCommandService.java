@@ -6,6 +6,8 @@ import com.aicc.silverlink.domain.user.entity.User;
 import com.aicc.silverlink.domain.user.entity.UserStatus;
 import com.aicc.silverlink.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +18,7 @@ public class UserCommandService {
 
     private final UserRepository userRepo;
 
+    @Cacheable(value = "users", key = "#userId", unless = "#result == null")
     @Transactional(readOnly = true)
     public UserResponses.MyProfileResponse getMyProfile(Long userId) {
         User user = userRepo.findById(userId)
@@ -23,6 +26,7 @@ public class UserCommandService {
         return UserResponses.MyProfileResponse.from(user);
     }
 
+    @CacheEvict(value = "users", key = "#userId")
     @Transactional
     public UserResponses.MyProfileResponse updateMyProfile(Long userId, UserRequests.UpdateMyProfileRequest req) {
         User user = userRepo.findById(userId)

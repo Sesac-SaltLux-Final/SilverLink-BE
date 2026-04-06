@@ -31,6 +31,16 @@ spring:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
       port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      timeout: 3000ms
+      connect-timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+          max-wait: 3000ms
+        shutdown-timeout: 200ms
       repositories:
         enabled: false
 
@@ -83,6 +93,34 @@ logging:
     com.aicc.silverlink: info
     org.hibernate.SQL: debug
     net.ttddyy.dsproxy: error  # datasource-proxy 쿼리 로그 비활성화
+    io.github.resilience4j: info  # Circuit Breaker 상태 변경 로그
+
+# ===== Spring Actuator =====
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+  health:
+    redis:
+      enabled: true
+    circuitbreakers:
+      enabled: true
+
+# ===== Resilience4j Circuit Breaker =====
+resilience4j:
+  circuitbreaker:
+    instances:
+      redisCircuitBreaker:
+        register-health-indicator: true
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-type: COUNT_BASED
 
 twilio:
   account-sid: ${TWILIO_ACCOUNT_SID}

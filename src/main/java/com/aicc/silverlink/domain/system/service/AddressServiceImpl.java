@@ -5,6 +5,7 @@ import com.aicc.silverlink.domain.system.entity.AdministrativeDivision;
 import com.aicc.silverlink.domain.system.repository.AdministrativeDivisionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ public class AddressServiceImpl implements AddressService {
 
     private final AdministrativeDivisionRepository repository;
 
+    @Cacheable(value = "divisions", key = "'sido:all'")
     @Override
     public List<AddressResponse> getAllSido() {
         log.info("전체 시/도 목록 조회");
@@ -27,6 +29,7 @@ public class AddressServiceImpl implements AddressService {
                 .collect(Collectors.toList());
     }
 
+    @Cacheable(value = "divisions", key = "'sigungu:' + #sidoCode")
     @Override
     public List<AddressResponse> getSigunguBySido(String sidoCode) {
         log.info("시/도 {}의 시/군/구 목록 조회", sidoCode);
@@ -35,6 +38,7 @@ public class AddressServiceImpl implements AddressService {
                 .collect(Collectors.toList());
     }
 
+    @Cacheable(value = "divisions", key = "'dong:' + #sidoCode + ':' + #sigunguCode")
     @Override
     public List<AddressResponse> getDongBySigungu(String sidoCode, String sigunguCode) {
         log.info("시/군/구 {}-{}의 읍/면/동 목록 조회", sidoCode, sigunguCode);

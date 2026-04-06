@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -64,6 +65,7 @@ public class WelfareService {
         return welfarePage.map(welfare -> modelMapper.map(welfare, WelfareListResponse.class));
     }
 
+    @Cacheable(value = "welfare", key = "#welfareId", unless = "#result == null")
     @Transactional(readOnly = true)
     public WelfareDetailResponse getWelfareDetail(Long welfareId) {
         Welfare welfare = welfareRepository.findById(welfareId)
